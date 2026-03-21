@@ -6,7 +6,7 @@ A cross-platform automotive shop management app built with Flutter, inspired by 
 
 ## Project Status
 
-**v1.1.0 — Ignition** — Infrastructure wired up. Riverpod state management, go_router navigation, and Drift local database (customers + vehicles tables) all running. Ready to build Module 1.
+**v1.0.1 — Ignition** — Infrastructure wired up. Riverpod state management, go_router navigation, and Drift local database (customers + vehicles tables) all running. Ready to build Module 1.
 
 **v1.0.0 — Bones** — Adaptive app shell complete. Sidebar navigation on desktop, tab bar on mobile, all 5 module placeholders wired up.
 
