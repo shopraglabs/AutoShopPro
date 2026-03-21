@@ -138,7 +138,7 @@ The heart of the app. Everything else depends on this.
 
 ## Infrastructure & App Shell
 
-### App Foundation (v1.0.0 Bones ✅)
+### App Foundation (v0.1.0 Bones ✅)
 - ✅ Flutter project created
 - ✅ App running on macOS via Xcode
 - ✅ CupertinoApp with system blue theme (#007AFF)
@@ -152,7 +152,7 @@ The heart of the app. Everything else depends on this.
 - ✅ Git initialized and connected to GitHub
 - ✅ README.md, module_plan.md, AutoShopPro_Build_Log.docx created
 
-### Infrastructure (v1.0.1 Ignition ✅)
+### Infrastructure (v0.1.1 Ignition ✅)
 - ✅ Riverpod state management setup
 - ✅ go_router navigation setup (ShellRoute with 5 module routes)
 - ✅ Drift database initialization (customers + vehicles tables)

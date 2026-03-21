@@ -63,4 +63,4 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v1.0.1 Ignition
+v0.1.1 Ignition
