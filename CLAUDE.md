@@ -47,9 +47,25 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 
 ## Device & Build Info
 - MacBook Neo, Apple A18 Pro, macOS Tahoe 26.3.2
+- Flutter is installed at: /Users/jamestoney/flutter/bin/flutter (not on system PATH — always use full path in terminal)
 - Flutter CLI has a code signing bug on macOS Tahoe
 - To run the app: open ~/Documents/autoshoppro/macos/Runner.xcworkspace in Xcode, select My Mac, press Play
 - Project location: ~/Documents/autoshoppro
+
+## Adding New Plugins (macOS)
+When adding a new Flutter plugin with native macOS code:
+1. Add to pubspec.yaml and run `/Users/jamestoney/flutter/bin/flutter pub get`
+2. Run `/Users/jamestoney/flutter/bin/flutter build macos --debug` to register the plugin with Swift Package Manager (will fail at code signing — that's expected and fine)
+3. Run `swift package resolve` in `macos/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage`
+4. Quit and reopen Xcode, then press Play
+
+## Versioning
+- Uses semantic versioning: MAJOR.MINOR.PATCH
+- 0.x.x = in development, not ready for real users
+- 1.0.0 = first stable release to real shops
+- PATCH (0.1.0 → 0.1.1): under-the-hood changes, nothing visible
+- MINOR (0.1.x → 0.2.0): new module or major feature working
+- MAJOR (0.x.x → 1.0.0): app is shippable to real customers
 
 ## Session Rules
 - At the start of each session, check the current state of code
