@@ -1,6 +1,11 @@
+import 'dart:io';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'database/database.dart';
+import 'features/customers/customers_provider.dart';
 import 'router.dart';
 
 void main() {
@@ -12,15 +17,262 @@ class AutoShopProApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoApp.router(
-      title: 'AutoShopPro',
-      theme: const CupertinoThemeData(
-        primaryColor: Color(0xFF007AFF),
-        brightness: Brightness.light,
+    return PlatformMenuBar(
+      menus: [
+        // ── AutoShopPro ──────────────────────────────────────────────────────
+        PlatformMenu(
+          label: 'AutoShopPro',
+          menus: [
+            PlatformMenuItemGroup(members: [
+              PlatformMenuItem(
+                label: 'About AutoShopPro',
+                onSelected: _showAboutDialog,
+              ),
+            ]),
+            PlatformMenuItemGroup(members: [
+              PlatformMenuItem(
+                label: 'Settings…',
+                shortcut: const SingleActivator(
+                  LogicalKeyboardKey.comma,
+                  meta: true,
+                ),
+                onSelected: _showSettingsDialog,
+              ),
+            ]),
+            const PlatformMenuItemGroup(members: [
+              PlatformProvidedMenuItem(
+                  type: PlatformProvidedMenuItemType.servicesSubmenu),
+            ]),
+            const PlatformMenuItemGroup(members: [
+              PlatformProvidedMenuItem(
+                  type: PlatformProvidedMenuItemType.hide),
+              PlatformProvidedMenuItem(
+                  type: PlatformProvidedMenuItemType.hideOtherApplications),
+              PlatformProvidedMenuItem(
+                  type: PlatformProvidedMenuItemType.showAllApplications),
+            ]),
+            PlatformMenuItemGroup(members: [
+              PlatformMenuItem(
+                label: 'Quit AutoShopPro',
+                shortcut: const SingleActivator(
+                  LogicalKeyboardKey.keyQ,
+                  meta: true,
+                ),
+                onSelected: () => exit(0),
+              ),
+            ]),
+          ],
+        ),
+        // ── File ─────────────────────────────────────────────────────────────
+        PlatformMenu(
+          label: 'File',
+          menus: [
+            PlatformMenuItemGroup(members: [
+              PlatformMenuItem(
+                label: 'New Estimate',
+                shortcut: const SingleActivator(
+                  LogicalKeyboardKey.keyN,
+                  meta: true,
+                ),
+                onSelected: _newEstimate,
+              ),
+              PlatformMenuItem(
+                label: 'New Customer',
+                shortcut: const SingleActivator(
+                  LogicalKeyboardKey.keyN,
+                  meta: true,
+                  shift: true,
+                ),
+                onSelected: _newCustomer,
+              ),
+            ]),
+          ],
+        ),
+        // ── Window ───────────────────────────────────────────────────────────
+        PlatformMenu(
+          label: 'Window',
+          menus: [
+            const PlatformMenuItemGroup(members: [
+              PlatformProvidedMenuItem(
+                  type: PlatformProvidedMenuItemType.minimizeWindow),
+              PlatformProvidedMenuItem(
+                  type: PlatformProvidedMenuItemType.zoomWindow),
+            ]),
+          ],
+        ),
+        // ── Help ─────────────────────────────────────────────────────────────
+        PlatformMenu(
+          label: 'Help',
+          menus: [
+            PlatformMenuItemGroup(members: [
+              PlatformMenuItem(
+                label: 'AutoShopPro Help',
+                onSelected: _showHelpDialog,
+              ),
+            ]),
+          ],
+        ),
+      ],
+      child: CupertinoApp.router(
+        title: 'AutoShopPro',
+        theme: const CupertinoThemeData(
+          primaryColor: Color(0xFF007AFF),
+          brightness: Brightness.light,
+        ),
+        routerConfig: appRouter,
       ),
-      routerConfig: appRouter,
     );
   }
+}
+
+// ─── Menu bar helpers ─────────────────────────────────────────────────────────
+
+BuildContext? get _ctx => appNavigatorKey.currentContext;
+
+Future<void> _showAboutDialog() async {
+  final ctx = _ctx;
+  if (ctx == null) return;
+  showCupertinoDialog(
+    context: ctx,
+    builder: (d) => CupertinoAlertDialog(
+      title: const Text('AutoShopPro'),
+      content: const Padding(
+        padding: EdgeInsets.only(top: 6),
+        child: Column(
+          children: [
+            Text('Version 0.2.0', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 4),
+            Text(
+              'Professional shop management for independent automotive repair shops.',
+              style: TextStyle(fontSize: 13),
+            ),
+            SizedBox(height: 8),
+            Text('© 2025 AutoShopPro', style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93))),
+          ],
+        ),
+      ),
+      actions: [
+        CupertinoDialogAction(
+          isDefaultAction: true,
+          onPressed: () => Navigator.pop(d),
+          child: const Text('OK'),
+        ),
+      ],
+    ),
+  );
+}
+
+// Settings: single dialog with all settings — Cmd+, convention.
+Future<void> _showSettingsDialog() async {
+  final ctx = _ctx;
+  if (ctx == null) return;
+  final db = ProviderScope.containerOf(ctx).read(dbProvider);
+  final settings = await db.getOrCreateSettings();
+  if (!ctx.mounted) return;
+
+  final laborCtrl = TextEditingController(
+      text: settings.defaultLaborRate.toStringAsFixed(2));
+  final markupCtrl = TextEditingController(
+      text: settings.defaultPartsMarkup.toStringAsFixed(1));
+
+  showCupertinoDialog(
+    context: ctx,
+    builder: (d) => CupertinoAlertDialog(
+      title: const Text('Settings'),
+      content: Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Labor rate
+            const Text('Default Labor Rate',
+                style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93),
+                    fontWeight: FontWeight.w500)),
+            const SizedBox(height: 6),
+            CupertinoTextField(
+              controller: laborCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              placeholder: '120.00',
+              prefix: const Padding(
+                  padding: EdgeInsets.only(left: 8), child: Text('\$')),
+            ),
+            const SizedBox(height: 14),
+            // Parts markup
+            const Text('Default Parts Markup',
+                style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93),
+                    fontWeight: FontWeight.w500)),
+            const SizedBox(height: 6),
+            CupertinoTextField(
+              controller: markupCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              placeholder: '30.0',
+              suffix: const Padding(
+                  padding: EdgeInsets.only(right: 8), child: Text('%')),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        CupertinoDialogAction(
+          onPressed: () => Navigator.pop(d),
+          child: const Text('Cancel'),
+        ),
+        CupertinoDialogAction(
+          isDefaultAction: true,
+          onPressed: () async {
+            final rate =
+                double.tryParse(laborCtrl.text) ?? settings.defaultLaborRate;
+            final markup = double.tryParse(markupCtrl.text) ??
+                settings.defaultPartsMarkup;
+            await db.saveSettings(ShopSettingsCompanion(
+              id: const Value(1),
+              defaultLaborRate: Value(rate),
+              defaultPartsMarkup: Value(markup),
+            ));
+            if (d.mounted) Navigator.pop(d);
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    ),
+  );
+}
+
+// File menu helpers — navigate to the new-estimate / new-customer forms.
+Future<void> _newEstimate() async {
+  final ctx = _ctx;
+  if (ctx == null) return;
+  ctx.push('/repair-orders/estimates/new');
+}
+
+Future<void> _newCustomer() async {
+  final ctx = _ctx;
+  if (ctx == null) return;
+  ctx.go('/repair-orders/customers/new');
+}
+
+Future<void> _showHelpDialog() async {
+  final ctx = _ctx;
+  if (ctx == null) return;
+  showCupertinoDialog(
+    context: ctx,
+    builder: (d) => CupertinoAlertDialog(
+      title: const Text('AutoShopPro Help'),
+      content: const Padding(
+        padding: EdgeInsets.only(top: 6),
+        child: Text('Full documentation is coming soon.'),
+      ),
+      actions: [
+        CupertinoDialogAction(
+          isDefaultAction: true,
+          onPressed: () => Navigator.pop(d),
+          child: const Text('OK'),
+        ),
+      ],
+    ),
+  );
 }
 
 // AppShell is the outer frame that holds the sidebar (desktop) or tab bar

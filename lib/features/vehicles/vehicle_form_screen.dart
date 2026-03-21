@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
 import '../customers/customers_provider.dart';
+import 'vin_service.dart';
 
 // Formats an integer mileage value as "45,000" for display in the field.
 String _formatMileage(int? mileage) {
@@ -49,6 +50,8 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
   late final TextEditingController _mileage;
   late final TextEditingController _plate;
   bool _saving = false;
+  bool _decoding = false;
+  String? _vinMessage; // shown below the DETAILS section
 
   bool get _isEditing => widget.vehicle != null;
 
@@ -63,10 +66,57 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
     // Pre-fill mileage and plate with their formatted versions
     _mileage = TextEditingController(text: _formatMileage(v?.mileage));
     _plate = TextEditingController(text: _formatPlate(v?.licensePlate));
+
+    _vin.addListener(_onVinChanged);
+  }
+
+  void _onVinChanged() {
+    final vin = _vin.text.trim();
+    if (vin.length == 17 && !_decoding) {
+      _decodeVin(vin);
+    }
+  }
+
+  Future<void> _decodeVin(String vin) async {
+    setState(() {
+      _decoding = true;
+      _vinMessage = null;
+    });
+    final result = await VinService.decode(vin);
+    if (!mounted) return;
+    if (result != null) {
+      // Only fill a field if it's currently empty — don't overwrite user input
+      if (_year.text.trim().isEmpty && result.year != null) {
+        _year.text = result.year!;
+      }
+      if (_make.text.trim().isEmpty && result.make != null) {
+        _make.text = _toTitleCase(result.make!);
+      }
+      if (_model.text.trim().isEmpty && result.model != null) {
+        _model.text = _toTitleCase(result.model!);
+      }
+      setState(() {
+        _decoding = false;
+        _vinMessage = null;
+      });
+    } else {
+      setState(() {
+        _decoding = false;
+        _vinMessage = 'VIN not recognized — enter details manually';
+      });
+    }
+  }
+
+  String _toTitleCase(String s) {
+    return s.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
   }
 
   @override
   void dispose() {
+    _vin.removeListener(_onVinChanged);
     _year.dispose();
     _make.dispose();
     _model.dispose();
@@ -80,13 +130,13 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
     if (_make.text.trim().isEmpty && _model.text.trim().isEmpty) {
       showCupertinoDialog(
         context: context,
-        builder: (_) => CupertinoAlertDialog(
+        builder: (dialogCtx) => CupertinoAlertDialog(
           title: const Text('Vehicle info required'),
           content: const Text('Please enter at least a make or model.'),
           actions: [
             CupertinoDialogAction(
               isDefaultAction: true,
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogCtx),
               child: const Text('OK'),
             ),
           ],
@@ -183,6 +233,12 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
                   placeholder: '1HGBH41JXMN109186',
                   textCapitalization: TextCapitalization.characters,
                   inputFormatters: [_UpperCaseFormatter()],
+                  trailing: _decoding
+                      ? const Padding(
+                          padding: EdgeInsets.only(right: 4),
+                          child: CupertinoActivityIndicator(radius: 8),
+                        )
+                      : null,
                 ),
                 _FormField(
                   label: 'Mileage',
@@ -200,6 +256,17 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
                 ),
               ],
             ),
+            if (_vinMessage != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(
+                  _vinMessage!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF8E8E93),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -259,6 +326,7 @@ class _FormField extends StatelessWidget {
   final TextCapitalization textCapitalization;
   final List<TextInputFormatter>? inputFormatters;
   final bool autofocus;
+  final Widget? trailing;
 
   const _FormField({
     required this.label,
@@ -268,6 +336,7 @@ class _FormField extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.inputFormatters,
     this.autofocus = false,
+    this.trailing,
   });
 
   @override
@@ -299,6 +368,7 @@ class _FormField extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 13),
             ),
           ),
+          if (trailing != null) trailing!,
         ],
       ),
     );

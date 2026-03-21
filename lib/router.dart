@@ -9,12 +9,24 @@ import 'features/customers/customer_detail_screen.dart';
 import 'features/customers/customers_provider.dart';
 import 'features/vehicles/vehicle_form_screen.dart';
 import 'features/vehicles/vehicle_detail_screen.dart';
+import 'features/estimates/estimate_list_screen.dart';
+import 'features/estimates/estimate_form_screen.dart';
+import 'features/estimates/estimate_detail_screen.dart';
+import 'features/estimates/line_item_form_screen.dart';
+import 'features/vendors/vendor_list_screen.dart';
+import 'features/vendors/vendor_form_screen.dart';
+import 'features/vendors/vendors_provider.dart';
 
 // The router defines every screen address in the app.
 // Think of each GoRoute as a page in a book — the 'path' is its page number,
 // and 'builder' is what gets displayed when you turn to that page.
 
+// A global key that gives us a BuildContext from outside the widget tree.
+// The macOS menu bar uses this to show dialogs when a menu item is tapped.
+final appNavigatorKey = GlobalKey<NavigatorState>();
+
 final appRouter = GoRouter(
+  navigatorKey: appNavigatorKey,
   initialLocation: '/repair-orders',
   routes: [
     ShellRoute(
@@ -26,6 +38,84 @@ final appRouter = GoRouter(
           path: '/repair-orders',
           builder: (context, state) => const RepairOrdersScreen(),
           routes: [
+            // Vendor list
+            GoRoute(
+              path: 'vendors',
+              builder: (context, state) => const VendorListScreen(),
+              routes: [
+                GoRoute(
+                  path: 'new',
+                  builder: (context, state) => const VendorFormScreen(),
+                ),
+                GoRoute(
+                  path: ':vendorId/edit',
+                  builder: (context, state) {
+                    final id =
+                        int.parse(state.pathParameters['vendorId']!);
+                    return _VendorEditLoader(vendorId: id);
+                  },
+                ),
+              ],
+            ),
+
+            // Estimate list
+            GoRoute(
+              path: 'estimates',
+              builder: (context, state) => const EstimateListScreen(),
+              routes: [
+                // New estimate form
+                GoRoute(
+                  path: 'new',
+                  builder: (context, state) => const EstimateFormScreen(),
+                ),
+                // Estimate detail
+                GoRoute(
+                  path: ':estimateId',
+                  builder: (context, state) {
+                    final id =
+                        int.parse(state.pathParameters['estimateId']!);
+                    return EstimateDetailScreen(estimateId: id);
+                  },
+                  routes: [
+                    // Add labor line item
+                    GoRoute(
+                      path: 'line-items/labor',
+                      builder: (context, state) {
+                        final id = int.parse(
+                            state.pathParameters['estimateId']!);
+                        return LineItemFormScreen(
+                            estimateId: id, type: 'labor');
+                      },
+                    ),
+                    // Add part line item
+                    GoRoute(
+                      path: 'line-items/part',
+                      builder: (context, state) {
+                        final id = int.parse(
+                            state.pathParameters['estimateId']!);
+                        return LineItemFormScreen(
+                            estimateId: id, type: 'part');
+                      },
+                    ),
+                    // Edit existing line item
+                    GoRoute(
+                      path: 'line-items/:lineItemId/edit',
+                      builder: (context, state) {
+                        final estimateId = int.parse(
+                            state.pathParameters['estimateId']!);
+                        final lineItemId = int.parse(
+                            state.pathParameters['lineItemId']!);
+                        return _LineItemEditLoader(
+                          estimateId: estimateId,
+                          lineItemId: lineItemId,
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
             // Customer list
             GoRoute(
               path: 'customers',
@@ -154,6 +244,74 @@ class _CustomerEditLoader extends ConsumerWidget {
         }
         // Hand the loaded customer to the form so its fields are pre-filled
         return CustomerFormScreen(customer: customer);
+      },
+    );
+  }
+}
+
+// Fetches a vendor from the database by id, then shows the edit form
+// pre-filled with that vendor's data.
+class _VendorEditLoader extends ConsumerWidget {
+  final int vendorId;
+  const _VendorEditLoader({required this.vendorId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(dbProvider);
+    return FutureBuilder(
+      future: db.getVendor(vendorId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CupertinoPageScaffold(
+            child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        final vendor = snapshot.data;
+        if (vendor == null) {
+          return const CupertinoPageScaffold(
+            navigationBar:
+                CupertinoNavigationBar(middle: Text('Edit Vendor')),
+            child: Center(child: Text('Vendor not found.')),
+          );
+        }
+        return VendorFormScreen(vendor: vendor);
+      },
+    );
+  }
+}
+
+// Fetches a line item from the database by id, then shows the edit form.
+class _LineItemEditLoader extends ConsumerWidget {
+  final int estimateId;
+  final int lineItemId;
+  const _LineItemEditLoader({
+    required this.estimateId,
+    required this.lineItemId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(dbProvider);
+    return FutureBuilder(
+      future: db.getLineItem(lineItemId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CupertinoPageScaffold(
+            child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        final lineItem = snapshot.data;
+        if (lineItem == null) {
+          return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(middle: Text('Edit')),
+            child: Center(child: Text('Line item not found.')),
+          );
+        }
+        return LineItemFormScreen(
+          estimateId: estimateId,
+          type: lineItem.type,
+          lineItem: lineItem,
+        );
       },
     );
   }

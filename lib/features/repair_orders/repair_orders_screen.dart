@@ -43,11 +43,21 @@ class RepairOrdersScreen extends StatelessWidget {
                     color: const Color(0xFFE5E5EA),
                     margin: const EdgeInsets.only(left: 62),
                   ),
-                  const _MenuRow(
+                  _MenuRow(
                     icon: CupertinoIcons.doc_fill,
                     label: 'Estimates',
-                    subtitle: 'Coming soon',
-                    onTap: null,
+                    onTap: () =>
+                        context.go('/repair-orders/estimates'),
+                  ),
+                  Container(
+                    height: 0.5,
+                    color: const Color(0xFFE5E5EA),
+                    margin: const EdgeInsets.only(left: 62),
+                  ),
+                  _MenuRow(
+                    icon: CupertinoIcons.building_2_fill,
+                    label: 'Vendors',
+                    onTap: () => context.go('/repair-orders/vendors'),
                   ),
                 ],
               ),

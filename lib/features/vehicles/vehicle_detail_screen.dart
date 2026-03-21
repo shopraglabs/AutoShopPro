@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -124,7 +125,52 @@ class _VehicleDetail extends ConsumerWidget {
               emptyMessage: 'No additional details',
             ),
 
-            const SizedBox(height: 36),
+            const SizedBox(height: 28),
+
+            // New Estimate — styled as a standard list row
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Text(
+                    'ACTIONS',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF8E8E93),
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _newEstimate(context, ref),
+                  child: Container(
+                    color: CupertinoColors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    child: const Row(
+                      children: [
+                        Icon(CupertinoIcons.doc_text,
+                            size: 18, color: Color(0xFF007AFF)),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'New Estimate',
+                            style: TextStyle(
+                                fontSize: 16, color: Color(0xFF007AFF)),
+                          ),
+                        ),
+                        Icon(CupertinoIcons.chevron_right,
+                            size: 16, color: Color(0xFFC7C7CC)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
 
             // Delete — subtle text link
             Center(
@@ -144,6 +190,19 @@ class _VehicleDetail extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  // Creates a new estimate pre-linked to this customer and vehicle,
+  // then navigates directly to the estimate detail screen.
+  Future<void> _newEstimate(BuildContext context, WidgetRef ref) async {
+    final db = ref.read(dbProvider);
+    final id = await db.insertEstimate(EstimatesCompanion.insert(
+      customerId: customerId,
+      vehicleId: Value(vehicle.id),
+    ));
+    if (context.mounted) {
+      context.push('/repair-orders/estimates/$id');
+    }
   }
 
   // Formats 45000 → "45,000"

@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
+import '../../widgets/context_menu.dart';
 import 'customers_provider.dart';
 
 // The main customer list screen.
@@ -133,20 +134,70 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
 }
 
 // A single row in the customer list.
-class _CustomerTile extends StatelessWidget {
+class _CustomerTile extends ConsumerWidget {
   final Customer customer;
   final VoidCallback onTap;
 
   const _CustomerTile({required this.customer, required this.onTap});
 
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) {
+    return showCupertinoDialog(
+      context: context,
+      builder: (dialogCtx) => CupertinoAlertDialog(
+        title: Text('Delete ${customer.name}?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              await ref.read(dbProvider).deleteCustomer(customer.id);
+            },
+            child: const Text('Delete'),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Show the first letter of the customer's name as an avatar
     final initial =
         customer.name.isNotEmpty ? customer.name[0].toUpperCase() : '?';
 
     return GestureDetector(
       onTap: onTap,
+      onSecondaryTapUp: (details) => showContextMenu(
+        context: context,
+        position: details.globalPosition,
+        items: [
+          ContextMenuAction(
+            label: 'Open',
+            icon: CupertinoIcons.person_fill,
+            onTap: onTap,
+          ),
+          contextMenuDivider,
+          ContextMenuAction(
+            label: 'Edit Customer',
+            icon: CupertinoIcons.pencil,
+            onTap: () => context.push(
+                '/repair-orders/customers/${customer.id}/edit'),
+          ),
+          contextMenuDivider,
+          ContextMenuAction(
+            label: 'Delete Customer',
+            icon: CupertinoIcons.trash,
+            isDestructive: true,
+            onTap: () => _confirmDelete(context, ref),
+          ),
+        ],
+      ),
       child: Container(
         color: CupertinoColors.white,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

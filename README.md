@@ -6,7 +6,7 @@ A cross-platform automotive shop management app built with Flutter, inspired by 
 
 ## Project Status
 
-**v1.0.0 — Bones** — Adaptive app shell complete. Sidebar navigation on desktop, tab bar on mobile, all 5 module placeholders wired up. Ready to build features.
+**v0.3.0 — Estimate** — Module 1 in progress. Customers, vehicles, VIN decode, estimates (labor + parts + totals), vendors, shop settings, and Apple-style macOS menu bar all working.
 
 ---
 

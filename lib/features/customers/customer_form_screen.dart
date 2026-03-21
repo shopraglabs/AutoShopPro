@@ -48,13 +48,13 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     if (name.isEmpty) {
       showCupertinoDialog(
         context: context,
-        builder: (_) => CupertinoAlertDialog(
+        builder: (dialogCtx) => CupertinoAlertDialog(
           title: const Text('Name required'),
           content: const Text('Please enter the customer\'s name.'),
           actions: [
             CupertinoDialogAction(
               isDefaultAction: true,
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogCtx),
               child: const Text('OK'),
             ),
           ],

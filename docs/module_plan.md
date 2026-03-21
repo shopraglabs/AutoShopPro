@@ -21,18 +21,33 @@ The heart of the app. Everything else depends on this.
 - ✅ Add / edit vehicle form (mileage formatter, plate formatter, VIN caps)
 
 ### VIN Decode
-- ⬜ VIN decode API integration (NHTSA free API)
-- ⬜ Auto-fill year/make/model/trim from VIN on vehicle form
+- ✅ VIN decode API integration (NHTSA free API, no key required)
+- ✅ Auto-fill year/make/model from VIN on vehicle form
 
 ### Estimates
-- ⬜ Estimate model
-- ⬜ Create new estimate
-- ⬜ Add labor lines to estimate
-- ⬜ Add parts lines to estimate
-- ⬜ Calculate totals (parts + labor + tax)
-- ⬜ Estimate list screen
-- ⬜ Estimate detail screen
+- ✅ Estimate model (customer, vehicle, note, status, tax rate)
+- ✅ Create new estimate (customer + vehicle picker)
+- ✅ Add labor lines to estimate (description, hours, rate/hr)
+- ✅ Add parts lines to estimate (description, qty, unit price, vendor)
+- ✅ Calculate totals (subtotal + tax + total)
+- ✅ Estimate list screen (status dot, customer name, vehicle, total)
+- ✅ Estimate detail screen (labor section, parts section, totals section)
+- ✅ Swipe-to-delete line items
+- ✅ Live line total preview on line item form
+- ✅ Default labor rate auto-filled from shop settings
+- ✅ Edit existing line items
 - ⬜ Convert estimate → Repair Order
+
+### Vendors
+- ✅ Vendor model (name, contact, phone, account #)
+- ✅ Vendor list screen
+- ✅ Add / edit vendor form (account # forced uppercase)
+- ✅ Delete vendor (with confirmation)
+- ✅ Vendor picker when adding a part to an estimate
+
+### Shop Settings
+- ✅ Single-row settings table (default labor rate, default parts markup)
+- ✅ Settings dialog accessible via ⌘, menu bar shortcut
 
 ### Repair Orders (RO)
 - ⬜ RO model
@@ -46,8 +61,9 @@ The heart of the app. Everything else depends on this.
 
 ### Local Database (Drift/SQLite)
 - ✅ Drift database setup
-- ✅ Tables: customers, vehicles (estimates, repair_orders, line_items pending)
-- ✅ Basic CRUD operations for customers and vehicles
+- ✅ Tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings
+- ✅ CRUD for customers, vehicles, estimates, line items, vendors, settings
+- ✅ Schema versioning + migration strategy (v8)
 
 ---
 
@@ -171,6 +187,25 @@ The heart of the app. Everything else depends on this.
 - ✅ Plate formatter: ABC 1234
 - ✅ VIN auto-uppercase
 - ✅ Name / Make / Model word capitalization enforced
+
+### Estimates & Vendors (v0.3.0 — current session)
+- ✅ VIN decode via NHTSA API (auto-fills year/make/model)
+- ✅ macOS network entitlement added for outbound HTTP
+- ✅ dio HTTP client added
+- ✅ Estimates — full create/view/delete flow
+- ✅ Line items — labor and parts, swipe to delete
+- ✅ Vendor system — list, add, edit, delete
+- ✅ Vendor picker on Add Part form
+- ✅ Shop settings — default labor rate + parts markup, saved to DB
+- ✅ Apple-style macOS menu bar (AutoShopPro / File / Window / Help)
+- ✅ ⌘N → New Estimate, ⇧⌘N → New Customer, ⌘, → Settings
+- ✅ Right-click context menus on customer, estimate, and vendor list rows
+- ✅ New Estimate shortcut from vehicle detail screen
+- ✅ Smart dependency navigation (no customers → go to New Customer, etc.)
+- ✅ All alert dialogs fixed to use dialog context (no stuck popups)
+- ✅ Edit existing line items (tap row to edit description, qty, price, vendor)
+- ✅ Account # forced uppercase in vendor form
+- ✅ docs/update_build_log.py — python-docx build log script
 
 ### Backend (Go — planned)
 - ⬜ Go project scaffolding

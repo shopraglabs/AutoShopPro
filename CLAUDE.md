@@ -26,6 +26,19 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - Backend: Go (planned, not started)
 - Database: PostgreSQL + Redis (planned)
 
+## What's Built So Far
+- **App shell** — sidebar nav (desktop), tab bar (mobile), all 5 module placeholders
+- **Customers** — list (searchable), detail, add/edit/delete, phone/name formatting
+- **Vehicles** — list per customer, detail, add/edit/delete, VIN decode (NHTSA API), all formatters
+- **Estimates** — list, create (customer + vehicle picker), detail (labor + parts + totals), delete
+- **Line items** — add labor (hrs × rate, default rate from settings), add parts (qty × price, vendor picker), swipe to delete, live total preview
+- **Vendors** — list, add/edit/delete, account # forced uppercase, contact name
+- **Shop settings** — default labor rate + parts markup, stored in DB, accessible via ⌘,
+- **macOS menu bar** — AutoShopPro / File (⌘N, ⇧⌘N) / Window / Help
+- **Right-click context menus** — on customer, estimate, and vendor list rows
+- **Edit line items** — tap any labor or part row on an estimate to edit it; pre-filled form, saves via updateLineItem
+- **Database** — Drift/SQLite, schema v8, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings
+
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
 2. Parts & ordering — PartsTech/Epicor integration, inventory, cost/markup rules, core returns
@@ -82,11 +95,71 @@ When adding a new Flutter plugin with native macOS code:
 - Keep each session focused on one clear goal
 - Tell me when it is a good stopping point
 - When starting a session, start with "Current version: (insert version number and name) — this session goal: (list goals for the this session here)"
-- When ending a session, assign a version number with a cool name, summarize what was built, and provide updated module_plan.md, README.md and AutoShopPro_Build_Log.docx
+- When ending a session, assign a version number with a cool name, summarize what was built, and update these four files:
+
+  **1. `docs/module_plan.md`**
+  - Change `⬜` to `✅` for everything completed this session
+  - Add any new tasks that were discovered (keep them `⬜`)
+  - Add a new Infrastructure section at the bottom for the new version if it doesn't exist
+
+  **2. `docs/AutoShopPro_Build_Log.docx`**
+  - Fill in the SESSION dict at the top of `docs/update_build_log.py`
+  - Run: `python3 docs/update_build_log.py`
+  - Verify with: `python3 docs/update_build_log.py read`
+
+  **3. `README.md`**
+  - Update the single line in the **Project Status** section: change the version number and the one-sentence description of what's working
+
+  **4. `CLAUDE.md`**
+  - Update the **Current Version** field at the bottom
+  - Update the **What's Built So Far** section to include anything new
 - Save work to GitHub at end of every session
+
+## Coding Rules (learned the hard way)
+
+### Dialogs
+- Always use `dialogCtx` — never `context` — inside `CupertinoAlertDialog` builders:
+  ```dart
+  showCupertinoDialog(
+    context: context,
+    builder: (dialogCtx) => CupertinoAlertDialog(
+      actions: [
+        CupertinoDialogAction(
+          onPressed: () => Navigator.pop(dialogCtx), // ← dialogCtx, not context
+          ...
+        ),
+      ],
+    ),
+  );
+  ```
+- Reason: on macOS with go_router, `Navigator.pop(context)` can close the wrong route instead of the dialog.
+
+### Missing Dependencies — Navigate, Don't Block
+- If a screen requires something that doesn't exist yet (e.g. no customers when creating an estimate), navigate directly to the creation screen instead of showing a dead-end dialog:
+  ```dart
+  if (customers.isEmpty) {
+    context.push('/repair-orders/customers/new');
+    return;
+  }
+  ```
+
+### Database Migrations
+- Always use `from == N` (not `from < N`) for migrations that run SQL statements like `ALTER TABLE RENAME` that would fail if run more than once.
+- For `addColumn`, guard with a PRAGMA check in case a partial migration already ran:
+  ```dart
+  final cols = await m.database.customSelect(
+    "SELECT name FROM pragma_table_info('table') WHERE name='col'"
+  ).get();
+  if (cols.isEmpty) { await m.addColumn(...); }
+  ```
+
+### Build Log
+- To read: `python3 docs/update_build_log.py read`
+- To write: fill in the SESSION dict in `docs/update_build_log.py`, then run `python3 docs/update_build_log.py`
+- Requires: `python-docx` (`pip3 install python-docx`)
 
 ## GitHub
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.2.0 Intake
+v0.3.0 Estimate
