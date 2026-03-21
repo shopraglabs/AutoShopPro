@@ -11,14 +11,14 @@ Track build progress here. Check off tasks as they are completed.
 The heart of the app. Everything else depends on this.
 
 ### Customer & Vehicle Records
-- ⬜ Customer model (name, phone, email, address)
-- ⬜ Vehicle model (year, make, model, trim, VIN, mileage, license plate)
-- ⬜ Link vehicles to customers (one customer → many vehicles)
-- ⬜ Customer list screen
-- ⬜ Customer detail screen
-- ⬜ Add / edit customer form
-- ⬜ Vehicle list screen (per customer)
-- ⬜ Add / edit vehicle form
+- ✅ Customer model (name, phone, email)
+- ✅ Vehicle model (year, make, model, VIN, mileage, license plate)
+- ✅ Link vehicles to customers (one customer → many vehicles)
+- ✅ Customer list screen (searchable, live-updating)
+- ✅ Customer detail screen
+- ✅ Add / edit customer form (phone formatter, word capitalization)
+- ✅ Vehicle list screen (per customer, on detail screen)
+- ✅ Add / edit vehicle form (mileage formatter, plate formatter, VIN caps)
 
 ### VIN Decode
 - ⬜ VIN decode API integration (NHTSA free API)
@@ -45,9 +45,9 @@ The heart of the app. Everything else depends on this.
 - ⬜ Close RO
 
 ### Local Database (Drift/SQLite)
-- ⬜ Drift database setup
-- ⬜ Tables: customers, vehicles, estimates, repair_orders, line_items
-- ⬜ Basic CRUD operations for all tables
+- ✅ Drift database setup
+- ✅ Tables: customers, vehicles (estimates, repair_orders, line_items pending)
+- ✅ Basic CRUD operations for customers and vehicles
 
 ---
 
@@ -157,6 +157,20 @@ The heart of the app. Everything else depends on this.
 - ✅ go_router navigation setup (ShellRoute with 5 module routes)
 - ✅ Drift database initialization (customers + vehicles tables)
 - ✅ Dock display name fixed to AutoShopPro
+
+### Customer & Vehicle Records (v0.2.0 Intake ✅)
+- ✅ Repair Orders hub screen (module entry point)
+- ✅ Customer list with live search and avatar initials
+- ✅ New customer → lands on customer detail page
+- ✅ Edit customer form (pre-filled)
+- ✅ Delete customer (with confirmation dialog)
+- ✅ Vehicle list on customer detail (live-updating)
+- ✅ Add / edit / delete vehicles
+- ✅ Phone formatter: (555) 867-5309
+- ✅ Mileage formatter: 45,000
+- ✅ Plate formatter: ABC 1234
+- ✅ VIN auto-uppercase
+- ✅ Name / Make / Model word capitalization enforced
 
 ### Backend (Go — planned)
 - ⬜ Go project scaffolding

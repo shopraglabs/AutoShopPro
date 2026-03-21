@@ -79,4 +79,4 @@ When adding a new Flutter plugin with native macOS code:
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.1.1 Ignition
+v0.2.0 Intake

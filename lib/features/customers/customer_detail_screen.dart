@@ -1,0 +1,447 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../database/database.dart';
+import 'customers_provider.dart';
+
+// Helper: builds "2018 Toyota Camry" from a Vehicle object
+String vehicleLabel(Vehicle v) {
+  final parts = [
+    if (v.year != null) v.year.toString(),
+    if (v.make != null) v.make!,
+    if (v.model != null) v.model!,
+  ];
+  return parts.isEmpty ? 'Unknown vehicle' : parts.join(' ');
+}
+
+// Shows a single customer's profile — their contact info, vehicles, and a
+// delete button. Tapping Edit opens the CustomerFormScreen pre-filled.
+class CustomerDetailScreen extends ConsumerWidget {
+  final int customerId;
+  const CustomerDetailScreen({super.key, required this.customerId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(dbProvider);
+    return FutureBuilder<Customer?>(
+      future: db.getCustomer(customerId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CupertinoPageScaffold(
+            child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        final customer = snapshot.data;
+        if (customer == null) {
+          return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(middle: Text('Customer')),
+            child: Center(child: Text('Customer not found.')),
+          );
+        }
+        return _CustomerDetail(customer: customer);
+      },
+    );
+  }
+}
+
+class _CustomerDetail extends ConsumerWidget {
+  final Customer customer;
+  const _CustomerDetail({required this.customer});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: Text(customer.name),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () =>
+              context.go('/repair-orders/customers/${customer.id}/edit'),
+          child: const Text('Edit'),
+        ),
+      ),
+      child: SafeArea(
+        child: ListView(
+          children: [
+            // Avatar + name header
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Column(
+                children: [
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF007AFF).withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        customer.name.isNotEmpty
+                            ? customer.name[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          fontSize: 34,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF007AFF),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    customer.name,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1C1C1E),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Contact info section
+            _DetailSection(
+              label: 'CONTACT',
+              rows: [
+                if (customer.phone != null && customer.phone!.isNotEmpty)
+                  _DetailRow(
+                    icon: CupertinoIcons.phone_fill,
+                    label: 'Phone',
+                    value: customer.phone!,
+                  ),
+                if (customer.email != null && customer.email!.isNotEmpty)
+                  _DetailRow(
+                    icon: CupertinoIcons.mail_solid,
+                    label: 'Email',
+                    value: customer.email!,
+                  ),
+              ],
+              emptyMessage: 'No contact info saved',
+            ),
+
+            const SizedBox(height: 20),
+
+            // Vehicles section — live list from the database
+            _VehiclesSection(customer: customer),
+
+            const SizedBox(height: 36),
+
+            // Delete — subtle text link, not a big red button
+            Center(
+              child: CupertinoButton(
+                onPressed: () => _confirmDelete(context, ref),
+                child: const Text(
+                  'Delete Customer',
+                  style: TextStyle(
+                    color: CupertinoColors.destructiveRed,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 36),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref) {
+    showCupertinoDialog(
+      context: context,
+      // 'dlg' is the dialog's own context — needed to close the dialog itself
+      builder: (dlg) => CupertinoAlertDialog(
+        title: const Text('Delete Customer?'),
+        content: Text(
+          'This will permanently delete ${customer.name}. This cannot be undone.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () async {
+              Navigator.pop(dlg); // close dialog first
+              await ref.read(dbProvider).deleteCustomer(customer.id);
+              if (context.mounted) {
+                context.go('/repair-orders/customers');
+              }
+            },
+            child: const Text('Delete'),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(dlg),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// The vehicles section on the customer detail page.
+// Watches the database live and shows a tile per vehicle plus an Add button.
+class _VehiclesSection extends ConsumerWidget {
+  final Customer customer;
+  const _VehiclesSection({required this.customer});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncVehicles = ref.watch(vehiclesProvider(customer.id));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section header with Add button on the right
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'VEHICLES',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF8E8E93),
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              CupertinoButton(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minSize: 0,
+                onPressed: () => context.go(
+                  '/repair-orders/customers/${customer.id}/vehicles/new',
+                ),
+                child: const Icon(
+                  CupertinoIcons.add_circled,
+                  size: 22,
+                  color: Color(0xFF007AFF),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Vehicle list or empty state
+        asyncVehicles.when(
+          loading: () => const Center(child: CupertinoActivityIndicator()),
+          error: (e, _) => Text('Error: $e'),
+          data: (vehicleList) {
+            if (vehicleList.isEmpty) {
+              return Container(
+                color: CupertinoColors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                child: const Text(
+                  'No vehicles yet — tap + to add one',
+                  style: TextStyle(fontSize: 16, color: Color(0xFF8E8E93)),
+                ),
+              );
+            }
+            return Container(
+              color: CupertinoColors.white,
+              child: Column(
+                children: [
+                  for (int i = 0; i < vehicleList.length; i++) ...[
+                    _VehicleTile(
+                      vehicle: vehicleList[i],
+                      onTap: () => context.go(
+                        '/repair-orders/customers/${customer.id}/vehicles/${vehicleList[i].id}',
+                      ),
+                    ),
+                    if (i < vehicleList.length - 1)
+                      Container(
+                        height: 0.5,
+                        color: const Color(0xFFE5E5EA),
+                        margin: const EdgeInsets.only(left: 56),
+                      ),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _VehicleTile extends StatelessWidget {
+  final Vehicle vehicle;
+  final VoidCallback onTap;
+
+  const _VehicleTile({required this.vehicle, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = vehicleLabel(vehicle);
+    final sub = [
+      if (vehicle.licensePlate != null) vehicle.licensePlate!,
+      if (vehicle.mileage != null) '${vehicle.mileage} mi',
+    ].join(' · ');
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        color: CupertinoColors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            const Icon(
+              CupertinoIcons.car_detailed,
+              size: 22,
+              color: Color(0xFF007AFF),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF1C1C1E),
+                    ),
+                  ),
+                  if (sub.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        sub,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF8E8E93),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const Icon(
+              CupertinoIcons.chevron_right,
+              size: 16,
+              color: Color(0xFFC7C7CC),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// A labelled section containing a list of detail rows, or an empty message.
+class _DetailSection extends StatelessWidget {
+  final String label;
+  final List<_DetailRow> rows;
+  final String? emptyMessage;
+
+  const _DetailSection({
+    required this.label,
+    required this.rows,
+    this.emptyMessage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF8E8E93),
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        Container(
+          color: CupertinoColors.white,
+          child: rows.isEmpty
+              ? Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Text(
+                    emptyMessage ?? '',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF8E8E93),
+                    ),
+                  ),
+                )
+              : Column(
+                  children: [
+                    for (int i = 0; i < rows.length; i++) ...[
+                      rows[i],
+                      if (i < rows.length - 1)
+                        Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 56),
+                        ),
+                    ],
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+// A single info row with an icon, small label, and value
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: const Color(0xFF007AFF)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF8E8E93),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF1C1C1E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

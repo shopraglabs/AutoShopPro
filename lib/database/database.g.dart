@@ -49,17 +49,6 @@ class $CustomersTable extends Customers
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _addressMeta = const VerificationMeta(
-    'address',
-  );
-  @override
-  late final GeneratedColumn<String> address = GeneratedColumn<String>(
-    'address',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -73,14 +62,7 @@ class $CustomersTable extends Customers
     defaultValue: currentDateAndTime,
   );
   @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    name,
-    phone,
-    email,
-    address,
-    createdAt,
-  ];
+  List<GeneratedColumn> get $columns => [id, name, phone, email, createdAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -116,12 +98,6 @@ class $CustomersTable extends Customers
         email.isAcceptableOrUnknown(data['email']!, _emailMeta),
       );
     }
-    if (data.containsKey('address')) {
-      context.handle(
-        _addressMeta,
-        address.isAcceptableOrUnknown(data['address']!, _addressMeta),
-      );
-    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -153,10 +129,6 @@ class $CustomersTable extends Customers
         DriftSqlType.string,
         data['${effectivePrefix}email'],
       ),
-      address: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}address'],
-      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -175,14 +147,12 @@ class Customer extends DataClass implements Insertable<Customer> {
   final String name;
   final String? phone;
   final String? email;
-  final String? address;
   final DateTime createdAt;
   const Customer({
     required this.id,
     required this.name,
     this.phone,
     this.email,
-    this.address,
     required this.createdAt,
   });
   @override
@@ -195,9 +165,6 @@ class Customer extends DataClass implements Insertable<Customer> {
     }
     if (!nullToAbsent || email != null) {
       map['email'] = Variable<String>(email);
-    }
-    if (!nullToAbsent || address != null) {
-      map['address'] = Variable<String>(address);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -213,9 +180,6 @@ class Customer extends DataClass implements Insertable<Customer> {
       email: email == null && nullToAbsent
           ? const Value.absent()
           : Value(email),
-      address: address == null && nullToAbsent
-          ? const Value.absent()
-          : Value(address),
       createdAt: Value(createdAt),
     );
   }
@@ -230,7 +194,6 @@ class Customer extends DataClass implements Insertable<Customer> {
       name: serializer.fromJson<String>(json['name']),
       phone: serializer.fromJson<String?>(json['phone']),
       email: serializer.fromJson<String?>(json['email']),
-      address: serializer.fromJson<String?>(json['address']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -242,7 +205,6 @@ class Customer extends DataClass implements Insertable<Customer> {
       'name': serializer.toJson<String>(name),
       'phone': serializer.toJson<String?>(phone),
       'email': serializer.toJson<String?>(email),
-      'address': serializer.toJson<String?>(address),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -252,14 +214,12 @@ class Customer extends DataClass implements Insertable<Customer> {
     String? name,
     Value<String?> phone = const Value.absent(),
     Value<String?> email = const Value.absent(),
-    Value<String?> address = const Value.absent(),
     DateTime? createdAt,
   }) => Customer(
     id: id ?? this.id,
     name: name ?? this.name,
     phone: phone.present ? phone.value : this.phone,
     email: email.present ? email.value : this.email,
-    address: address.present ? address.value : this.address,
     createdAt: createdAt ?? this.createdAt,
   );
   Customer copyWithCompanion(CustomersCompanion data) {
@@ -268,7 +228,6 @@ class Customer extends DataClass implements Insertable<Customer> {
       name: data.name.present ? data.name.value : this.name,
       phone: data.phone.present ? data.phone.value : this.phone,
       email: data.email.present ? data.email.value : this.email,
-      address: data.address.present ? data.address.value : this.address,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -280,14 +239,13 @@ class Customer extends DataClass implements Insertable<Customer> {
           ..write('name: $name, ')
           ..write('phone: $phone, ')
           ..write('email: $email, ')
-          ..write('address: $address, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, phone, email, address, createdAt);
+  int get hashCode => Object.hash(id, name, phone, email, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -296,7 +254,6 @@ class Customer extends DataClass implements Insertable<Customer> {
           other.name == this.name &&
           other.phone == this.phone &&
           other.email == this.email &&
-          other.address == this.address &&
           other.createdAt == this.createdAt);
 }
 
@@ -305,14 +262,12 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
   final Value<String> name;
   final Value<String?> phone;
   final Value<String?> email;
-  final Value<String?> address;
   final Value<DateTime> createdAt;
   const CustomersCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
-    this.address = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   CustomersCompanion.insert({
@@ -320,7 +275,6 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     required String name,
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
-    this.address = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Customer> custom({
@@ -328,7 +282,6 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     Expression<String>? name,
     Expression<String>? phone,
     Expression<String>? email,
-    Expression<String>? address,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -336,7 +289,6 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       if (name != null) 'name': name,
       if (phone != null) 'phone': phone,
       if (email != null) 'email': email,
-      if (address != null) 'address': address,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -346,7 +298,6 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     Value<String>? name,
     Value<String?>? phone,
     Value<String?>? email,
-    Value<String?>? address,
     Value<DateTime>? createdAt,
   }) {
     return CustomersCompanion(
@@ -354,7 +305,6 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       name: name ?? this.name,
       phone: phone ?? this.phone,
       email: email ?? this.email,
-      address: address ?? this.address,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -374,9 +324,6 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     if (email.present) {
       map['email'] = Variable<String>(email.value);
     }
-    if (address.present) {
-      map['address'] = Variable<String>(address.value);
-    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -390,7 +337,6 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
           ..write('name: $name, ')
           ..write('phone: $phone, ')
           ..write('email: $email, ')
-          ..write('address: $address, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -453,15 +399,6 @@ class $VehiclesTable extends Vehicles with TableInfo<$VehiclesTable, Vehicle> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _trimMeta = const VerificationMeta('trim');
-  @override
-  late final GeneratedColumn<String> trim = GeneratedColumn<String>(
-    'trim',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
   static const VerificationMeta _vinMeta = const VerificationMeta('vin');
   @override
   late final GeneratedColumn<String> vin = GeneratedColumn<String>(
@@ -512,7 +449,6 @@ class $VehiclesTable extends Vehicles with TableInfo<$VehiclesTable, Vehicle> {
     year,
     make,
     model,
-    trim,
     vin,
     mileage,
     licensePlate,
@@ -557,12 +493,6 @@ class $VehiclesTable extends Vehicles with TableInfo<$VehiclesTable, Vehicle> {
       context.handle(
         _modelMeta,
         model.isAcceptableOrUnknown(data['model']!, _modelMeta),
-      );
-    }
-    if (data.containsKey('trim')) {
-      context.handle(
-        _trimMeta,
-        trim.isAcceptableOrUnknown(data['trim']!, _trimMeta),
       );
     }
     if (data.containsKey('vin')) {
@@ -621,10 +551,6 @@ class $VehiclesTable extends Vehicles with TableInfo<$VehiclesTable, Vehicle> {
         DriftSqlType.string,
         data['${effectivePrefix}model'],
       ),
-      trim: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}trim'],
-      ),
       vin: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}vin'],
@@ -656,7 +582,6 @@ class Vehicle extends DataClass implements Insertable<Vehicle> {
   final int? year;
   final String? make;
   final String? model;
-  final String? trim;
   final String? vin;
   final int? mileage;
   final String? licensePlate;
@@ -667,7 +592,6 @@ class Vehicle extends DataClass implements Insertable<Vehicle> {
     this.year,
     this.make,
     this.model,
-    this.trim,
     this.vin,
     this.mileage,
     this.licensePlate,
@@ -686,9 +610,6 @@ class Vehicle extends DataClass implements Insertable<Vehicle> {
     }
     if (!nullToAbsent || model != null) {
       map['model'] = Variable<String>(model);
-    }
-    if (!nullToAbsent || trim != null) {
-      map['trim'] = Variable<String>(trim);
     }
     if (!nullToAbsent || vin != null) {
       map['vin'] = Variable<String>(vin);
@@ -712,7 +633,6 @@ class Vehicle extends DataClass implements Insertable<Vehicle> {
       model: model == null && nullToAbsent
           ? const Value.absent()
           : Value(model),
-      trim: trim == null && nullToAbsent ? const Value.absent() : Value(trim),
       vin: vin == null && nullToAbsent ? const Value.absent() : Value(vin),
       mileage: mileage == null && nullToAbsent
           ? const Value.absent()
@@ -735,7 +655,6 @@ class Vehicle extends DataClass implements Insertable<Vehicle> {
       year: serializer.fromJson<int?>(json['year']),
       make: serializer.fromJson<String?>(json['make']),
       model: serializer.fromJson<String?>(json['model']),
-      trim: serializer.fromJson<String?>(json['trim']),
       vin: serializer.fromJson<String?>(json['vin']),
       mileage: serializer.fromJson<int?>(json['mileage']),
       licensePlate: serializer.fromJson<String?>(json['licensePlate']),
@@ -751,7 +670,6 @@ class Vehicle extends DataClass implements Insertable<Vehicle> {
       'year': serializer.toJson<int?>(year),
       'make': serializer.toJson<String?>(make),
       'model': serializer.toJson<String?>(model),
-      'trim': serializer.toJson<String?>(trim),
       'vin': serializer.toJson<String?>(vin),
       'mileage': serializer.toJson<int?>(mileage),
       'licensePlate': serializer.toJson<String?>(licensePlate),
@@ -765,7 +683,6 @@ class Vehicle extends DataClass implements Insertable<Vehicle> {
     Value<int?> year = const Value.absent(),
     Value<String?> make = const Value.absent(),
     Value<String?> model = const Value.absent(),
-    Value<String?> trim = const Value.absent(),
     Value<String?> vin = const Value.absent(),
     Value<int?> mileage = const Value.absent(),
     Value<String?> licensePlate = const Value.absent(),
@@ -776,7 +693,6 @@ class Vehicle extends DataClass implements Insertable<Vehicle> {
     year: year.present ? year.value : this.year,
     make: make.present ? make.value : this.make,
     model: model.present ? model.value : this.model,
-    trim: trim.present ? trim.value : this.trim,
     vin: vin.present ? vin.value : this.vin,
     mileage: mileage.present ? mileage.value : this.mileage,
     licensePlate: licensePlate.present ? licensePlate.value : this.licensePlate,
@@ -791,7 +707,6 @@ class Vehicle extends DataClass implements Insertable<Vehicle> {
       year: data.year.present ? data.year.value : this.year,
       make: data.make.present ? data.make.value : this.make,
       model: data.model.present ? data.model.value : this.model,
-      trim: data.trim.present ? data.trim.value : this.trim,
       vin: data.vin.present ? data.vin.value : this.vin,
       mileage: data.mileage.present ? data.mileage.value : this.mileage,
       licensePlate: data.licensePlate.present
@@ -809,7 +724,6 @@ class Vehicle extends DataClass implements Insertable<Vehicle> {
           ..write('year: $year, ')
           ..write('make: $make, ')
           ..write('model: $model, ')
-          ..write('trim: $trim, ')
           ..write('vin: $vin, ')
           ..write('mileage: $mileage, ')
           ..write('licensePlate: $licensePlate, ')
@@ -825,7 +739,6 @@ class Vehicle extends DataClass implements Insertable<Vehicle> {
     year,
     make,
     model,
-    trim,
     vin,
     mileage,
     licensePlate,
@@ -840,7 +753,6 @@ class Vehicle extends DataClass implements Insertable<Vehicle> {
           other.year == this.year &&
           other.make == this.make &&
           other.model == this.model &&
-          other.trim == this.trim &&
           other.vin == this.vin &&
           other.mileage == this.mileage &&
           other.licensePlate == this.licensePlate &&
@@ -853,7 +765,6 @@ class VehiclesCompanion extends UpdateCompanion<Vehicle> {
   final Value<int?> year;
   final Value<String?> make;
   final Value<String?> model;
-  final Value<String?> trim;
   final Value<String?> vin;
   final Value<int?> mileage;
   final Value<String?> licensePlate;
@@ -864,7 +775,6 @@ class VehiclesCompanion extends UpdateCompanion<Vehicle> {
     this.year = const Value.absent(),
     this.make = const Value.absent(),
     this.model = const Value.absent(),
-    this.trim = const Value.absent(),
     this.vin = const Value.absent(),
     this.mileage = const Value.absent(),
     this.licensePlate = const Value.absent(),
@@ -876,7 +786,6 @@ class VehiclesCompanion extends UpdateCompanion<Vehicle> {
     this.year = const Value.absent(),
     this.make = const Value.absent(),
     this.model = const Value.absent(),
-    this.trim = const Value.absent(),
     this.vin = const Value.absent(),
     this.mileage = const Value.absent(),
     this.licensePlate = const Value.absent(),
@@ -888,7 +797,6 @@ class VehiclesCompanion extends UpdateCompanion<Vehicle> {
     Expression<int>? year,
     Expression<String>? make,
     Expression<String>? model,
-    Expression<String>? trim,
     Expression<String>? vin,
     Expression<int>? mileage,
     Expression<String>? licensePlate,
@@ -900,7 +808,6 @@ class VehiclesCompanion extends UpdateCompanion<Vehicle> {
       if (year != null) 'year': year,
       if (make != null) 'make': make,
       if (model != null) 'model': model,
-      if (trim != null) 'trim': trim,
       if (vin != null) 'vin': vin,
       if (mileage != null) 'mileage': mileage,
       if (licensePlate != null) 'license_plate': licensePlate,
@@ -914,7 +821,6 @@ class VehiclesCompanion extends UpdateCompanion<Vehicle> {
     Value<int?>? year,
     Value<String?>? make,
     Value<String?>? model,
-    Value<String?>? trim,
     Value<String?>? vin,
     Value<int?>? mileage,
     Value<String?>? licensePlate,
@@ -926,7 +832,6 @@ class VehiclesCompanion extends UpdateCompanion<Vehicle> {
       year: year ?? this.year,
       make: make ?? this.make,
       model: model ?? this.model,
-      trim: trim ?? this.trim,
       vin: vin ?? this.vin,
       mileage: mileage ?? this.mileage,
       licensePlate: licensePlate ?? this.licensePlate,
@@ -952,9 +857,6 @@ class VehiclesCompanion extends UpdateCompanion<Vehicle> {
     if (model.present) {
       map['model'] = Variable<String>(model.value);
     }
-    if (trim.present) {
-      map['trim'] = Variable<String>(trim.value);
-    }
     if (vin.present) {
       map['vin'] = Variable<String>(vin.value);
     }
@@ -978,7 +880,6 @@ class VehiclesCompanion extends UpdateCompanion<Vehicle> {
           ..write('year: $year, ')
           ..write('make: $make, ')
           ..write('model: $model, ')
-          ..write('trim: $trim, ')
           ..write('vin: $vin, ')
           ..write('mileage: $mileage, ')
           ..write('licensePlate: $licensePlate, ')
@@ -1006,7 +907,6 @@ typedef $$CustomersTableCreateCompanionBuilder =
       required String name,
       Value<String?> phone,
       Value<String?> email,
-      Value<String?> address,
       Value<DateTime> createdAt,
     });
 typedef $$CustomersTableUpdateCompanionBuilder =
@@ -1015,7 +915,6 @@ typedef $$CustomersTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String?> phone,
       Value<String?> email,
-      Value<String?> address,
       Value<DateTime> createdAt,
     });
 
@@ -1045,11 +944,6 @@ class $$CustomersTableFilterComposer
 
   ColumnFilters<String> get email => $composableBuilder(
     column: $table.email,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get address => $composableBuilder(
-    column: $table.address,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1088,11 +982,6 @@ class $$CustomersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get address => $composableBuilder(
-    column: $table.address,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -1119,9 +1008,6 @@ class $$CustomersTableAnnotationComposer
 
   GeneratedColumn<String> get email =>
       $composableBuilder(column: $table.email, builder: (column) => column);
-
-  GeneratedColumn<String> get address =>
-      $composableBuilder(column: $table.address, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -1159,14 +1045,12 @@ class $$CustomersTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String?> phone = const Value.absent(),
                 Value<String?> email = const Value.absent(),
-                Value<String?> address = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CustomersCompanion(
                 id: id,
                 name: name,
                 phone: phone,
                 email: email,
-                address: address,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -1175,14 +1059,12 @@ class $$CustomersTableTableManager
                 required String name,
                 Value<String?> phone = const Value.absent(),
                 Value<String?> email = const Value.absent(),
-                Value<String?> address = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CustomersCompanion.insert(
                 id: id,
                 name: name,
                 phone: phone,
                 email: email,
-                address: address,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -1214,7 +1096,6 @@ typedef $$VehiclesTableCreateCompanionBuilder =
       Value<int?> year,
       Value<String?> make,
       Value<String?> model,
-      Value<String?> trim,
       Value<String?> vin,
       Value<int?> mileage,
       Value<String?> licensePlate,
@@ -1227,7 +1108,6 @@ typedef $$VehiclesTableUpdateCompanionBuilder =
       Value<int?> year,
       Value<String?> make,
       Value<String?> model,
-      Value<String?> trim,
       Value<String?> vin,
       Value<int?> mileage,
       Value<String?> licensePlate,
@@ -1265,11 +1145,6 @@ class $$VehiclesTableFilterComposer
 
   ColumnFilters<String> get model => $composableBuilder(
     column: $table.model,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get trim => $composableBuilder(
-    column: $table.trim,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1328,11 +1203,6 @@ class $$VehiclesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get trim => $composableBuilder(
-    column: $table.trim,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get vin => $composableBuilder(
     column: $table.vin,
     builder: (column) => ColumnOrderings(column),
@@ -1379,9 +1249,6 @@ class $$VehiclesTableAnnotationComposer
 
   GeneratedColumn<String> get model =>
       $composableBuilder(column: $table.model, builder: (column) => column);
-
-  GeneratedColumn<String> get trim =>
-      $composableBuilder(column: $table.trim, builder: (column) => column);
 
   GeneratedColumn<String> get vin =>
       $composableBuilder(column: $table.vin, builder: (column) => column);
@@ -1431,7 +1298,6 @@ class $$VehiclesTableTableManager
                 Value<int?> year = const Value.absent(),
                 Value<String?> make = const Value.absent(),
                 Value<String?> model = const Value.absent(),
-                Value<String?> trim = const Value.absent(),
                 Value<String?> vin = const Value.absent(),
                 Value<int?> mileage = const Value.absent(),
                 Value<String?> licensePlate = const Value.absent(),
@@ -1442,7 +1308,6 @@ class $$VehiclesTableTableManager
                 year: year,
                 make: make,
                 model: model,
-                trim: trim,
                 vin: vin,
                 mileage: mileage,
                 licensePlate: licensePlate,
@@ -1455,7 +1320,6 @@ class $$VehiclesTableTableManager
                 Value<int?> year = const Value.absent(),
                 Value<String?> make = const Value.absent(),
                 Value<String?> model = const Value.absent(),
-                Value<String?> trim = const Value.absent(),
                 Value<String?> vin = const Value.absent(),
                 Value<int?> mileage = const Value.absent(),
                 Value<String?> licensePlate = const Value.absent(),
@@ -1466,7 +1330,6 @@ class $$VehiclesTableTableManager
                 year: year,
                 make: make,
                 model: model,
-                trim: trim,
                 vin: vin,
                 mileage: mileage,
                 licensePlate: licensePlate,
