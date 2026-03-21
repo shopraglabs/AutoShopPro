@@ -141,10 +141,18 @@ The heart of the app. Everything else depends on this.
 ### App Foundation (v1.0.0 Bones ✅)
 - ✅ Flutter project created
 - ✅ App running on macOS via Xcode
-- ⬜ Riverpod setup
+- ✅ CupertinoApp with system blue theme (#007AFF)
+- ✅ Adaptive layout — sidebar on desktop (>700px width), CupertinoTabBar on mobile
+- ✅ AutoShopPro branding in sidebar
+- ✅ All 5 module nav items with Cupertino icons
+- ✅ Active state highlighting (system blue background, white text/icon)
+- ✅ CupertinoNavigationBar on each screen
+- ✅ Placeholder screens for all 5 modules (icon + title + "Coming soon")
+- ✅ Mobile tab bar layout (CupertinoTabScaffold + CupertinoTabBar)
+- ✅ Git initialized and connected to GitHub
+- ✅ README.md, module_plan.md, AutoShopPro_Build_Log.docx created
+- ⬜ Riverpod state management setup
 - ⬜ go_router navigation setup
-- ⬜ Adaptive layout shell (sidebar on desktop, tab bar on mobile)
-- ⬜ Cupertino theme configuration (colors, typography)
 - ⬜ Drift database initialization
 
 ### Backend (Go — planned)

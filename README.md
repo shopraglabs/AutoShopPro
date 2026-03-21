@@ -6,7 +6,13 @@ A cross-platform automotive shop management app built with Flutter, inspired by 
 
 ## Project Status
 
-**v1.0.0 — Bones** — App scaffolding is up and running. No features built yet.
+**v1.0.0 — Bones** — Adaptive app shell complete. Sidebar navigation on desktop, tab bar on mobile, all 5 module placeholders wired up. Ready to build features.
+
+---
+
+## GitHub
+
+[https://github.com/shopraglabs/AutoShopPro](https://github.com/shopraglabs/AutoShopPro)
 
 ---
 
