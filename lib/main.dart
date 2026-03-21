@@ -1,7 +1,10 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'router.dart';
 
 void main() {
-  runApp(const AutoShopProApp());
+  runApp(const ProviderScope(child: AutoShopProApp()));
 }
 
 class AutoShopProApp extends StatelessWidget {
@@ -9,26 +12,36 @@ class AutoShopProApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const CupertinoApp(
+    return CupertinoApp.router(
       title: 'AutoShopPro',
-      theme: CupertinoThemeData(
+      theme: const CupertinoThemeData(
         primaryColor: Color(0xFF007AFF),
         brightness: Brightness.light,
       ),
-      home: AppShell(),
+      routerConfig: appRouter,
     );
   }
 }
 
+// AppShell is the outer frame that holds the sidebar (desktop) or tab bar
+// (mobile). The current screen is passed in as 'child' by go_router.
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  final Widget child;
+  const AppShell({super.key, required this.child});
 
   @override
   State<AppShell> createState() => _AppShellState();
 }
 
 class _AppShellState extends State<AppShell> {
-  int _selectedIndex = 0;
+  // The list of routes in the same order as the nav items below.
+  final List<String> _routes = const [
+    '/repair-orders',
+    '/parts',
+    '/payments',
+    '/dashboard',
+    '/accounting',
+  ];
 
   final List<_NavItem> _navItems = const [
     _NavItem(label: 'Repair Orders', icon: CupertinoIcons.wrench),
@@ -38,25 +51,25 @@ class _AppShellState extends State<AppShell> {
     _NavItem(label: 'Accounting', icon: CupertinoIcons.book),
   ];
 
-  final List<Widget> _screens = const [
-    PlaceholderScreen(title: 'Repair Orders'),
-    PlaceholderScreen(title: 'Parts'),
-    PlaceholderScreen(title: 'Payments'),
-    PlaceholderScreen(title: 'Dashboard'),
-    PlaceholderScreen(title: 'Accounting'),
-  ];
+  // Figure out which nav item is active by matching the current URL path.
+  int _selectedIndex(BuildContext context) {
+    final location = GoRouterState.of(context).uri.path;
+    final index = _routes.indexWhere((r) => location.startsWith(r));
+    return index < 0 ? 0 : index;
+  }
 
   @override
   Widget build(BuildContext context) {
     final bool isDesktop = MediaQuery.of(context).size.width > 700;
     if (isDesktop) {
-      return _buildDesktopLayout();
+      return _buildDesktopLayout(context);
     } else {
-      return _buildMobileLayout();
+      return _buildMobileLayout(context);
     }
   }
 
-  Widget _buildDesktopLayout() {
+  Widget _buildDesktopLayout(BuildContext context) {
+    final selected = _selectedIndex(context);
     return CupertinoPageScaffold(
       child: Row(
         children: [
@@ -81,9 +94,9 @@ class _AppShellState extends State<AppShell> {
                 const SizedBox(height: 16),
                 ...List.generate(_navItems.length, (index) {
                   final item = _navItems[index];
-                  final isSelected = _selectedIndex == index;
+                  final isSelected = selected == index;
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedIndex = index),
+                    onTap: () => context.go(_routes[index]),
                     child: Container(
                       margin: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
@@ -126,17 +139,18 @@ class _AppShellState extends State<AppShell> {
             ),
           ),
           Container(width: 1, color: const Color(0xFFE5E5EA)),
-          Expanded(child: _screens[_selectedIndex]),
+          Expanded(child: widget.child),
         ],
       ),
     );
   }
 
-  Widget _buildMobileLayout() {
+  Widget _buildMobileLayout(BuildContext context) {
+    final selected = _selectedIndex(context);
     return CupertinoTabScaffold(
       tabBar: CupertinoTabBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
+        currentIndex: selected,
+        onTap: (index) => context.go(_routes[index]),
         items: _navItems
             .map((item) => BottomNavigationBarItem(
                   icon: Icon(item.icon),
@@ -144,7 +158,7 @@ class _AppShellState extends State<AppShell> {
                 ))
             .toList(),
       ),
-      tabBuilder: (context, index) => _screens[index],
+      tabBuilder: (context, index) => widget.child,
     );
   }
 }

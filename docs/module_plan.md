@@ -151,9 +151,11 @@ The heart of the app. Everything else depends on this.
 - ✅ Mobile tab bar layout (CupertinoTabScaffold + CupertinoTabBar)
 - ✅ Git initialized and connected to GitHub
 - ✅ README.md, module_plan.md, AutoShopPro_Build_Log.docx created
-- ⬜ Riverpod state management setup
-- ⬜ go_router navigation setup
-- ⬜ Drift database initialization
+### Infrastructure (v1.1.0 Ignition ✅)
+- ✅ Riverpod state management setup
+- ✅ go_router navigation setup (ShellRoute with 5 module routes)
+- ✅ Drift database initialization (customers + vehicles tables)
+- ✅ Dock display name fixed to AutoShopPro
 
 ### Backend (Go — planned)
 - ⬜ Go project scaffolding
