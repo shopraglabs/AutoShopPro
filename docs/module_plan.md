@@ -66,9 +66,9 @@ The heart of the app. Everything else depends on this.
 - ✅ Mark items done on RO (checkmark toggle per line item while open)
 - ✅ Edit Estimate link from non-closed RO detail
 - ✅ Declined items filtered out of RO (not shown, not counted in totals)
-- ⬜ Edit RO details
-- ⬜ Assign technician to RO
-- ⬜ RO list status filters
+- ✅ Edit RO details
+- ✅ Assign technician to RO
+- ✅ RO list status filters
 
 ### Local Database (Drift/SQLite)
 - ✅ Drift database setup
@@ -246,6 +246,17 @@ The heart of the app. Everything else depends on this.
 - ✅ Partial estimate approval — approve/decline individual line items (schema v13)
 - ✅ Declined items: strikethrough + gray in estimate; filtered from RO entirely
 - ✅ Totals section shows "X items declined −$Y.YY" footnote
+
+### Module 1 Complete (v0.6.0 Full Bay)
+- ✅ RO list status filter pills (All / Open / In Progress / Completed / Closed)
+- ✅ Edit RO details form (internal note, accessible from ACTIONS on non-closed ROs)
+- ✅ Technicians table (schema v14) — name, specialty, phone
+- ✅ Technician list screen + add/edit/delete form
+- ✅ Assign technician to RO (bottom sheet picker with "+ New Technician" option)
+- ✅ Assigned technician shown in RO detail header
+- ✅ Technicians row added to Repair Orders hub screen
+
+---
 
 ### Backend (Go — planned)
 - ⬜ Go project scaffolding

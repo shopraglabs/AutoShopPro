@@ -99,6 +99,18 @@ class RepairOrders extends Table {
   TextColumn get note => text().nullable()();
   // 'open' | 'in_progress' | 'completed' | 'closed'
   TextColumn get status => text().withDefault(const Constant('open'))();
+  // Which technician is assigned to this RO (optional)
+  IntColumn get technicianId => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+// A technician who works at the shop. ROs can be assigned to a technician.
+class Technicians extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  // e.g. "Engine", "Brakes", "Electrical"
+  TextColumn get specialty => text().nullable()();
+  TextColumn get phone => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -150,6 +162,7 @@ class RepairOrderWithDetails {
   ShopSettings,
   Vendors,
   RepairOrders,
+  Technicians,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -157,7 +170,7 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   // Drift runs this when it finds an older database on the device.
   @override
@@ -262,6 +275,16 @@ class AppDatabase extends _$AppDatabase {
             .get();
         if (approvalCol.isEmpty) {
           await m.addColumn(estimateLineItems, estimateLineItems.approvalStatus);
+        }
+      }
+      if (from < 14) {
+        // Added in v14: technicians table + technician_id on repair_orders.
+        await m.createTable(technicians);
+        final techCol = await m.database.customSelect(
+            "SELECT name FROM pragma_table_info('repair_orders') WHERE name='technician_id'")
+            .get();
+        if (techCol.isEmpty) {
+          await m.addColumn(repairOrders, repairOrders.technicianId);
         }
       }
     },
@@ -438,6 +461,10 @@ class AppDatabase extends _$AppDatabase {
         .toList());
   }
 
+  // Fetches a single repair order by id (one-time read).
+  Future<RepairOrder?> getRepairOrder(int id) =>
+      (select(repairOrders)..where((r) => r.id.equals(id))).getSingleOrNull();
+
   // Returns a live stream of a single RO by id.
   Stream<RepairOrder?> watchRepairOrder(int id) =>
       (select(repairOrders)..where((r) => r.id.equals(id)))
@@ -460,6 +487,24 @@ class AppDatabase extends _$AppDatabase {
   // Permanently removes a repair order by id.
   Future<int> deleteRepairOrder(int id) =>
       (delete(repairOrders)..where((r) => r.id.equals(id))).go();
+
+  // ─── Technician Queries ───────────────────────────────────────────────────
+
+  Stream<List<Technician>> watchAllTechnicians() =>
+      (select(technicians)..orderBy([(t) => OrderingTerm.asc(t.name)]))
+          .watch();
+
+  Future<Technician?> getTechnician(int id) =>
+      (select(technicians)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  Future<int> insertTechnician(TechniciansCompanion entry) =>
+      into(technicians).insert(entry);
+
+  Future<bool> updateTechnician(Technician tech) =>
+      update(technicians).replace(tech);
+
+  Future<int> deleteTechnician(int id) =>
+      (delete(technicians)..where((t) => t.id.equals(id))).go();
 }
 
 // Opens (or creates) the SQLite database file on the device.

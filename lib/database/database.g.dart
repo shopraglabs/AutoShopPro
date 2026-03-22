@@ -2871,6 +2871,17 @@ class $RepairOrdersTable extends RepairOrders
     requiredDuringInsert: false,
     defaultValue: const Constant('open'),
   );
+  static const VerificationMeta _technicianIdMeta = const VerificationMeta(
+    'technicianId',
+  );
+  @override
+  late final GeneratedColumn<int> technicianId = GeneratedColumn<int>(
+    'technician_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2891,6 +2902,7 @@ class $RepairOrdersTable extends RepairOrders
     vehicleId,
     note,
     status,
+    technicianId,
     createdAt,
   ];
   @override
@@ -2940,6 +2952,15 @@ class $RepairOrdersTable extends RepairOrders
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
+    if (data.containsKey('technician_id')) {
+      context.handle(
+        _technicianIdMeta,
+        technicianId.isAcceptableOrUnknown(
+          data['technician_id']!,
+          _technicianIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2979,6 +3000,10 @@ class $RepairOrdersTable extends RepairOrders
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      technicianId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}technician_id'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2999,6 +3024,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
   final int? vehicleId;
   final String? note;
   final String status;
+  final int? technicianId;
   final DateTime createdAt;
   const RepairOrder({
     required this.id,
@@ -3007,6 +3033,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     this.vehicleId,
     this.note,
     required this.status,
+    this.technicianId,
     required this.createdAt,
   });
   @override
@@ -3024,6 +3051,9 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
       map['note'] = Variable<String>(note);
     }
     map['status'] = Variable<String>(status);
+    if (!nullToAbsent || technicianId != null) {
+      map['technician_id'] = Variable<int>(technicianId);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -3040,6 +3070,9 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
           : Value(vehicleId),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       status: Value(status),
+      technicianId: technicianId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(technicianId),
       createdAt: Value(createdAt),
     );
   }
@@ -3056,6 +3089,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
       vehicleId: serializer.fromJson<int?>(json['vehicleId']),
       note: serializer.fromJson<String?>(json['note']),
       status: serializer.fromJson<String>(json['status']),
+      technicianId: serializer.fromJson<int?>(json['technicianId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -3069,6 +3103,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
       'vehicleId': serializer.toJson<int?>(vehicleId),
       'note': serializer.toJson<String?>(note),
       'status': serializer.toJson<String>(status),
+      'technicianId': serializer.toJson<int?>(technicianId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -3080,6 +3115,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     Value<int?> vehicleId = const Value.absent(),
     Value<String?> note = const Value.absent(),
     String? status,
+    Value<int?> technicianId = const Value.absent(),
     DateTime? createdAt,
   }) => RepairOrder(
     id: id ?? this.id,
@@ -3088,6 +3124,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     vehicleId: vehicleId.present ? vehicleId.value : this.vehicleId,
     note: note.present ? note.value : this.note,
     status: status ?? this.status,
+    technicianId: technicianId.present ? technicianId.value : this.technicianId,
     createdAt: createdAt ?? this.createdAt,
   );
   RepairOrder copyWithCompanion(RepairOrdersCompanion data) {
@@ -3102,6 +3139,9 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
       vehicleId: data.vehicleId.present ? data.vehicleId.value : this.vehicleId,
       note: data.note.present ? data.note.value : this.note,
       status: data.status.present ? data.status.value : this.status,
+      technicianId: data.technicianId.present
+          ? data.technicianId.value
+          : this.technicianId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -3115,6 +3155,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
           ..write('vehicleId: $vehicleId, ')
           ..write('note: $note, ')
           ..write('status: $status, ')
+          ..write('technicianId: $technicianId, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -3128,6 +3169,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     vehicleId,
     note,
     status,
+    technicianId,
     createdAt,
   );
   @override
@@ -3140,6 +3182,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
           other.vehicleId == this.vehicleId &&
           other.note == this.note &&
           other.status == this.status &&
+          other.technicianId == this.technicianId &&
           other.createdAt == this.createdAt);
 }
 
@@ -3150,6 +3193,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
   final Value<int?> vehicleId;
   final Value<String?> note;
   final Value<String> status;
+  final Value<int?> technicianId;
   final Value<DateTime> createdAt;
   const RepairOrdersCompanion({
     this.id = const Value.absent(),
@@ -3158,6 +3202,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     this.vehicleId = const Value.absent(),
     this.note = const Value.absent(),
     this.status = const Value.absent(),
+    this.technicianId = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   RepairOrdersCompanion.insert({
@@ -3167,6 +3212,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     this.vehicleId = const Value.absent(),
     this.note = const Value.absent(),
     this.status = const Value.absent(),
+    this.technicianId = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : customerId = Value(customerId);
   static Insertable<RepairOrder> custom({
@@ -3176,6 +3222,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     Expression<int>? vehicleId,
     Expression<String>? note,
     Expression<String>? status,
+    Expression<int>? technicianId,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -3185,6 +3232,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
       if (vehicleId != null) 'vehicle_id': vehicleId,
       if (note != null) 'note': note,
       if (status != null) 'status': status,
+      if (technicianId != null) 'technician_id': technicianId,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -3196,6 +3244,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     Value<int?>? vehicleId,
     Value<String?>? note,
     Value<String>? status,
+    Value<int?>? technicianId,
     Value<DateTime>? createdAt,
   }) {
     return RepairOrdersCompanion(
@@ -3205,6 +3254,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
       vehicleId: vehicleId ?? this.vehicleId,
       note: note ?? this.note,
       status: status ?? this.status,
+      technicianId: technicianId ?? this.technicianId,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -3230,6 +3280,9 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (technicianId.present) {
+      map['technician_id'] = Variable<int>(technicianId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3245,6 +3298,349 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
           ..write('vehicleId: $vehicleId, ')
           ..write('note: $note, ')
           ..write('status: $status, ')
+          ..write('technicianId: $technicianId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TechniciansTable extends Technicians
+    with TableInfo<$TechniciansTable, Technician> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TechniciansTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _specialtyMeta = const VerificationMeta(
+    'specialty',
+  );
+  @override
+  late final GeneratedColumn<String> specialty = GeneratedColumn<String>(
+    'specialty',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _phoneMeta = const VerificationMeta('phone');
+  @override
+  late final GeneratedColumn<String> phone = GeneratedColumn<String>(
+    'phone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, specialty, phone, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'technicians';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Technician> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('specialty')) {
+      context.handle(
+        _specialtyMeta,
+        specialty.isAcceptableOrUnknown(data['specialty']!, _specialtyMeta),
+      );
+    }
+    if (data.containsKey('phone')) {
+      context.handle(
+        _phoneMeta,
+        phone.isAcceptableOrUnknown(data['phone']!, _phoneMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Technician map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Technician(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      specialty: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}specialty'],
+      ),
+      phone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}phone'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TechniciansTable createAlias(String alias) {
+    return $TechniciansTable(attachedDatabase, alias);
+  }
+}
+
+class Technician extends DataClass implements Insertable<Technician> {
+  final int id;
+  final String name;
+  final String? specialty;
+  final String? phone;
+  final DateTime createdAt;
+  const Technician({
+    required this.id,
+    required this.name,
+    this.specialty,
+    this.phone,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || specialty != null) {
+      map['specialty'] = Variable<String>(specialty);
+    }
+    if (!nullToAbsent || phone != null) {
+      map['phone'] = Variable<String>(phone);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  TechniciansCompanion toCompanion(bool nullToAbsent) {
+    return TechniciansCompanion(
+      id: Value(id),
+      name: Value(name),
+      specialty: specialty == null && nullToAbsent
+          ? const Value.absent()
+          : Value(specialty),
+      phone: phone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(phone),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory Technician.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Technician(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      specialty: serializer.fromJson<String?>(json['specialty']),
+      phone: serializer.fromJson<String?>(json['phone']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'specialty': serializer.toJson<String?>(specialty),
+      'phone': serializer.toJson<String?>(phone),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  Technician copyWith({
+    int? id,
+    String? name,
+    Value<String?> specialty = const Value.absent(),
+    Value<String?> phone = const Value.absent(),
+    DateTime? createdAt,
+  }) => Technician(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    specialty: specialty.present ? specialty.value : this.specialty,
+    phone: phone.present ? phone.value : this.phone,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  Technician copyWithCompanion(TechniciansCompanion data) {
+    return Technician(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      specialty: data.specialty.present ? data.specialty.value : this.specialty,
+      phone: data.phone.present ? data.phone.value : this.phone,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Technician(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('specialty: $specialty, ')
+          ..write('phone: $phone, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, specialty, phone, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Technician &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.specialty == this.specialty &&
+          other.phone == this.phone &&
+          other.createdAt == this.createdAt);
+}
+
+class TechniciansCompanion extends UpdateCompanion<Technician> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<String?> specialty;
+  final Value<String?> phone;
+  final Value<DateTime> createdAt;
+  const TechniciansCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.specialty = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  TechniciansCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    this.specialty = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : name = Value(name);
+  static Insertable<Technician> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<String>? specialty,
+    Expression<String>? phone,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (specialty != null) 'specialty': specialty,
+      if (phone != null) 'phone': phone,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  TechniciansCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<String?>? specialty,
+    Value<String?>? phone,
+    Value<DateTime>? createdAt,
+  }) {
+    return TechniciansCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      specialty: specialty ?? this.specialty,
+      phone: phone ?? this.phone,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (specialty.present) {
+      map['specialty'] = Variable<String>(specialty.value);
+    }
+    if (phone.present) {
+      map['phone'] = Variable<String>(phone.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TechniciansCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('specialty: $specialty, ')
+          ..write('phone: $phone, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -3262,6 +3658,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ShopSettingsTable shopSettings = $ShopSettingsTable(this);
   late final $VendorsTable vendors = $VendorsTable(this);
   late final $RepairOrdersTable repairOrders = $RepairOrdersTable(this);
+  late final $TechniciansTable technicians = $TechniciansTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3274,6 +3671,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     shopSettings,
     vendors,
     repairOrders,
+    technicians,
   ];
 }
 
@@ -4711,6 +5109,7 @@ typedef $$RepairOrdersTableCreateCompanionBuilder =
       Value<int?> vehicleId,
       Value<String?> note,
       Value<String> status,
+      Value<int?> technicianId,
       Value<DateTime> createdAt,
     });
 typedef $$RepairOrdersTableUpdateCompanionBuilder =
@@ -4721,6 +5120,7 @@ typedef $$RepairOrdersTableUpdateCompanionBuilder =
       Value<int?> vehicleId,
       Value<String?> note,
       Value<String> status,
+      Value<int?> technicianId,
       Value<DateTime> createdAt,
     });
 
@@ -4760,6 +5160,11 @@ class $$RepairOrdersTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get technicianId => $composableBuilder(
+    column: $table.technicianId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4808,6 +5213,11 @@ class $$RepairOrdersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get technicianId => $composableBuilder(
+    column: $table.technicianId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -4844,6 +5254,11 @@ class $$RepairOrdersTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get technicianId => $composableBuilder(
+    column: $table.technicianId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -4886,6 +5301,7 @@ class $$RepairOrdersTableTableManager
                 Value<int?> vehicleId = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<int?> technicianId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => RepairOrdersCompanion(
                 id: id,
@@ -4894,6 +5310,7 @@ class $$RepairOrdersTableTableManager
                 vehicleId: vehicleId,
                 note: note,
                 status: status,
+                technicianId: technicianId,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -4904,6 +5321,7 @@ class $$RepairOrdersTableTableManager
                 Value<int?> vehicleId = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<int?> technicianId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => RepairOrdersCompanion.insert(
                 id: id,
@@ -4912,6 +5330,7 @@ class $$RepairOrdersTableTableManager
                 vehicleId: vehicleId,
                 note: note,
                 status: status,
+                technicianId: technicianId,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -4939,6 +5358,200 @@ typedef $$RepairOrdersTableProcessedTableManager =
       RepairOrder,
       PrefetchHooks Function()
     >;
+typedef $$TechniciansTableCreateCompanionBuilder =
+    TechniciansCompanion Function({
+      Value<int> id,
+      required String name,
+      Value<String?> specialty,
+      Value<String?> phone,
+      Value<DateTime> createdAt,
+    });
+typedef $$TechniciansTableUpdateCompanionBuilder =
+    TechniciansCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<String?> specialty,
+      Value<String?> phone,
+      Value<DateTime> createdAt,
+    });
+
+class $$TechniciansTableFilterComposer
+    extends Composer<_$AppDatabase, $TechniciansTable> {
+  $$TechniciansTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get specialty => $composableBuilder(
+    column: $table.specialty,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TechniciansTableOrderingComposer
+    extends Composer<_$AppDatabase, $TechniciansTable> {
+  $$TechniciansTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get specialty => $composableBuilder(
+    column: $table.specialty,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TechniciansTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TechniciansTable> {
+  $$TechniciansTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get specialty =>
+      $composableBuilder(column: $table.specialty, builder: (column) => column);
+
+  GeneratedColumn<String> get phone =>
+      $composableBuilder(column: $table.phone, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$TechniciansTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TechniciansTable,
+          Technician,
+          $$TechniciansTableFilterComposer,
+          $$TechniciansTableOrderingComposer,
+          $$TechniciansTableAnnotationComposer,
+          $$TechniciansTableCreateCompanionBuilder,
+          $$TechniciansTableUpdateCompanionBuilder,
+          (
+            Technician,
+            BaseReferences<_$AppDatabase, $TechniciansTable, Technician>,
+          ),
+          Technician,
+          PrefetchHooks Function()
+        > {
+  $$TechniciansTableTableManager(_$AppDatabase db, $TechniciansTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TechniciansTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TechniciansTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TechniciansTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> specialty = const Value.absent(),
+                Value<String?> phone = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => TechniciansCompanion(
+                id: id,
+                name: name,
+                specialty: specialty,
+                phone: phone,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                Value<String?> specialty = const Value.absent(),
+                Value<String?> phone = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => TechniciansCompanion.insert(
+                id: id,
+                name: name,
+                specialty: specialty,
+                phone: phone,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TechniciansTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TechniciansTable,
+      Technician,
+      $$TechniciansTableFilterComposer,
+      $$TechniciansTableOrderingComposer,
+      $$TechniciansTableAnnotationComposer,
+      $$TechniciansTableCreateCompanionBuilder,
+      $$TechniciansTableUpdateCompanionBuilder,
+      (
+        Technician,
+        BaseReferences<_$AppDatabase, $TechniciansTable, Technician>,
+      ),
+      Technician,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4957,4 +5570,6 @@ class $AppDatabaseManager {
       $$VendorsTableTableManager(_db, _db.vendors);
   $$RepairOrdersTableTableManager get repairOrders =>
       $$RepairOrdersTableTableManager(_db, _db.repairOrders);
+  $$TechniciansTableTableManager get technicians =>
+      $$TechniciansTableTableManager(_db, _db.technicians);
 }

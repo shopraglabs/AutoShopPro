@@ -40,11 +40,29 @@ Color _statusColor(String status) {
   }
 }
 
-class RoListScreen extends ConsumerWidget {
+// The status filter options shown in the pill bar.
+// null means "All" — no filtering applied.
+const _filters = <(String label, String? value)>[
+  ('All', null),
+  ('Open', 'open'),
+  ('In Progress', 'in_progress'),
+  ('Completed', 'completed'),
+  ('Closed', 'closed'),
+];
+
+class RoListScreen extends ConsumerStatefulWidget {
   const RoListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RoListScreen> createState() => _RoListScreenState();
+}
+
+class _RoListScreenState extends ConsumerState<RoListScreen> {
+  // null = show all; otherwise filter to that status string
+  String? _filter;
+
+  @override
+  Widget build(BuildContext context) {
     final rosAsync = ref.watch(repairOrdersProvider);
 
     return CupertinoPageScaffold(
@@ -52,60 +70,143 @@ class RoListScreen extends ConsumerWidget {
         middle: Text('Repair Orders'),
       ),
       child: SafeArea(
-        child: rosAsync.when(
-          loading: () =>
-              const Center(child: CupertinoActivityIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
-          data: (ros) {
-            if (ros.isEmpty) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        CupertinoIcons.doc_text,
-                        size: 48,
-                        color: Color(0xFFC7C7CC),
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'No repair orders yet.',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF3A3A3C),
-                        ),
-                      ),
-                      SizedBox(height: 6),
-                      Text(
-                        'Convert an estimate to create your first RO.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF8E8E93),
-                        ),
+        child: Column(
+          children: [
+            // ── Status filter pill bar ─────────────────────────────────────
+            Container(
+              color: CupertinoColors.systemGroupedBackground,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    for (int i = 0; i < _filters.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      _FilterPill(
+                        label: _filters[i].$1,
+                        selected: _filter == _filters[i].$2,
+                        onTap: () =>
+                            setState(() => _filter = _filters[i].$2),
                       ),
                     ],
-                  ),
+                  ],
                 ),
-              );
-            }
+              ),
+            ),
 
-            return ListView.builder(
-              itemCount: ros.length,
-              itemBuilder: (context, index) {
-                final item = ros[index];
-                return _RoRow(
-                  item: item,
-                  onTap: () =>
-                      context.push('/repair-orders/ros/${item.ro.id}'),
-                  showDivider: index < ros.length - 1,
-                );
-              },
-            );
-          },
+            // ── RO list ───────────────────────────────────────────────────
+            Expanded(
+              child: rosAsync.when(
+                loading: () =>
+                    const Center(child: CupertinoActivityIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
+                data: (allRos) {
+                  // Apply the active filter
+                  final ros = _filter == null
+                      ? allRos
+                      : allRos
+                          .where((r) => r.ro.status == _filter)
+                          .toList();
+
+                  if (ros.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              CupertinoIcons.doc_text,
+                              size: 48,
+                              color: Color(0xFFC7C7CC),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _filter == null
+                                  ? 'No repair orders yet.'
+                                  : 'No ${_statusLabel(_filter!).toLowerCase()} repair orders.',
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF3A3A3C),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _filter == null
+                                  ? 'Convert an estimate to create your first RO.'
+                                  : 'Try a different filter above.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF8E8E93),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: ros.length,
+                    itemBuilder: (context, index) {
+                      final item = ros[index];
+                      return _RoRow(
+                        item: item,
+                        onTap: () =>
+                            context.push('/repair-orders/ros/${item.ro.id}'),
+                        showDivider: index < ros.length - 1,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Filter Pill ───────────────────────────────────────────────────────────────
+class _FilterPill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected
+              ? const Color(0xFF007AFF)
+              : const Color(0xFFE5E5EA),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight:
+                selected ? FontWeight.w600 : FontWeight.normal,
+            color: selected
+                ? CupertinoColors.white
+                : const Color(0xFF3A3A3C),
+          ),
         ),
       ),
     );

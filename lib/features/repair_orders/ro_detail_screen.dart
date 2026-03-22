@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
 import '../estimates/estimates_provider.dart';
+import '../technicians/technicians_provider.dart';
 import 'repair_orders_provider.dart';
 
 String _roNumber(int id) => 'RO-${id.toString().padLeft(4, '0')}';
@@ -159,6 +160,39 @@ class _RoDetailView extends ConsumerWidget {
     await db.updateRepairOrder(ro.copyWith(status: nextStatus));
   }
 
+  void _showTechPicker(BuildContext context, WidgetRef ref) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (ctx) => Consumer(
+        builder: (ctx, innerRef, _) {
+          final techsAsync = innerRef.watch(techniciansProvider);
+          final techs = techsAsync.value ?? [];
+          return _TechPickerSheet(
+            techs: techs,
+            currentTechId: ro.technicianId,
+            onSelect: (techId) async {
+              await innerRef
+                  .read(dbProvider)
+                  .updateRepairOrder(ro.copyWith(technicianId: Value(techId)));
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            onRemove: ro.technicianId != null
+                ? () async {
+                    await innerRef.read(dbProvider).updateRepairOrder(
+                        ro.copyWith(technicianId: const Value(null)));
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  }
+                : null,
+            onCreateNew: () {
+              Navigator.pop(ctx);
+              context.push('/repair-orders/technicians/new');
+            },
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Declined items are excluded from the repair order — only approved/pending work shows
@@ -294,14 +328,14 @@ class _RoDetailView extends ConsumerWidget {
             ],
 
             // ── Actions ───────────────────────────────────────────────────
-            if (next != null || (ro.estimateId != null && ro.status != 'closed')) ...[
+            if (ro.status != 'closed') ...[
               _sectionHeader('ACTIONS'),
               Container(
                 color: CupertinoColors.white,
                 child: Column(
                   children: [
                     // Edit Estimate — visible on any non-closed RO with an estimate
-                    if (ro.estimateId != null && ro.status != 'closed') ...[
+                    if (ro.estimateId != null) ...[
                       GestureDetector(
                         onTap: () => context
                             .push('/repair-orders/estimates/${ro.estimateId}'),
@@ -326,14 +360,74 @@ class _RoDetailView extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      if (next != null)
-                        Container(
-                            height: 0.5,
-                            color: const Color(0xFFE5E5EA),
-                            margin: const EdgeInsets.only(left: 46)),
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 46)),
                     ],
+                    // Edit RO note
+                    GestureDetector(
+                      onTap: () => context
+                          .push('/repair-orders/ros/${ro.id}/edit'),
+                      child: Container(
+                        color: CupertinoColors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        child: const Row(
+                          children: [
+                            Icon(CupertinoIcons.pencil,
+                                size: 18, color: Color(0xFF007AFF)),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text('Edit RO',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF007AFF))),
+                            ),
+                            Icon(CupertinoIcons.chevron_right,
+                                size: 16, color: Color(0xFFC7C7CC)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Container(
+                        height: 0.5,
+                        color: const Color(0xFFE5E5EA),
+                        margin: const EdgeInsets.only(left: 46)),
+                    // Assign Technician
+                    GestureDetector(
+                      onTap: () => _showTechPicker(context, ref),
+                      child: Container(
+                        color: CupertinoColors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        child: Row(
+                          children: [
+                            const Icon(CupertinoIcons.person_crop_circle_badge_checkmark,
+                                size: 18, color: Color(0xFF007AFF)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                ro.technicianId != null
+                                    ? 'Change Technician'
+                                    : 'Assign Technician',
+                                style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Color(0xFF007AFF)),
+                              ),
+                            ),
+                            const Icon(CupertinoIcons.chevron_right,
+                                size: 16, color: Color(0xFFC7C7CC)),
+                          ],
+                        ),
+                      ),
+                    ),
                     // Status advancement button
-                    if (next != null)
+                    if (next != null) ...[
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 46)),
                       GestureDetector(
                         onTap: () => _advanceStatus(ref, next.nextStatus),
                         child: Container(
@@ -358,6 +452,7 @@ class _RoDetailView extends ConsumerWidget {
                           ),
                         ),
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -468,7 +563,7 @@ class _CustomerVehicleHeader extends ConsumerWidget {
                             fontSize: 15, color: Color(0xFF8E8E93))),
                     if (vehicle?.licensePlate != null &&
                         vehicle!.licensePlate!.isNotEmpty &&
-                        vehicle.licensePlate != 'NO PLATE') ...[
+                        vehicle.licensePlate!.isNotEmpty) ...[
                       const SizedBox(width: 6),
                       Text(
                         '· ${vehicle.licensePlate}',
@@ -510,10 +605,228 @@ class _CustomerVehicleHeader extends ConsumerWidget {
                   ),
                 ),
               ],
+              // Assigned technician
+              if (ro.technicianId != null) ...[
+                const SizedBox(height: 8),
+                _TechnicianLabel(technicianId: ro.technicianId!),
+              ],
             ],
           ),
         );
       },
+    );
+  }
+}
+
+// ─── Technician Label ─────────────────────────────────────────────────────────
+// Shown in the RO header when a technician is assigned.
+class _TechnicianLabel extends ConsumerWidget {
+  final int technicianId;
+  const _TechnicianLabel({required this.technicianId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder(
+      future: ref.read(dbProvider).getTechnician(technicianId),
+      builder: (context, snap) {
+        final tech = snap.data;
+        if (tech == null) return const SizedBox.shrink();
+        return Row(
+          children: [
+            const Icon(CupertinoIcons.wrench_fill,
+                size: 13, color: Color(0xFF8E8E93)),
+            const SizedBox(width: 5),
+            Text(
+              tech.name,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF8E8E93)),
+            ),
+            if (tech.specialty != null && tech.specialty!.isNotEmpty) ...[
+              Text(
+                ' · ${tech.specialty}',
+                style: const TextStyle(
+                    fontSize: 13, color: Color(0xFFAEAEB2)),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ─── Technician Picker Sheet ──────────────────────────────────────────────────
+// A bottom sheet for assigning a technician to a repair order.
+class _TechPickerSheet extends StatelessWidget {
+  final List<Technician> techs;
+  final int? currentTechId;
+  final void Function(int techId) onSelect;
+  final VoidCallback? onRemove;
+  final VoidCallback onCreateNew;
+
+  const _TechPickerSheet({
+    required this.techs,
+    required this.currentTechId,
+    required this.onSelect,
+    required this.onRemove,
+    required this.onCreateNew,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: CupertinoColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(top: 10, bottom: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD1D1D6),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Title
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  const Text(
+                    'Assign Technician',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1C1C1E),
+                    ),
+                  ),
+                  const Spacer(),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              ),
+            ),
+            Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+            // New technician row
+            GestureDetector(
+              onTap: onCreateNew,
+              child: Container(
+                color: CupertinoColors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 14),
+                child: const Row(
+                  children: [
+                    Icon(CupertinoIcons.add_circled,
+                        size: 22, color: Color(0xFF007AFF)),
+                    SizedBox(width: 12),
+                    Text('New Technician',
+                        style: TextStyle(
+                            fontSize: 16, color: Color(0xFF007AFF))),
+                  ],
+                ),
+              ),
+            ),
+            if (techs.isNotEmpty)
+              Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+            // Technician rows
+            for (int i = 0; i < techs.length; i++) ...[
+              GestureDetector(
+                onTap: () => onSelect(techs[i].id),
+                child: Container(
+                  color: CupertinoColors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE5E5EA),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            techs[i].name.isNotEmpty
+                                ? techs[i].name[0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF3A3A3C),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              techs[i].name,
+                              style: const TextStyle(
+                                  fontSize: 16, color: Color(0xFF1C1C1E)),
+                            ),
+                            if (techs[i].specialty != null &&
+                                techs[i].specialty!.isNotEmpty)
+                              Text(
+                                techs[i].specialty!,
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF8E8E93)),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (techs[i].id == currentTechId)
+                        const Icon(CupertinoIcons.checkmark,
+                            size: 16, color: Color(0xFF007AFF)),
+                    ],
+                  ),
+                ),
+              ),
+              if (i < techs.length - 1)
+                Container(
+                    height: 0.5,
+                    color: const Color(0xFFE5E5EA),
+                    margin: const EdgeInsets.only(left: 60)),
+            ],
+            // Remove technician (only when one is assigned)
+            if (onRemove != null) ...[
+              Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+              GestureDetector(
+                onTap: onRemove,
+                child: Container(
+                  color: CupertinoColors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  child: const Center(
+                    child: Text(
+                      'Remove Technician',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: CupertinoColors.destructiveRed,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 }

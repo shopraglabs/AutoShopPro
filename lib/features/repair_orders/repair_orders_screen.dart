@@ -58,6 +58,16 @@ class RepairOrdersScreen extends StatelessWidget {
                     label: 'Vendors',
                     onTap: () => context.go('/repair-orders/vendors'),
                   ),
+                  Container(
+                    height: 0.5,
+                    color: const Color(0xFFE5E5EA),
+                    margin: const EdgeInsets.only(left: 62),
+                  ),
+                  _MenuRow(
+                    icon: CupertinoIcons.person_2_square_stack_fill,
+                    label: 'Technicians',
+                    onTap: () => context.go('/repair-orders/technicians'),
+                  ),
                 ],
               ),
             ),

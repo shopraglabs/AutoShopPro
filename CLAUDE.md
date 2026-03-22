@@ -34,12 +34,13 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **Line items** — add labor (hrs × rate, default rate from settings), add parts (unit cost + markup % / $ / list, vendor picker, link to labor line), swipe to delete, live total preview, edit existing items
 - **Parts display** — grouped under their linked labor line sub-header in estimate and RO detail
 - **Estimate approval** — tap circle badge on any line item to approve or decline; declined items show strikethrough/gray and are excluded from totals; "X items declined" footnote in totals section
-- **Repair Orders** — convert estimate → RO (declined items excluded), RO list (color-coded status), RO detail, status flow (Open → In Progress → Completed → Closed), mark items done per line item, Edit Estimate link on non-closed ROs
+- **Repair Orders** — convert estimate → RO (declined items excluded), RO list (color-coded status, status filter pills), RO detail, status flow (Open → In Progress → Completed → Closed), mark items done per line item, Edit Estimate link on non-closed ROs, edit RO note, assign technician from bottom sheet picker
 - **Vendors** — list, add/edit/delete, account # forced uppercase, contact name
 - **Shop settings** — default labor rate + parts markup, stored in DB, accessible via ⌘,
 - **macOS menu bar** — AutoShopPro / File (⌘N, ⇧⌘N) / Window / Help
 - **Right-click context menus** — on customer, estimate, and vendor list rows; contextMenuBuilder on all CupertinoTextFields
-- **Database** — Drift/SQLite, schema v13, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders
+- **Technicians** — list, add/edit/delete, specialty + phone fields
+- **Database** — Drift/SQLite, schema v14, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
@@ -193,4 +194,4 @@ Rename operations must only run once — `from == N` prevents them from running 
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.5.0 Sign-Off
+v0.6.0 Full Bay

@@ -18,6 +18,10 @@ import 'features/vendors/vendor_form_screen.dart';
 import 'features/vendors/vendors_provider.dart';
 import 'features/repair_orders/ro_list_screen.dart';
 import 'features/repair_orders/ro_detail_screen.dart';
+import 'features/repair_orders/ro_form_screen.dart';
+import 'features/technicians/technician_list_screen.dart';
+import 'features/technicians/technician_form_screen.dart';
+import 'features/technicians/technicians_provider.dart';
 
 // The router defines every screen address in the app.
 // Think of each GoRoute as a page in a book — the 'path' is its page number,
@@ -50,6 +54,36 @@ final appRouter = GoRouter(
                   builder: (context, state) {
                     final id = int.parse(state.pathParameters['roId']!);
                     return RoDetailScreen(roId: id);
+                  },
+                  routes: [
+                    // Edit RO note
+                    GoRoute(
+                      path: 'edit',
+                      builder: (context, state) {
+                        final id = int.parse(state.pathParameters['roId']!);
+                        return _RoEditLoader(roId: id);
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            // Technicians
+            GoRoute(
+              path: 'technicians',
+              builder: (context, state) => const TechnicianListScreen(),
+              routes: [
+                GoRoute(
+                  path: 'new',
+                  builder: (context, state) => const TechnicianFormScreen(),
+                ),
+                GoRoute(
+                  path: ':techId/edit',
+                  builder: (context, state) {
+                    final id =
+                        int.parse(state.pathParameters['techId']!);
+                    return _TechEditLoader(techId: id);
                   },
                 ),
               ],
@@ -347,6 +381,65 @@ class _LineItemEditLoader extends ConsumerWidget {
           type: lineItem.type,
           lineItem: lineItem,
         );
+      },
+    );
+  }
+}
+
+// Fetches a repair order from the database by id, then shows the edit form.
+class _RoEditLoader extends ConsumerWidget {
+  final int roId;
+  const _RoEditLoader({required this.roId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(dbProvider);
+    return FutureBuilder(
+      future: db.getRepairOrder(roId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CupertinoPageScaffold(
+            child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        final ro = snapshot.data;
+        if (ro == null) {
+          return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(middle: Text('Edit RO')),
+            child: Center(child: Text('Repair order not found.')),
+          );
+        }
+        return RoFormScreen(ro: ro);
+      },
+    );
+  }
+}
+
+// Fetches a technician from the database by id, then shows the edit form.
+class _TechEditLoader extends ConsumerWidget {
+  final int techId;
+  const _TechEditLoader({required this.techId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(dbProvider);
+    return FutureBuilder(
+      future: db.getTechnician(techId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CupertinoPageScaffold(
+            child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        final tech = snapshot.data;
+        if (tech == null) {
+          return const CupertinoPageScaffold(
+            navigationBar:
+                CupertinoNavigationBar(middle: Text('Edit Technician')),
+            child: Center(child: Text('Technician not found.')),
+          );
+        }
+        return TechnicianFormScreen(technician: tech);
       },
     );
   }
