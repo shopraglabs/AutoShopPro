@@ -238,7 +238,7 @@ The heart of the app. Everything else depends on this.
 - ✅ Customer complaint field added to estimate form and detail header (schema v11)
 - ✅ Internal note on customers — form field, detail display, auto-populates estimate note (schema v12)
 - ✅ License plate shown in vehicle picker dropdown and selected row
-- ✅ "NO PLATE" stored when plate field is empty on save
+- ✅ "NO PLATE" stored when plate field is empty on save; displayed as-is in all pickers and headers
 - ✅ Mark items done on RO — checkmark toggle per line item (schema v12)
 - ✅ Edit Estimate link on non-closed RO detail
 - ✅ "+ New Customer" / "+ New Vehicle" / "+ Add Vendor" inside all picker sheets

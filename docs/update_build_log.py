@@ -29,7 +29,7 @@ SESSION = {
         'Customer complaint field added to new estimate form and displayed in estimate/RO detail header (schema v11)',
         'Internal note field on customer form — shown on customer detail, auto-populates estimate internal note when customer is picked (schema v12)',
         'License plate shown in vehicle picker dropdown and selected row on estimate form',
-        '"NO PLATE" stored when plate field is left empty on vehicle save',
+        '"NO PLATE" stored when plate field is left empty on vehicle save; displayed as-is in all pickers, estimate headers, and RO headers',
         'Mark items done on repair order — checkmark circle toggle per line item when RO is not closed (schema v12)',
         'Edit Estimate link added to non-closed RO detail screens',
         '"+ New Customer" / "+ New Vehicle" / "+ Add Vendor" rows added to all picker sheets so you can create records without leaving the form',
@@ -52,6 +52,9 @@ SESSION = {
         'lib/features/customers/customer_form_screen.dart — internal note field added',
         'lib/features/customers/customer_detail_screen.dart — internal note shown in CONTACT section',
         'lib/features/vehicles/vehicle_form_screen.dart — NO PLATE stored when plate field is empty',
+        'lib/features/estimates/estimate_detail_screen.dart — removed NO PLATE display filter; plate shown as-is',
+        'lib/features/estimates/estimate_form_screen.dart — removed NO PLATE display filters in picker and selected row',
+        'lib/features/repair_orders/ro_detail_screen.dart — removed NO PLATE display filter',
     ],
     'next': 'Begin Module 3 — Invoice PDF generation from a closed repair order.',
 }

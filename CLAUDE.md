@@ -29,7 +29,7 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 ## What's Built So Far
 - **App shell** — sidebar nav (desktop), tab bar (mobile), all 5 module placeholders
 - **Customers** — list (searchable), detail, add/edit/delete, phone/name formatting, internal note field
-- **Vehicles** — list per customer, detail, add/edit/delete, VIN decode (NHTSA API), all formatters, "NO PLATE" auto-stored when plate is blank
+- **Vehicles** — list per customer, detail, add/edit/delete, VIN decode (NHTSA API), all formatters, "NO PLATE" auto-stored when plate is blank and shown as-is in all displays
 - **Estimates** — list, create (customer + vehicle picker with "+ New" options), detail (labor + parts + totals), customer complaint field, delete
 - **Line items** — add labor (hrs × rate, default rate from settings), add parts (unit cost + markup % / $ / list, vendor picker, link to labor line), swipe to delete, live total preview, edit existing items
 - **Parts display** — grouped under their linked labor line sub-header in estimate and RO detail
