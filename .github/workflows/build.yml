@@ -1,0 +1,75 @@
+name: Build AutoShopPro
+
+# Runs automatically on every push to main.
+# Can also be triggered manually from the Actions tab on GitHub.
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+
+  # ── Windows .exe ──────────────────────────────────────────────
+  build-windows:
+    name: Windows Build
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Flutter (beta)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.43.0'
+          channel: 'beta'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoShopPro-Windows
+          # The entire Release folder — contains the .exe + required DLLs
+          path: build/windows/x64/runner/Release/
+          retention-days: 30
+
+  # ── Android .apk ─────────────────────────────────────────────
+  build-android:
+    name: Android Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install Flutter (beta)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.43.0'
+          channel: 'beta'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Android APK
+        run: flutter build apk --release
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoShopPro-Android
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
