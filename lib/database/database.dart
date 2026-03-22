@@ -73,6 +73,23 @@ class Vendors extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+// A Repair Order is created when a customer approves an estimate and work begins.
+// It tracks the lifecycle of the job from open to closed.
+class RepairOrders extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // Which estimate this RO was created from (null if created directly)
+  IntColumn get estimateId => integer().nullable()();
+  // Which customer
+  IntColumn get customerId => integer()();
+  // Which vehicle (optional)
+  IntColumn get vehicleId => integer().nullable()();
+  // Short description of the work, carried over from the estimate
+  TextColumn get note => text().nullable()();
+  // 'open' | 'in_progress' | 'completed' | 'closed'
+  TextColumn get status => text().withDefault(const Constant('open'))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 // A single-row table that stores app-wide defaults set by the shop owner.
 // The row is always id = 1. We use getOrCreateSettings() to read it safely.
 class ShopSettings extends Table {
@@ -97,6 +114,18 @@ class EstimateWithDetails {
   });
 }
 
+/// Combined repair order + customer + vehicle — used in the RO list screen.
+class RepairOrderWithDetails {
+  final RepairOrder ro;
+  final Customer? customer;
+  final Vehicle? vehicle;
+  RepairOrderWithDetails({
+    required this.ro,
+    this.customer,
+    this.vehicle,
+  });
+}
+
 // ─── Database Class ───────────────────────────────────────────────────────────
 // This is the database itself. List every table you defined above inside the
 // @DriftDatabase annotation so the generator knows about them.
@@ -108,6 +137,7 @@ class EstimateWithDetails {
   EstimateLineItems,
   ShopSettings,
   Vendors,
+  RepairOrders,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -115,7 +145,7 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   // Drift runs this when it finds an older database on the device.
   @override
@@ -166,6 +196,10 @@ class AppDatabase extends _$AppDatabase {
         // Rename supplier_id → vendor_id to match the vendors table rename.
         await m.database.customStatement(
             'ALTER TABLE estimate_line_items RENAME COLUMN supplier_id TO vendor_id');
+      }
+      if (from < 9) {
+        // Add the repair_orders table.
+        await m.createTable(repairOrders);
       }
     },
   );
@@ -309,6 +343,48 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> deleteVendor(int id) =>
       (delete(vendors)..where((v) => v.id.equals(id))).go();
+
+  // ─── Repair Order Queries ─────────────────────────────────────────────────
+
+  // Returns a live stream of all ROs, joined with customer + vehicle,
+  // newest first so the shop always sees the most recent jobs at the top.
+  Stream<List<RepairOrderWithDetails>> watchAllRepairOrders() {
+    final q = select(repairOrders).join([
+      leftOuterJoin(customers, customers.id.equalsExp(repairOrders.customerId)),
+      leftOuterJoin(vehicles, vehicles.id.equalsExp(repairOrders.vehicleId)),
+    ]);
+    q.orderBy([OrderingTerm.desc(repairOrders.createdAt)]);
+    return q.watch().map((rows) => rows
+        .map((row) => RepairOrderWithDetails(
+              ro: row.readTable(repairOrders),
+              customer: row.readTableOrNull(customers),
+              vehicle: row.readTableOrNull(vehicles),
+            ))
+        .toList());
+  }
+
+  // Returns a live stream of a single RO by id.
+  Stream<RepairOrder?> watchRepairOrder(int id) =>
+      (select(repairOrders)..where((r) => r.id.equals(id)))
+          .watchSingleOrNull();
+
+  // Returns the RO linked to a specific estimate (null if none exists yet).
+  // Used by the estimate detail screen to show "Convert to RO" or "View RO".
+  Stream<RepairOrder?> watchRoForEstimate(int estimateId) =>
+      (select(repairOrders)..where((r) => r.estimateId.equals(estimateId)))
+          .watchSingleOrNull();
+
+  // Adds a new repair order and returns its new id.
+  Future<int> insertRepairOrder(RepairOrdersCompanion entry) =>
+      into(repairOrders).insert(entry);
+
+  // Replaces all fields on an existing repair order.
+  Future<bool> updateRepairOrder(RepairOrder ro) =>
+      update(repairOrders).replace(ro);
+
+  // Permanently removes a repair order by id.
+  Future<int> deleteRepairOrder(int id) =>
+      (delete(repairOrders)..where((r) => r.id.equals(id))).go();
 }
 
 // Opens (or creates) the SQLite database file on the device.

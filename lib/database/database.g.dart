@@ -2463,6 +2463,457 @@ class VendorsCompanion extends UpdateCompanion<Vendor> {
   }
 }
 
+class $RepairOrdersTable extends RepairOrders
+    with TableInfo<$RepairOrdersTable, RepairOrder> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RepairOrdersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _estimateIdMeta = const VerificationMeta(
+    'estimateId',
+  );
+  @override
+  late final GeneratedColumn<int> estimateId = GeneratedColumn<int>(
+    'estimate_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _customerIdMeta = const VerificationMeta(
+    'customerId',
+  );
+  @override
+  late final GeneratedColumn<int> customerId = GeneratedColumn<int>(
+    'customer_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _vehicleIdMeta = const VerificationMeta(
+    'vehicleId',
+  );
+  @override
+  late final GeneratedColumn<int> vehicleId = GeneratedColumn<int>(
+    'vehicle_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('open'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    estimateId,
+    customerId,
+    vehicleId,
+    note,
+    status,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'repair_orders';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RepairOrder> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('estimate_id')) {
+      context.handle(
+        _estimateIdMeta,
+        estimateId.isAcceptableOrUnknown(data['estimate_id']!, _estimateIdMeta),
+      );
+    }
+    if (data.containsKey('customer_id')) {
+      context.handle(
+        _customerIdMeta,
+        customerId.isAcceptableOrUnknown(data['customer_id']!, _customerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_customerIdMeta);
+    }
+    if (data.containsKey('vehicle_id')) {
+      context.handle(
+        _vehicleIdMeta,
+        vehicleId.isAcceptableOrUnknown(data['vehicle_id']!, _vehicleIdMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RepairOrder map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RepairOrder(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      estimateId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}estimate_id'],
+      ),
+      customerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}customer_id'],
+      )!,
+      vehicleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}vehicle_id'],
+      ),
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $RepairOrdersTable createAlias(String alias) {
+    return $RepairOrdersTable(attachedDatabase, alias);
+  }
+}
+
+class RepairOrder extends DataClass implements Insertable<RepairOrder> {
+  final int id;
+  final int? estimateId;
+  final int customerId;
+  final int? vehicleId;
+  final String? note;
+  final String status;
+  final DateTime createdAt;
+  const RepairOrder({
+    required this.id,
+    this.estimateId,
+    required this.customerId,
+    this.vehicleId,
+    this.note,
+    required this.status,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || estimateId != null) {
+      map['estimate_id'] = Variable<int>(estimateId);
+    }
+    map['customer_id'] = Variable<int>(customerId);
+    if (!nullToAbsent || vehicleId != null) {
+      map['vehicle_id'] = Variable<int>(vehicleId);
+    }
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['status'] = Variable<String>(status);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  RepairOrdersCompanion toCompanion(bool nullToAbsent) {
+    return RepairOrdersCompanion(
+      id: Value(id),
+      estimateId: estimateId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(estimateId),
+      customerId: Value(customerId),
+      vehicleId: vehicleId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(vehicleId),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      status: Value(status),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory RepairOrder.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RepairOrder(
+      id: serializer.fromJson<int>(json['id']),
+      estimateId: serializer.fromJson<int?>(json['estimateId']),
+      customerId: serializer.fromJson<int>(json['customerId']),
+      vehicleId: serializer.fromJson<int?>(json['vehicleId']),
+      note: serializer.fromJson<String?>(json['note']),
+      status: serializer.fromJson<String>(json['status']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'estimateId': serializer.toJson<int?>(estimateId),
+      'customerId': serializer.toJson<int>(customerId),
+      'vehicleId': serializer.toJson<int?>(vehicleId),
+      'note': serializer.toJson<String?>(note),
+      'status': serializer.toJson<String>(status),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  RepairOrder copyWith({
+    int? id,
+    Value<int?> estimateId = const Value.absent(),
+    int? customerId,
+    Value<int?> vehicleId = const Value.absent(),
+    Value<String?> note = const Value.absent(),
+    String? status,
+    DateTime? createdAt,
+  }) => RepairOrder(
+    id: id ?? this.id,
+    estimateId: estimateId.present ? estimateId.value : this.estimateId,
+    customerId: customerId ?? this.customerId,
+    vehicleId: vehicleId.present ? vehicleId.value : this.vehicleId,
+    note: note.present ? note.value : this.note,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  RepairOrder copyWithCompanion(RepairOrdersCompanion data) {
+    return RepairOrder(
+      id: data.id.present ? data.id.value : this.id,
+      estimateId: data.estimateId.present
+          ? data.estimateId.value
+          : this.estimateId,
+      customerId: data.customerId.present
+          ? data.customerId.value
+          : this.customerId,
+      vehicleId: data.vehicleId.present ? data.vehicleId.value : this.vehicleId,
+      note: data.note.present ? data.note.value : this.note,
+      status: data.status.present ? data.status.value : this.status,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RepairOrder(')
+          ..write('id: $id, ')
+          ..write('estimateId: $estimateId, ')
+          ..write('customerId: $customerId, ')
+          ..write('vehicleId: $vehicleId, ')
+          ..write('note: $note, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    estimateId,
+    customerId,
+    vehicleId,
+    note,
+    status,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RepairOrder &&
+          other.id == this.id &&
+          other.estimateId == this.estimateId &&
+          other.customerId == this.customerId &&
+          other.vehicleId == this.vehicleId &&
+          other.note == this.note &&
+          other.status == this.status &&
+          other.createdAt == this.createdAt);
+}
+
+class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
+  final Value<int> id;
+  final Value<int?> estimateId;
+  final Value<int> customerId;
+  final Value<int?> vehicleId;
+  final Value<String?> note;
+  final Value<String> status;
+  final Value<DateTime> createdAt;
+  const RepairOrdersCompanion({
+    this.id = const Value.absent(),
+    this.estimateId = const Value.absent(),
+    this.customerId = const Value.absent(),
+    this.vehicleId = const Value.absent(),
+    this.note = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  RepairOrdersCompanion.insert({
+    this.id = const Value.absent(),
+    this.estimateId = const Value.absent(),
+    required int customerId,
+    this.vehicleId = const Value.absent(),
+    this.note = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : customerId = Value(customerId);
+  static Insertable<RepairOrder> custom({
+    Expression<int>? id,
+    Expression<int>? estimateId,
+    Expression<int>? customerId,
+    Expression<int>? vehicleId,
+    Expression<String>? note,
+    Expression<String>? status,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (estimateId != null) 'estimate_id': estimateId,
+      if (customerId != null) 'customer_id': customerId,
+      if (vehicleId != null) 'vehicle_id': vehicleId,
+      if (note != null) 'note': note,
+      if (status != null) 'status': status,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  RepairOrdersCompanion copyWith({
+    Value<int>? id,
+    Value<int?>? estimateId,
+    Value<int>? customerId,
+    Value<int?>? vehicleId,
+    Value<String?>? note,
+    Value<String>? status,
+    Value<DateTime>? createdAt,
+  }) {
+    return RepairOrdersCompanion(
+      id: id ?? this.id,
+      estimateId: estimateId ?? this.estimateId,
+      customerId: customerId ?? this.customerId,
+      vehicleId: vehicleId ?? this.vehicleId,
+      note: note ?? this.note,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (estimateId.present) {
+      map['estimate_id'] = Variable<int>(estimateId.value);
+    }
+    if (customerId.present) {
+      map['customer_id'] = Variable<int>(customerId.value);
+    }
+    if (vehicleId.present) {
+      map['vehicle_id'] = Variable<int>(vehicleId.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RepairOrdersCompanion(')
+          ..write('id: $id, ')
+          ..write('estimateId: $estimateId, ')
+          ..write('customerId: $customerId, ')
+          ..write('vehicleId: $vehicleId, ')
+          ..write('note: $note, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2473,6 +2924,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $EstimateLineItemsTable(this);
   late final $ShopSettingsTable shopSettings = $ShopSettingsTable(this);
   late final $VendorsTable vendors = $VendorsTable(this);
+  late final $RepairOrdersTable repairOrders = $RepairOrdersTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2484,6 +2936,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     estimateLineItems,
     shopSettings,
     vendors,
+    repairOrders,
   ];
 }
 
@@ -3791,6 +4244,242 @@ typedef $$VendorsTableProcessedTableManager =
       Vendor,
       PrefetchHooks Function()
     >;
+typedef $$RepairOrdersTableCreateCompanionBuilder =
+    RepairOrdersCompanion Function({
+      Value<int> id,
+      Value<int?> estimateId,
+      required int customerId,
+      Value<int?> vehicleId,
+      Value<String?> note,
+      Value<String> status,
+      Value<DateTime> createdAt,
+    });
+typedef $$RepairOrdersTableUpdateCompanionBuilder =
+    RepairOrdersCompanion Function({
+      Value<int> id,
+      Value<int?> estimateId,
+      Value<int> customerId,
+      Value<int?> vehicleId,
+      Value<String?> note,
+      Value<String> status,
+      Value<DateTime> createdAt,
+    });
+
+class $$RepairOrdersTableFilterComposer
+    extends Composer<_$AppDatabase, $RepairOrdersTable> {
+  $$RepairOrdersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get estimateId => $composableBuilder(
+    column: $table.estimateId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get customerId => $composableBuilder(
+    column: $table.customerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get vehicleId => $composableBuilder(
+    column: $table.vehicleId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RepairOrdersTableOrderingComposer
+    extends Composer<_$AppDatabase, $RepairOrdersTable> {
+  $$RepairOrdersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get estimateId => $composableBuilder(
+    column: $table.estimateId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get customerId => $composableBuilder(
+    column: $table.customerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get vehicleId => $composableBuilder(
+    column: $table.vehicleId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RepairOrdersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RepairOrdersTable> {
+  $$RepairOrdersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get estimateId => $composableBuilder(
+    column: $table.estimateId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get customerId => $composableBuilder(
+    column: $table.customerId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get vehicleId =>
+      $composableBuilder(column: $table.vehicleId, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$RepairOrdersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RepairOrdersTable,
+          RepairOrder,
+          $$RepairOrdersTableFilterComposer,
+          $$RepairOrdersTableOrderingComposer,
+          $$RepairOrdersTableAnnotationComposer,
+          $$RepairOrdersTableCreateCompanionBuilder,
+          $$RepairOrdersTableUpdateCompanionBuilder,
+          (
+            RepairOrder,
+            BaseReferences<_$AppDatabase, $RepairOrdersTable, RepairOrder>,
+          ),
+          RepairOrder,
+          PrefetchHooks Function()
+        > {
+  $$RepairOrdersTableTableManager(_$AppDatabase db, $RepairOrdersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RepairOrdersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RepairOrdersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RepairOrdersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> estimateId = const Value.absent(),
+                Value<int> customerId = const Value.absent(),
+                Value<int?> vehicleId = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => RepairOrdersCompanion(
+                id: id,
+                estimateId: estimateId,
+                customerId: customerId,
+                vehicleId: vehicleId,
+                note: note,
+                status: status,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> estimateId = const Value.absent(),
+                required int customerId,
+                Value<int?> vehicleId = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => RepairOrdersCompanion.insert(
+                id: id,
+                estimateId: estimateId,
+                customerId: customerId,
+                vehicleId: vehicleId,
+                note: note,
+                status: status,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RepairOrdersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RepairOrdersTable,
+      RepairOrder,
+      $$RepairOrdersTableFilterComposer,
+      $$RepairOrdersTableOrderingComposer,
+      $$RepairOrdersTableAnnotationComposer,
+      $$RepairOrdersTableCreateCompanionBuilder,
+      $$RepairOrdersTableUpdateCompanionBuilder,
+      (
+        RepairOrder,
+        BaseReferences<_$AppDatabase, $RepairOrdersTable, RepairOrder>,
+      ),
+      RepairOrder,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3807,4 +4496,6 @@ class $AppDatabaseManager {
       $$ShopSettingsTableTableManager(_db, _db.shopSettings);
   $$VendorsTableTableManager get vendors =>
       $$VendorsTableTableManager(_db, _db.vendors);
+  $$RepairOrdersTableTableManager get repairOrders =>
+      $$RepairOrdersTableTableManager(_db, _db.repairOrders);
 }

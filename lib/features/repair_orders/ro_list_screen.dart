@@ -1,0 +1,227 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../database/database.dart';
+import 'repair_orders_provider.dart';
+
+// Formats a repair order id as a number: 1 → "RO-0001"
+String _roNumber(int id) => 'RO-${id.toString().padLeft(4, '0')}';
+
+// Returns a human-readable label for each status value
+String _statusLabel(String status) {
+  switch (status) {
+    case 'open':
+      return 'Open';
+    case 'in_progress':
+      return 'In Progress';
+    case 'completed':
+      return 'Completed';
+    case 'closed':
+      return 'Closed';
+    default:
+      return status;
+  }
+}
+
+// Returns the color for each status — these match what shops expect:
+// blue = new/open, orange = active work, green = done, gray = archived
+Color _statusColor(String status) {
+  switch (status) {
+    case 'open':
+      return const Color(0xFF007AFF); // blue
+    case 'in_progress':
+      return const Color(0xFFFF9500); // orange
+    case 'completed':
+      return const Color(0xFF34C759); // green
+    case 'closed':
+      return const Color(0xFF8E8E93); // gray
+    default:
+      return const Color(0xFF8E8E93);
+  }
+}
+
+class RoListScreen extends ConsumerWidget {
+  const RoListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rosAsync = ref.watch(repairOrdersProvider);
+
+    return CupertinoPageScaffold(
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text('Repair Orders'),
+      ),
+      child: SafeArea(
+        child: rosAsync.when(
+          loading: () =>
+              const Center(child: CupertinoActivityIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (ros) {
+            if (ros.isEmpty) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        CupertinoIcons.doc_text,
+                        size: 48,
+                        color: Color(0xFFC7C7CC),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'No repair orders yet.',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF3A3A3C),
+                        ),
+                      ),
+                      SizedBox(height: 6),
+                      Text(
+                        'Convert an estimate to create your first RO.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF8E8E93),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              itemCount: ros.length,
+              itemBuilder: (context, index) {
+                final item = ros[index];
+                return _RoRow(
+                  item: item,
+                  onTap: () =>
+                      context.push('/repair-orders/ros/${item.ro.id}'),
+                  showDivider: index < ros.length - 1,
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// ─── RO List Row ──────────────────────────────────────────────────────────────
+class _RoRow extends StatelessWidget {
+  final RepairOrderWithDetails item;
+  final VoidCallback onTap;
+  final bool showDivider;
+
+  const _RoRow({
+    required this.item,
+    required this.onTap,
+    required this.showDivider,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ro = item.ro;
+    final customerName = item.customer?.name ?? 'Customer #${ro.customerId}';
+    final vehicle = item.vehicle;
+    final vehicleLabel = vehicle != null
+        ? [vehicle.year?.toString(), vehicle.make, vehicle.model]
+            .whereType<String>()
+            .join(' ')
+        : null;
+
+    final color = _statusColor(ro.status);
+    final label = _statusLabel(ro.status);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            color: CupertinoColors.white,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            child: Row(
+              children: [
+                // Status color dot
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // RO number + customer + vehicle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _roNumber(ro.id),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1C1C1E),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        customerName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF3A3A3C),
+                        ),
+                      ),
+                      if (vehicleLabel != null && vehicleLabel.isNotEmpty)
+                        Text(
+                          vehicleLabel,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF8E8E93),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // Status label + chevron
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: color,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      CupertinoIcons.chevron_right,
+                      size: 14,
+                      color: Color(0xFFC7C7CC),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (showDivider)
+          Container(
+            height: 0.5,
+            color: const Color(0xFFE5E5EA),
+            margin: const EdgeInsets.only(left: 38),
+          ),
+      ],
+    );
+  }
+}

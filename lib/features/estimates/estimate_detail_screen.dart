@@ -1,8 +1,10 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
 import 'estimates_provider.dart';
+import '../repair_orders/repair_orders_provider.dart';
 
 // Formats a double as a dollar amount: 1234.5 → "$1,234.50"
 String _money(double amount) {
@@ -119,7 +121,12 @@ class _EstimateDetailView extends ConsumerWidget {
             // ── Customer + Vehicle header ──────────────────────────────────
             _CustomerVehicleHeader(estimate: estimate),
 
-            const SizedBox(height: 28),
+            const SizedBox(height: 16),
+
+            // ── Convert to RO / View RO banner ────────────────────────────
+            _RoBanner(estimate: estimate),
+
+            const SizedBox(height: 20),
 
             // ── Labor lines ───────────────────────────────────────────────
             if (laborLines.isNotEmpty) ...[
@@ -157,27 +164,28 @@ class _EstimateDetailView extends ConsumerWidget {
                 ),
               ),
 
-            // ── Add buttons ───────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
+            // ── Add items ─────────────────────────────────────────────────
+            _sectionHeader('ADD ITEMS'),
+            Container(
+              color: CupertinoColors.white,
+              child: Column(
                 children: [
-                  Expanded(
-                    child: _AddButton(
-                      label: 'Add Labor',
-                      icon: CupertinoIcons.wrench_fill,
-                      onTap: () => context.push(
-                          '/repair-orders/estimates/${estimate.id}/line-items/labor'),
-                    ),
+                  _ActionRow(
+                    icon: CupertinoIcons.wrench_fill,
+                    label: 'Add Labor',
+                    onTap: () => context.push(
+                        '/repair-orders/estimates/${estimate.id}/line-items/labor'),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _AddButton(
-                      label: 'Add Part',
-                      icon: CupertinoIcons.cube_box_fill,
-                      onTap: () => context.push(
-                          '/repair-orders/estimates/${estimate.id}/line-items/part'),
-                    ),
+                  Container(
+                    height: 0.5,
+                    color: const Color(0xFFE5E5EA),
+                    margin: const EdgeInsets.only(left: 46),
+                  ),
+                  _ActionRow(
+                    icon: CupertinoIcons.cube_box_fill,
+                    label: 'Add Part',
+                    onTap: () => context.push(
+                        '/repair-orders/estimates/${estimate.id}/line-items/part'),
                   ),
                 ],
               ),
@@ -440,15 +448,108 @@ class _LineItemRow extends ConsumerWidget {
       q % 1 == 0 ? q.toInt().toString() : q.toStringAsFixed(1);
 }
 
-// ─── Add Button ───────────────────────────────────────────────────────────────
-class _AddButton extends StatelessWidget {
-  final String label;
+// ─── RO Banner ────────────────────────────────────────────────────────────────
+// Shows a "Convert to Repair Order" button when no RO exists for this estimate.
+// Shows a "View Repair Order" row when one already does.
+class _RoBanner extends ConsumerWidget {
+  final Estimate estimate;
+  const _RoBanner({required this.estimate});
+
+  Future<void> _convert(BuildContext context, WidgetRef ref) async {
+    final db = ref.read(dbProvider);
+    // Mark the estimate as approved
+    await db.updateEstimate(estimate.copyWith(status: 'approved'));
+    // Create the repair order, carrying over all the key details
+    final roId = await db.insertRepairOrder(RepairOrdersCompanion(
+      estimateId: Value(estimate.id),
+      customerId: Value(estimate.customerId),
+      vehicleId: Value(estimate.vehicleId),
+      note: Value(estimate.note),
+    ));
+    if (context.mounted) context.push('/repair-orders/ros/$roId');
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final roAsync = ref.watch(roForEstimateProvider(estimate.id));
+
+    return roAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (ro) {
+        if (ro == null) {
+          // No RO yet — show Convert as a standard action row
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionHeaderStatic('ACTIONS'),
+              _ActionRow(
+                icon: CupertinoIcons.doc_text_fill,
+                label: 'Convert to Repair Order',
+                onTap: () => _convert(context, ref),
+              ),
+            ],
+          );
+        }
+
+        // RO exists — show a "View RO" row in the same style
+        final roNumber = 'RO-${ro.id.toString().padLeft(4, '0')}';
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeaderStatic('REPAIR ORDER'),
+            GestureDetector(
+              onTap: () => context.push('/repair-orders/ros/${ro.id}'),
+              child: Container(
+                color: CupertinoColors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Icon(CupertinoIcons.doc_text_fill,
+                        size: 18, color: const Color(0xFF34C759)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'View Repair Order',
+                            style: TextStyle(
+                                fontSize: 16, color: Color(0xFF34C759)),
+                          ),
+                          Text(
+                            roNumber,
+                            style: const TextStyle(
+                                fontSize: 13, color: Color(0xFF8E8E93)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(CupertinoIcons.chevron_right,
+                        size: 16, color: Color(0xFFC7C7CC)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ─── Action Row ───────────────────────────────────────────────────────────────
+// Standard action button style: blue icon + blue label + gray chevron.
+// Matches the "New Estimate" row on the vehicle detail screen.
+class _ActionRow extends StatelessWidget {
   final IconData icon;
+  final String label;
   final VoidCallback onTap;
 
-  const _AddButton({
-    required this.label,
+  const _ActionRow({
     required this.icon,
+    required this.label,
     required this.onTap,
   });
 
@@ -457,24 +558,25 @@ class _AddButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(vertical: 13),
-        decoration: BoxDecoration(
-          color: CupertinoColors.white,
-          borderRadius: BorderRadius.circular(10),
-        ),
+        color: CupertinoColors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: const Color(0xFF007AFF)),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 15,
-                color: Color(0xFF007AFF),
-                fontWeight: FontWeight.w500,
+            Icon(icon, size: 18, color: const Color(0xFF007AFF)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF007AFF),
+                ),
               ),
+            ),
+            const Icon(
+              CupertinoIcons.chevron_right,
+              size: 16,
+              color: Color(0xFFC7C7CC),
             ),
           ],
         ),
@@ -482,6 +584,21 @@ class _AddButton extends StatelessWidget {
     );
   }
 }
+
+// A static (non-instance) version of _sectionHeader for use inside
+// ConsumerWidgets that don't have access to the _EstimateDetailView instance.
+Widget _sectionHeaderStatic(String label) => Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 13,
+          color: Color(0xFF8E8E93),
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
 
 // ─── Total Row ────────────────────────────────────────────────────────────────
 class _TotalRow extends StatelessWidget {

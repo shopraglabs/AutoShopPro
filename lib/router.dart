@@ -16,6 +16,8 @@ import 'features/estimates/line_item_form_screen.dart';
 import 'features/vendors/vendor_list_screen.dart';
 import 'features/vendors/vendor_form_screen.dart';
 import 'features/vendors/vendors_provider.dart';
+import 'features/repair_orders/ro_list_screen.dart';
+import 'features/repair_orders/ro_detail_screen.dart';
 
 // The router defines every screen address in the app.
 // Think of each GoRoute as a page in a book — the 'path' is its page number,
@@ -38,6 +40,21 @@ final appRouter = GoRouter(
           path: '/repair-orders',
           builder: (context, state) => const RepairOrdersScreen(),
           routes: [
+            // Repair order list + detail
+            GoRoute(
+              path: 'ros',
+              builder: (context, state) => const RoListScreen(),
+              routes: [
+                GoRoute(
+                  path: ':roId',
+                  builder: (context, state) {
+                    final id = int.parse(state.pathParameters['roId']!);
+                    return RoDetailScreen(roId: id);
+                  },
+                ),
+              ],
+            ),
+
             // Vendor list
             GoRoute(
               path: 'vendors',

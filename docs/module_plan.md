@@ -36,7 +36,7 @@ The heart of the app. Everything else depends on this.
 - ✅ Live line total preview on line item form
 - ✅ Default labor rate auto-filled from shop settings
 - ✅ Edit existing line items
-- ⬜ Convert estimate → Repair Order
+- ✅ Convert estimate → Repair Order
 
 ### Vendors
 - ✅ Vendor model (name, contact, phone, account #)
@@ -50,20 +50,21 @@ The heart of the app. Everything else depends on this.
 - ✅ Settings dialog accessible via ⌘, menu bar shortcut
 
 ### Repair Orders (RO)
-- ⬜ RO model
-- ⬜ RO status flow: Draft → Approved → In Progress → Completed → Closed
-- ⬜ Create new RO
-- ⬜ Edit RO
+- ✅ RO model (estimateId, customerId, vehicleId, note, status, createdAt)
+- ✅ RO status flow: Open → In Progress → Completed → Closed
+- ✅ Create new RO (via Convert from estimate)
+- ✅ RO list screen (color-coded status dots, customer name, vehicle)
+- ✅ RO detail screen (line items, totals, status badge, advancement action)
+- ✅ Close RO
+- ⬜ Edit RO details
 - ⬜ Assign technician to RO
-- ⬜ RO list screen (with status filters)
-- ⬜ RO detail screen
-- ⬜ Close RO
+- ⬜ RO list status filters
 
 ### Local Database (Drift/SQLite)
 - ✅ Drift database setup
-- ✅ Tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings
-- ✅ CRUD for customers, vehicles, estimates, line items, vendors, settings
-- ✅ Schema versioning + migration strategy (v8)
+- ✅ Tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders
+- ✅ CRUD for customers, vehicles, estimates, line items, vendors, settings, repair orders
+- ✅ Schema versioning + migration strategy (v9)
 
 ---
 
@@ -188,7 +189,7 @@ The heart of the app. Everything else depends on this.
 - ✅ VIN auto-uppercase
 - ✅ Name / Make / Model word capitalization enforced
 
-### Estimates & Vendors (v0.3.0 — current session)
+### Estimates & Vendors (v0.3.0 Write-Up)
 - ✅ VIN decode via NHTSA API (auto-fills year/make/model)
 - ✅ macOS network entitlement added for outbound HTTP
 - ✅ dio HTTP client added
@@ -206,6 +207,18 @@ The heart of the app. Everything else depends on this.
 - ✅ Edit existing line items (tap row to edit description, qty, price, vendor)
 - ✅ Account # forced uppercase in vendor form
 - ✅ docs/update_build_log.py — python-docx build log script
+
+### Repair Order Engine (v0.4.0 Open Bay)
+- ✅ RepairOrders table (schema v9) + full CRUD queries
+- ✅ repair_orders_provider.dart — Riverpod stream providers for RO list, detail, and roForEstimate
+- ✅ RO list screen — color-coded status dots (blue/orange/green/gray), customer name, vehicle
+- ✅ RO detail screen — customer/vehicle header, line items, totals, status badge, ACTIONS row
+- ✅ Status advancement: Open → In Progress → Completed → Closed (list-row action, not filled button)
+- ✅ "Convert to Repair Order" action on estimate detail (list-row style under ACTIONS section)
+- ✅ "View Repair Order" link on estimate once RO is created
+- ✅ Repair Orders hub row enabled (was "Coming soon")
+- ✅ Button/action design rule standardized — all actions use list-row style (blue icon + label + chevron)
+- ✅ Button style rule saved permanently to CLAUDE.md
 
 ### Backend (Go — planned)
 - ⬜ Go project scaffolding

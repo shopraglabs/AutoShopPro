@@ -32,12 +32,13 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **Vehicles** — list per customer, detail, add/edit/delete, VIN decode (NHTSA API), all formatters
 - **Estimates** — list, create (customer + vehicle picker), detail (labor + parts + totals), delete
 - **Line items** — add labor (hrs × rate, default rate from settings), add parts (qty × price, vendor picker), swipe to delete, live total preview
+- **Repair Orders** — convert estimate → RO, RO list (color-coded status), RO detail, status flow (Open → In Progress → Completed → Closed)
 - **Vendors** — list, add/edit/delete, account # forced uppercase, contact name
 - **Shop settings** — default labor rate + parts markup, stored in DB, accessible via ⌘,
 - **macOS menu bar** — AutoShopPro / File (⌘N, ⇧⌘N) / Window / Help
 - **Right-click context menus** — on customer, estimate, and vendor list rows
 - **Edit line items** — tap any labor or part row on an estimate to edit it; pre-filled form, saves via updateLineItem
-- **Database** — Drift/SQLite, schema v8, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings
+- **Database** — Drift/SQLite, schema v9, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
@@ -45,6 +46,19 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 3. Payments — Stripe/Square, card-on-file, text-to-pay, invoice PDF generation
 4. Owner dashboards — ARO, GP per job, technician utilization, KPIs, multi-location
 5. QuickBooks/Xero sync — OAuth, accounting export
+
+## Button & Action Design Rule
+All action buttons throughout the app must use the **list-row style** — never `CupertinoButton.filled` or custom rounded buttons. The standard pattern is:
+- White container, full-width
+- Blue icon on the left (size 18)
+- Blue label text (fontSize 16) in the middle
+- Gray chevron (`CupertinoIcons.chevron_right`, size 16, color `0xFFC7C7CC`) on the right
+- Grouped under a small-caps section header (e.g. `ACTIONS`, `ADD ITEMS`)
+- Separator lines between rows (`height: 0.5, color: 0xFFE5E5EA`)
+
+This matches the "New Estimate" row on the vehicle detail screen and must be used as the default for every action/button across all screens.
+
+The only exception is destructive actions (delete), which use a centered `CupertinoButton` with `CupertinoColors.destructiveRed` text — no filled button.
 
 ## Design Philosophy — Apple-Native Feel
 - The app should feel like it was designed by Apple — clean, minimal, confident
@@ -162,4 +176,4 @@ When adding a new Flutter plugin with native macOS code:
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.3.0 Estimate
+v0.4.0 Open Bay
