@@ -151,6 +151,21 @@ class ShopSettings extends Table {
   RealColumn get defaultTaxRate => real().withDefault(const Constant(0.0))();
 }
 
+// A reusable service template — e.g. "Oil Change", "Tire Rotation".
+// When applied to an estimate it adds a pre-filled labor line in one tap.
+class ServiceTemplates extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // Display name shown in the picker, e.g. "Oil Change"
+  TextColumn get name => text()();
+  // The labor line description added to the estimate, e.g. "Oil and Filter Change"
+  TextColumn get laborDescription => text()();
+  // Default number of hours for this job
+  RealColumn get defaultHours => real().withDefault(const Constant(1.0))();
+  // Optional override rate — null means use the shop's default labor rate
+  RealColumn get defaultRate => real().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 // Tiered markup rules: parts within a cost range get a specific markup %.
 // Rows are ordered by minCost. The first matching rule wins.
 class MarkupRules extends Table {
@@ -202,6 +217,7 @@ class RepairOrderWithDetails {
   Technicians,
   InventoryParts,
   MarkupRules,
+  ServiceTemplates,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -209,7 +225,7 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   // Drift runs this when it finds an older database on the device.
   @override
@@ -354,6 +370,10 @@ class AppDatabase extends _$AppDatabase {
         if (taxCol.isEmpty) {
           await m.addColumn(shopSettings, shopSettings.defaultTaxRate);
         }
+      }
+      if (from < 18) {
+        // Added in v18: service_templates table for premade service presets.
+        await m.createTable(serviceTemplates);
       }
     },
   );
@@ -609,6 +629,90 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> deleteMarkupRule(int id) =>
       (delete(markupRules)..where((r) => r.id.equals(id))).go();
+
+  // ─── Service Template Queries ─────────────────────────────────────────────
+
+  Stream<List<ServiceTemplate>> watchAllServiceTemplates() =>
+      (select(serviceTemplates)
+            ..orderBy([(t) => OrderingTerm.asc(t.name)]))
+          .watch();
+
+  Future<ServiceTemplate?> getServiceTemplate(int id) =>
+      (select(serviceTemplates)..where((t) => t.id.equals(id)))
+          .getSingleOrNull();
+
+  Future<int> insertServiceTemplate(ServiceTemplatesCompanion entry) =>
+      into(serviceTemplates).insert(entry);
+
+  Future<bool> updateServiceTemplate(ServiceTemplate t) =>
+      update(serviceTemplates).replace(t);
+
+  Future<int> deleteServiceTemplate(int id) =>
+      (delete(serviceTemplates)..where((t) => t.id.equals(id))).go();
+
+  // ─── Global Search ────────────────────────────────────────────────────────
+  // Each method searches its table for a query string.
+  // Results are returned as simple lists for the search screen to display.
+
+  Future<List<Customer>> searchCustomers(String q) {
+    final lower = '%${q.toLowerCase()}%';
+    return (select(customers)
+          ..where((c) =>
+              c.name.lower().like(lower) |
+              c.phone.lower().like(lower) |
+              c.email.lower().like(lower))
+          ..orderBy([(c) => OrderingTerm.asc(c.name)]))
+        .get();
+  }
+
+  Future<List<Vehicle>> searchVehicles(String q) {
+    final lower = '%${q.toLowerCase()}%';
+    return (select(vehicles)
+          ..where((v) =>
+              v.make.lower().like(lower) |
+              v.model.lower().like(lower) |
+              v.vin.lower().like(lower) |
+              v.licensePlate.lower().like(lower))
+          ..orderBy([(v) => OrderingTerm.asc(v.make)]))
+        .get();
+  }
+
+  Future<List<EstimateWithDetails>> searchEstimates(String q) {
+    final lower = '%${q.toLowerCase()}%';
+    final query = select(estimates).join([
+      leftOuterJoin(customers, customers.id.equalsExp(estimates.customerId)),
+      leftOuterJoin(vehicles, vehicles.id.equalsExp(estimates.vehicleId)),
+    ]);
+    query.where(customers.name.lower().like(lower) |
+        estimates.note.lower().like(lower) |
+        estimates.customerComplaint.lower().like(lower));
+    query.orderBy([OrderingTerm.desc(estimates.createdAt)]);
+    return query.get().then((rows) => rows
+        .map((row) => EstimateWithDetails(
+              estimate: row.readTable(estimates),
+              customer: row.readTableOrNull(customers),
+              vehicle: row.readTableOrNull(vehicles),
+            ))
+        .toList());
+  }
+
+  Future<List<RepairOrderWithDetails>> searchRepairOrders(String q) {
+    final lower = '%${q.toLowerCase()}%';
+    final query = select(repairOrders).join([
+      leftOuterJoin(customers, customers.id.equalsExp(repairOrders.customerId)),
+      leftOuterJoin(vehicles, vehicles.id.equalsExp(repairOrders.vehicleId)),
+    ]);
+    query.where(customers.name.lower().like(lower) |
+        repairOrders.note.lower().like(lower));
+    query.orderBy([OrderingTerm.desc(repairOrders.createdAt)]);
+    return query.get().then((rows) => rows
+        .map((row) => RepairOrderWithDetails(
+              ro: row.readTable(repairOrders),
+              customer: row.readTableOrNull(customers),
+              vehicle: row.readTableOrNull(vehicles),
+            ))
+        .toList());
+  }
 }
 
 // Opens (or creates) the SQLite database file on the device.

@@ -37,15 +37,19 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **Repair Orders** — convert estimate → RO (declined items excluded), RO list (color-coded status, status filter pills), RO detail, status flow (Open → In Progress → Completed → Closed), mark items done per line item, Edit Estimate link on non-closed ROs, edit RO note, assign technician from bottom sheet picker
 - **Vendors** — list, add/edit/delete, account # forced uppercase, contact name
 - **Shop settings** — default labor rate + parts markup, stored in DB, accessible via ⌘,
-- **macOS menu bar** — AutoShopPro / File (⌘N, ⇧⌘N) / Window / Help
-- **Right-click context menus** — on customer, estimate, and vendor list rows; contextMenuBuilder on all CupertinoTextFields
+- **macOS menu bar** — AutoShopPro / File (⌘N, ⇧⌘N, ⌘F for Search) / Window / Help
+- **Right-click context menus** — on customer, estimate, and vendor list rows; on estimate line items (Edit / Delete); contextMenuBuilder on all CupertinoTextFields
 - **Technicians** — list, add/edit/delete, specialty + phone fields
 - **Parts Inventory** — list (searchable, stock badges), add/edit/delete form, stock qty tracking
 - **Catalog picker** — on Add Part form, picks from inventory to auto-fill description/cost/sell price; markup tier auto-applies based on cost
 - **Stock tracking** — deducts when RO line item is checked off, restores when unchecked
-- **Settings screen** — at `/settings`, sidebar gear icon + ⌘,; sections: shop info, default labor rate, default tax rate, parts markup rules
+- **Settings screen** — at `/settings`, sidebar gear icon + ⌘,; sections: shop info, default labor rate, default tax rate, parts markup rules, service templates
 - **Markup rules** — tiered matrix (cost range → markup %), add/edit/delete tiers
-- **Database** — Drift/SQLite, schema v17, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules
+- **Service Templates** — premade services (e.g. "Oil Change"); name, labor description, default hours, optional rate; managed at Settings → Service Templates; Apply Template action on estimates adds a pre-filled approved labor line in one tap
+- **Global search** — Search screen in sidebar + ⌘F; searches customers, vehicles, estimates, and ROs simultaneously; results grouped by section with direct navigation
+- **Inline search in pickers** — all picker/dropdown sheets (customer, vehicle, vendor, labor, technician, template) autofocus a search field; list filters as you type
+- **Default approve** — new line items save as approved automatically
+- **Database** — Drift/SQLite, schema v18, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
@@ -75,7 +79,7 @@ The only exception is destructive actions (delete), which use a centered `Cupert
 - Colors: system blue (#007AFF) as primary accent, pure whites and light grays for backgrounds
 - Typography: clean, well-spaced, hierarchical — large bold titles, smaller muted subtitles
 - Animations: smooth, physics-based, subtle — nothing flashy
-- Cards and lists should feel like native iOS grouped table views
+- Cards and lists should feel like native macOS grouped lists on desktop and native iOS table views on mobile
 - NO Material design widgets — always prefer Cupertino equivalents
 - Spacing should feel generous and breathable like Apple apps
 
@@ -210,4 +214,4 @@ contextMenuBuilder: (context, editableTextState) =>
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.7.0 Parts Counter
+v0.7.1 Smooth Operator

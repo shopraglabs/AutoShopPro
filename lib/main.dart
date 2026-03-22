@@ -85,6 +85,16 @@ class AutoShopProApp extends StatelessWidget {
                 onSelected: _newCustomer,
               ),
             ]),
+            PlatformMenuItemGroup(members: [
+              PlatformMenuItem(
+                label: 'Search…',
+                shortcut: const SingleActivator(
+                  LogicalKeyboardKey.keyF,
+                  meta: true,
+                ),
+                onSelected: _openSearch,
+              ),
+            ]),
           ],
         ),
         // ── Window ───────────────────────────────────────────────────────────
@@ -181,6 +191,12 @@ Future<void> _newCustomer() async {
   ctx.go('/repair-orders/customers/new');
 }
 
+Future<void> _openSearch() async {
+  final ctx = _ctx;
+  if (ctx == null) return;
+  ctx.go('/search');
+}
+
 Future<void> _showHelpDialog() async {
   final ctx = _ctx;
   if (ctx == null) return;
@@ -232,10 +248,11 @@ class _AppShellState extends State<AppShell> {
   ];
 
   // Figure out which nav item is active by matching the current URL path.
-  // Returns -1 when on /settings so no main nav item is highlighted.
+  // Returns -1 for /settings, -2 for /search so no main nav item is highlighted.
   int _selectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/settings')) return -1;
+    if (location.startsWith('/search')) return -2;
     final index = _routes.indexWhere((r) => location.startsWith(r));
     return index < 0 ? 0 : index;
   }
@@ -318,6 +335,45 @@ class _AppShellState extends State<AppShell> {
                   );
                 }),
                 const Spacer(),
+                // ── Search ──────────────────────────────────────────────────
+                GestureDetector(
+                  onTap: () => context.go('/search'),
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(8, 2, 8, 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selected == -2
+                          ? const Color(0xFF007AFF)
+                          : CupertinoColors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          CupertinoIcons.search,
+                          size: 18,
+                          color: selected == -2
+                              ? CupertinoColors.white
+                              : const Color(0xFF3C3C43),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Search',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: selected == -2
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: selected == -2
+                                ? CupertinoColors.white
+                                : const Color(0xFF3C3C43),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 // ── Settings gear at the bottom of the sidebar ─────────────
                 GestureDetector(
                   onTap: () => context.go('/settings'),

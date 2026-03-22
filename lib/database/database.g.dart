@@ -4616,6 +4616,422 @@ class MarkupRulesCompanion extends UpdateCompanion<MarkupRule> {
   }
 }
 
+class $ServiceTemplatesTable extends ServiceTemplates
+    with TableInfo<$ServiceTemplatesTable, ServiceTemplate> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ServiceTemplatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _laborDescriptionMeta = const VerificationMeta(
+    'laborDescription',
+  );
+  @override
+  late final GeneratedColumn<String> laborDescription = GeneratedColumn<String>(
+    'labor_description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _defaultHoursMeta = const VerificationMeta(
+    'defaultHours',
+  );
+  @override
+  late final GeneratedColumn<double> defaultHours = GeneratedColumn<double>(
+    'default_hours',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1.0),
+  );
+  static const VerificationMeta _defaultRateMeta = const VerificationMeta(
+    'defaultRate',
+  );
+  @override
+  late final GeneratedColumn<double> defaultRate = GeneratedColumn<double>(
+    'default_rate',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    laborDescription,
+    defaultHours,
+    defaultRate,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'service_templates';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ServiceTemplate> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('labor_description')) {
+      context.handle(
+        _laborDescriptionMeta,
+        laborDescription.isAcceptableOrUnknown(
+          data['labor_description']!,
+          _laborDescriptionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_laborDescriptionMeta);
+    }
+    if (data.containsKey('default_hours')) {
+      context.handle(
+        _defaultHoursMeta,
+        defaultHours.isAcceptableOrUnknown(
+          data['default_hours']!,
+          _defaultHoursMeta,
+        ),
+      );
+    }
+    if (data.containsKey('default_rate')) {
+      context.handle(
+        _defaultRateMeta,
+        defaultRate.isAcceptableOrUnknown(
+          data['default_rate']!,
+          _defaultRateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ServiceTemplate map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ServiceTemplate(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      laborDescription: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}labor_description'],
+      )!,
+      defaultHours: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}default_hours'],
+      )!,
+      defaultRate: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}default_rate'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ServiceTemplatesTable createAlias(String alias) {
+    return $ServiceTemplatesTable(attachedDatabase, alias);
+  }
+}
+
+class ServiceTemplate extends DataClass implements Insertable<ServiceTemplate> {
+  final int id;
+  final String name;
+  final String laborDescription;
+  final double defaultHours;
+  final double? defaultRate;
+  final DateTime createdAt;
+  const ServiceTemplate({
+    required this.id,
+    required this.name,
+    required this.laborDescription,
+    required this.defaultHours,
+    this.defaultRate,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['labor_description'] = Variable<String>(laborDescription);
+    map['default_hours'] = Variable<double>(defaultHours);
+    if (!nullToAbsent || defaultRate != null) {
+      map['default_rate'] = Variable<double>(defaultRate);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ServiceTemplatesCompanion toCompanion(bool nullToAbsent) {
+    return ServiceTemplatesCompanion(
+      id: Value(id),
+      name: Value(name),
+      laborDescription: Value(laborDescription),
+      defaultHours: Value(defaultHours),
+      defaultRate: defaultRate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(defaultRate),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ServiceTemplate.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ServiceTemplate(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      laborDescription: serializer.fromJson<String>(json['laborDescription']),
+      defaultHours: serializer.fromJson<double>(json['defaultHours']),
+      defaultRate: serializer.fromJson<double?>(json['defaultRate']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'laborDescription': serializer.toJson<String>(laborDescription),
+      'defaultHours': serializer.toJson<double>(defaultHours),
+      'defaultRate': serializer.toJson<double?>(defaultRate),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ServiceTemplate copyWith({
+    int? id,
+    String? name,
+    String? laborDescription,
+    double? defaultHours,
+    Value<double?> defaultRate = const Value.absent(),
+    DateTime? createdAt,
+  }) => ServiceTemplate(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    laborDescription: laborDescription ?? this.laborDescription,
+    defaultHours: defaultHours ?? this.defaultHours,
+    defaultRate: defaultRate.present ? defaultRate.value : this.defaultRate,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ServiceTemplate copyWithCompanion(ServiceTemplatesCompanion data) {
+    return ServiceTemplate(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      laborDescription: data.laborDescription.present
+          ? data.laborDescription.value
+          : this.laborDescription,
+      defaultHours: data.defaultHours.present
+          ? data.defaultHours.value
+          : this.defaultHours,
+      defaultRate: data.defaultRate.present
+          ? data.defaultRate.value
+          : this.defaultRate,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ServiceTemplate(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('laborDescription: $laborDescription, ')
+          ..write('defaultHours: $defaultHours, ')
+          ..write('defaultRate: $defaultRate, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    laborDescription,
+    defaultHours,
+    defaultRate,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ServiceTemplate &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.laborDescription == this.laborDescription &&
+          other.defaultHours == this.defaultHours &&
+          other.defaultRate == this.defaultRate &&
+          other.createdAt == this.createdAt);
+}
+
+class ServiceTemplatesCompanion extends UpdateCompanion<ServiceTemplate> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<String> laborDescription;
+  final Value<double> defaultHours;
+  final Value<double?> defaultRate;
+  final Value<DateTime> createdAt;
+  const ServiceTemplatesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.laborDescription = const Value.absent(),
+    this.defaultHours = const Value.absent(),
+    this.defaultRate = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  ServiceTemplatesCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    required String laborDescription,
+    this.defaultHours = const Value.absent(),
+    this.defaultRate = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : name = Value(name),
+       laborDescription = Value(laborDescription);
+  static Insertable<ServiceTemplate> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<String>? laborDescription,
+    Expression<double>? defaultHours,
+    Expression<double>? defaultRate,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (laborDescription != null) 'labor_description': laborDescription,
+      if (defaultHours != null) 'default_hours': defaultHours,
+      if (defaultRate != null) 'default_rate': defaultRate,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  ServiceTemplatesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<String>? laborDescription,
+    Value<double>? defaultHours,
+    Value<double?>? defaultRate,
+    Value<DateTime>? createdAt,
+  }) {
+    return ServiceTemplatesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      laborDescription: laborDescription ?? this.laborDescription,
+      defaultHours: defaultHours ?? this.defaultHours,
+      defaultRate: defaultRate ?? this.defaultRate,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (laborDescription.present) {
+      map['labor_description'] = Variable<String>(laborDescription.value);
+    }
+    if (defaultHours.present) {
+      map['default_hours'] = Variable<double>(defaultHours.value);
+    }
+    if (defaultRate.present) {
+      map['default_rate'] = Variable<double>(defaultRate.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ServiceTemplatesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('laborDescription: $laborDescription, ')
+          ..write('defaultHours: $defaultHours, ')
+          ..write('defaultRate: $defaultRate, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4630,6 +5046,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TechniciansTable technicians = $TechniciansTable(this);
   late final $InventoryPartsTable inventoryParts = $InventoryPartsTable(this);
   late final $MarkupRulesTable markupRules = $MarkupRulesTable(this);
+  late final $ServiceTemplatesTable serviceTemplates = $ServiceTemplatesTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4645,6 +5064,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     technicians,
     inventoryParts,
     markupRules,
+    serviceTemplates,
   ];
 }
 
@@ -7022,6 +7442,231 @@ typedef $$MarkupRulesTableProcessedTableManager =
       MarkupRule,
       PrefetchHooks Function()
     >;
+typedef $$ServiceTemplatesTableCreateCompanionBuilder =
+    ServiceTemplatesCompanion Function({
+      Value<int> id,
+      required String name,
+      required String laborDescription,
+      Value<double> defaultHours,
+      Value<double?> defaultRate,
+      Value<DateTime> createdAt,
+    });
+typedef $$ServiceTemplatesTableUpdateCompanionBuilder =
+    ServiceTemplatesCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<String> laborDescription,
+      Value<double> defaultHours,
+      Value<double?> defaultRate,
+      Value<DateTime> createdAt,
+    });
+
+class $$ServiceTemplatesTableFilterComposer
+    extends Composer<_$AppDatabase, $ServiceTemplatesTable> {
+  $$ServiceTemplatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get laborDescription => $composableBuilder(
+    column: $table.laborDescription,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get defaultHours => $composableBuilder(
+    column: $table.defaultHours,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get defaultRate => $composableBuilder(
+    column: $table.defaultRate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ServiceTemplatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ServiceTemplatesTable> {
+  $$ServiceTemplatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get laborDescription => $composableBuilder(
+    column: $table.laborDescription,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get defaultHours => $composableBuilder(
+    column: $table.defaultHours,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get defaultRate => $composableBuilder(
+    column: $table.defaultRate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ServiceTemplatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ServiceTemplatesTable> {
+  $$ServiceTemplatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get laborDescription => $composableBuilder(
+    column: $table.laborDescription,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get defaultHours => $composableBuilder(
+    column: $table.defaultHours,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get defaultRate => $composableBuilder(
+    column: $table.defaultRate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ServiceTemplatesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ServiceTemplatesTable,
+          ServiceTemplate,
+          $$ServiceTemplatesTableFilterComposer,
+          $$ServiceTemplatesTableOrderingComposer,
+          $$ServiceTemplatesTableAnnotationComposer,
+          $$ServiceTemplatesTableCreateCompanionBuilder,
+          $$ServiceTemplatesTableUpdateCompanionBuilder,
+          (
+            ServiceTemplate,
+            BaseReferences<
+              _$AppDatabase,
+              $ServiceTemplatesTable,
+              ServiceTemplate
+            >,
+          ),
+          ServiceTemplate,
+          PrefetchHooks Function()
+        > {
+  $$ServiceTemplatesTableTableManager(
+    _$AppDatabase db,
+    $ServiceTemplatesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ServiceTemplatesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ServiceTemplatesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ServiceTemplatesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> laborDescription = const Value.absent(),
+                Value<double> defaultHours = const Value.absent(),
+                Value<double?> defaultRate = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ServiceTemplatesCompanion(
+                id: id,
+                name: name,
+                laborDescription: laborDescription,
+                defaultHours: defaultHours,
+                defaultRate: defaultRate,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                required String laborDescription,
+                Value<double> defaultHours = const Value.absent(),
+                Value<double?> defaultRate = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ServiceTemplatesCompanion.insert(
+                id: id,
+                name: name,
+                laborDescription: laborDescription,
+                defaultHours: defaultHours,
+                defaultRate: defaultRate,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ServiceTemplatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ServiceTemplatesTable,
+      ServiceTemplate,
+      $$ServiceTemplatesTableFilterComposer,
+      $$ServiceTemplatesTableOrderingComposer,
+      $$ServiceTemplatesTableAnnotationComposer,
+      $$ServiceTemplatesTableCreateCompanionBuilder,
+      $$ServiceTemplatesTableUpdateCompanionBuilder,
+      (
+        ServiceTemplate,
+        BaseReferences<_$AppDatabase, $ServiceTemplatesTable, ServiceTemplate>,
+      ),
+      ServiceTemplate,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7046,4 +7691,6 @@ class $AppDatabaseManager {
       $$InventoryPartsTableTableManager(_db, _db.inventoryParts);
   $$MarkupRulesTableTableManager get markupRules =>
       $$MarkupRulesTableTableManager(_db, _db.markupRules);
+  $$ServiceTemplatesTableTableManager get serviceTemplates =>
+      $$ServiceTemplatesTableTableManager(_db, _db.serviceTemplates);
 }

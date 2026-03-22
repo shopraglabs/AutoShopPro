@@ -25,6 +25,9 @@ import 'features/technicians/technicians_provider.dart';
 import 'features/inventory/part_list_screen.dart';
 import 'features/inventory/part_form_screen.dart';
 import 'features/settings/settings_screen.dart';
+import 'features/service_templates/service_template_list_screen.dart';
+import 'features/service_templates/service_template_form_screen.dart';
+import 'features/search/search_screen.dart';
 
 // The router defines every screen address in the app.
 // Think of each GoRoute as a page in a book — the 'path' is its page number,
@@ -263,6 +266,34 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/settings',
           builder: (context, state) => const SettingsScreen(),
+          routes: [
+            GoRoute(
+              path: 'service-templates',
+              builder: (context, state) =>
+                  const ServiceTemplateListScreen(),
+              routes: [
+                GoRoute(
+                  path: 'new',
+                  builder: (context, state) =>
+                      const ServiceTemplateFormScreen(),
+                ),
+                GoRoute(
+                  path: ':templateId/edit',
+                  builder: (context, state) {
+                    final id = int.parse(
+                        state.pathParameters['templateId']!);
+                    return _ServiceTemplateEditLoader(templateId: id);
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        // ── Search ────────────────────────────────────────────────────────
+        GoRoute(
+          path: '/search',
+          builder: (context, state) => const SearchScreen(),
         ),
 
         // ── Module 3: Payments ────────────────────────────────────────────────
@@ -531,6 +562,36 @@ class _PartEditLoader extends ConsumerWidget {
           );
         }
         return PartFormScreen(part: part);
+      },
+    );
+  }
+}
+
+// Fetches a service template from the database by id, then shows the edit form.
+class _ServiceTemplateEditLoader extends ConsumerWidget {
+  final int templateId;
+  const _ServiceTemplateEditLoader({required this.templateId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(dbProvider);
+    return FutureBuilder(
+      future: db.getServiceTemplate(templateId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CupertinoPageScaffold(
+            child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        final template = snapshot.data;
+        if (template == null) {
+          return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(
+                middle: Text('Edit Template')),
+            child: Center(child: Text('Template not found.')),
+          );
+        }
+        return ServiceTemplateFormScreen(template: template);
       },
     );
   }

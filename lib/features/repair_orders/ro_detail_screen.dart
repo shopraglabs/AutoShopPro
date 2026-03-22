@@ -656,7 +656,7 @@ class _TechnicianLabel extends ConsumerWidget {
 
 // ─── Technician Picker Sheet ──────────────────────────────────────────────────
 // A bottom sheet for assigning a technician to a repair order.
-class _TechPickerSheet extends StatelessWidget {
+class _TechPickerSheet extends StatefulWidget {
   final List<Technician> techs;
   final int? currentTechId;
   final void Function(int techId) onSelect;
@@ -672,11 +672,49 @@ class _TechPickerSheet extends StatelessWidget {
   });
 
   @override
+  State<_TechPickerSheet> createState() => _TechPickerSheetState();
+}
+
+class _TechPickerSheetState extends State<_TechPickerSheet> {
+  final _searchCtrl = TextEditingController();
+  late List<Technician> _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.techs;
+    _searchCtrl.addListener(_onSearch);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.removeListener(_onSearch);
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    final q = _searchCtrl.text.toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.techs
+          : widget.techs
+              .where((t) =>
+                  t.name.toLowerCase().contains(q) ||
+                  (t.specialty?.toLowerCase().contains(q) ?? false))
+              .toList();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
         color: CupertinoColors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.65,
       ),
       child: SafeArea(
         top: false,
@@ -716,10 +754,19 @@ class _TechPickerSheet extends StatelessWidget {
                 ],
               ),
             ),
+            // Search field
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: CupertinoSearchTextField(
+                controller: _searchCtrl,
+                autofocus: true,
+                placeholder: 'Search',
+              ),
+            ),
             Container(height: 0.5, color: const Color(0xFFE5E5EA)),
             // New technician row
             GestureDetector(
-              onTap: onCreateNew,
+              onTap: widget.onCreateNew,
               child: Container(
                 color: CupertinoColors.white,
                 padding: const EdgeInsets.symmetric(
@@ -736,77 +783,93 @@ class _TechPickerSheet extends StatelessWidget {
                 ),
               ),
             ),
-            if (techs.isNotEmpty)
+            if (_filtered.isNotEmpty)
               Container(height: 0.5, color: const Color(0xFFE5E5EA)),
             // Technician rows
-            for (int i = 0; i < techs.length; i++) ...[
-              GestureDetector(
-                onTap: () => onSelect(techs[i].id),
-                child: Container(
-                  color: CupertinoColors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFE5E5EA),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            techs[i].name.isNotEmpty
-                                ? techs[i].name[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF3A3A3C),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              techs[i].name,
-                              style: const TextStyle(
-                                  fontSize: 16, color: Color(0xFF1C1C1E)),
-                            ),
-                            if (techs[i].specialty != null &&
-                                techs[i].specialty!.isNotEmpty)
-                              Text(
-                                techs[i].specialty!,
-                                style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF8E8E93)),
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (techs[i].id == currentTechId)
-                        const Icon(CupertinoIcons.checkmark,
-                            size: 16, color: Color(0xFF007AFF)),
-                    ],
-                  ),
-                ),
-              ),
-              if (i < techs.length - 1)
-                Container(
+            if (_filtered.isNotEmpty)
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _filtered.length,
+                  separatorBuilder: (_, __) => Container(
                     height: 0.5,
                     color: const Color(0xFFE5E5EA),
-                    margin: const EdgeInsets.only(left: 60)),
-            ],
+                    margin: const EdgeInsets.only(left: 60),
+                  ),
+                  itemBuilder: (context, i) => GestureDetector(
+                    onTap: () => widget.onSelect(_filtered[i].id),
+                    child: Container(
+                      color: CupertinoColors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE5E5EA),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                _filtered[i].name.isNotEmpty
+                                    ? _filtered[i].name[0].toUpperCase()
+                                    : '?',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF3A3A3C),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _filtered[i].name,
+                                  style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF1C1C1E)),
+                                ),
+                                if (_filtered[i].specialty != null &&
+                                    _filtered[i].specialty!.isNotEmpty)
+                                  Text(
+                                    _filtered[i].specialty!,
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xFF8E8E93)),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (_filtered[i].id == widget.currentTechId)
+                            const Icon(CupertinoIcons.checkmark,
+                                size: 16, color: Color(0xFF007AFF)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else if (_searchCtrl.text.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'No technicians match "${_searchCtrl.text}"',
+                  style: const TextStyle(
+                      fontSize: 15, color: Color(0xFF8E8E93)),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             // Remove technician (only when one is assigned)
-            if (onRemove != null) ...[
+            if (widget.onRemove != null) ...[
               Container(height: 0.5, color: const Color(0xFFE5E5EA)),
               GestureDetector(
-                onTap: onRemove,
+                onTap: widget.onRemove,
                 child: Container(
                   color: CupertinoColors.white,
                   padding: const EdgeInsets.symmetric(

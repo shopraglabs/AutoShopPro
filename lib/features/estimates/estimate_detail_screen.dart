@@ -3,8 +3,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
+import '../../widgets/context_menu.dart';
 import 'estimates_provider.dart';
 import '../repair_orders/repair_orders_provider.dart';
+import '../service_templates/service_templates_provider.dart';
 
 // Formats a double as a dollar amount: 1234.5 → "$1,234.50"
 String _money(double amount) {
@@ -60,6 +62,46 @@ class _EstimateDetailView extends ConsumerWidget {
     required this.estimate,
     required this.lineItemsAsync,
   });
+
+  // Opens the template picker. When a template is chosen, creates a labor
+  // line item pre-filled with the template's description, hours, and rate.
+  Future<void> _applyTemplate(BuildContext context, WidgetRef ref) async {
+    final templates = ref.read(serviceTemplatesProvider).value ?? [];
+    if (templates.isEmpty) {
+      showCupertinoDialog(
+        context: context,
+        builder: (d) => CupertinoAlertDialog(
+          title: const Text('No Templates'),
+          content: const Text(
+              'Go to Settings → Service Templates to create some first.'),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () => Navigator.pop(d),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    final picked = await showCupertinoModalPopup<ServiceTemplate>(
+      context: context,
+      builder: (_) => _TemplatePickerSheet(templates: templates),
+    );
+    if (picked == null || !context.mounted) return;
+    final db = ref.read(dbProvider);
+    double rate = picked.defaultRate ??
+        (await db.getOrCreateSettings()).defaultLaborRate;
+    await db.insertLineItem(EstimateLineItemsCompanion.insert(
+      estimateId: estimate.id,
+      type: 'labor',
+      description: picked.laborDescription,
+      quantity: Value(picked.defaultHours),
+      unitPrice: rate,
+      approvalStatus: const Value('approved'),
+    ));
+  }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     showCupertinoDialog(
@@ -195,6 +237,16 @@ class _EstimateDetailView extends ConsumerWidget {
                     label: 'Add Part',
                     onTap: () => context.push(
                         '/repair-orders/estimates/${estimate.id}/line-items/part'),
+                  ),
+                  Container(
+                    height: 0.5,
+                    color: const Color(0xFFE5E5EA),
+                    margin: const EdgeInsets.only(left: 46),
+                  ),
+                  _ActionRow(
+                    icon: CupertinoIcons.doc_text_fill,
+                    label: 'Apply Template',
+                    onTap: () => _applyTemplate(context, ref),
                   ),
                 ],
               ),
@@ -577,6 +629,25 @@ class _LineItemRow extends ConsumerWidget {
       child: GestureDetector(
         onTap: () => context.push(
             '/repair-orders/estimates/${item.estimateId}/line-items/${item.id}/edit'),
+        onSecondaryTapUp: (details) => showContextMenu(
+          context: context,
+          position: details.globalPosition,
+          items: [
+            ContextMenuAction(
+              label: 'Edit',
+              icon: CupertinoIcons.pencil,
+              onTap: () => context.push(
+                  '/repair-orders/estimates/${item.estimateId}/line-items/${item.id}/edit'),
+            ),
+            contextMenuDivider,
+            ContextMenuAction(
+              label: 'Delete',
+              icon: CupertinoIcons.trash,
+              isDestructive: true,
+              onTap: () => onDelete(item.id),
+            ),
+          ],
+        ),
         child: Container(
           color: CupertinoColors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -653,6 +724,9 @@ class _LineItemRow extends ConsumerWidget {
                   decorationColor: textColor,
                 ),
               ),
+              const SizedBox(width: 6),
+              const Icon(CupertinoIcons.chevron_right,
+                  size: 16, color: Color(0xFFC7C7CC)),
             ],
           ),
         ),
@@ -856,6 +930,146 @@ class _TotalRow extends StatelessWidget {
               color: textColor,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Template Picker Sheet ────────────────────────────────────────────────────
+// Shows a searchable list of service templates. Tapping one returns the
+// template so the caller can apply it to the estimate.
+class _TemplatePickerSheet extends StatefulWidget {
+  final List<ServiceTemplate> templates;
+  const _TemplatePickerSheet({required this.templates});
+
+  @override
+  State<_TemplatePickerSheet> createState() => _TemplatePickerSheetState();
+}
+
+class _TemplatePickerSheetState extends State<_TemplatePickerSheet> {
+  final _searchCtrl = TextEditingController();
+  late List<ServiceTemplate> _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.templates;
+    _searchCtrl.addListener(_onSearch);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.removeListener(_onSearch);
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    final q = _searchCtrl.text.toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.templates
+          : widget.templates
+              .where((t) =>
+                  t.name.toLowerCase().contains(q) ||
+                  t.laborDescription.toLowerCase().contains(q))
+              .toList();
+    });
+  }
+
+  String _fmtHours(double h) =>
+      h % 1 == 0 ? h.toInt().toString() : h.toStringAsFixed(1);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: CupertinoColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.65,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text('Apply Template',
+                      style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1C1C1E))),
+                ),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: CupertinoSearchTextField(
+              controller: _searchCtrl,
+              autofocus: true,
+              placeholder: 'Search templates',
+            ),
+          ),
+          Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+          if (_filtered.isNotEmpty)
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: _filtered.length,
+                separatorBuilder: (_, __) => Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E5EA),
+                  margin: const EdgeInsets.only(left: 16),
+                ),
+                itemBuilder: (context, i) {
+                  final t = _filtered[i];
+                  return GestureDetector(
+                    onTap: () => Navigator.pop(context, t),
+                    child: Container(
+                      color: CupertinoColors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(t.name,
+                              style: const TextStyle(
+                                  fontSize: 16, color: Color(0xFF1C1C1E))),
+                          Text(
+                            '${_fmtHours(t.defaultHours)} hr · ${t.laborDescription}',
+                            style: const TextStyle(
+                                fontSize: 13, color: Color(0xFF8E8E93)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                _searchCtrl.text.isNotEmpty
+                    ? 'No templates match "${_searchCtrl.text}"'
+                    : 'No templates saved yet.',
+                style: const TextStyle(
+                    fontSize: 15, color: Color(0xFF8E8E93)),
+                textAlign: TextAlign.center,
+              ),
+            ),
         ],
       ),
     );

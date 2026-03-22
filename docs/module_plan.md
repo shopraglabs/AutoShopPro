@@ -272,6 +272,16 @@ The heart of the app. Everything else depends on this.
 
 ---
 
+### UX Polish & Search (v0.7.1 Smooth Operator)
+- ✅ New line items default to approved (no manual tap required)
+- ✅ Chevron on estimate line item rows + right-click context menu (Edit / Delete)
+- ✅ Inline search in all picker sheets — customer, vehicle, vendor, labor, technician, template
+- ✅ Service Templates — new table (schema v18), list/add/edit/delete, Settings → Service Templates
+- ✅ Apply Template action on estimates — searchable picker adds pre-filled labor line in one tap
+- ✅ Global search screen — Search sidebar item + ⌘F; searches customers, vehicles, estimates, ROs
+
+---
+
 ### Backend (Go — planned)
 - ⬜ Go project scaffolding
 - ⬜ PostgreSQL schema

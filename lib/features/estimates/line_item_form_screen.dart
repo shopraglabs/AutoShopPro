@@ -383,6 +383,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         vendorId: Value(_vendorId),
         parentLaborId: Value(_parentLaborId),
         inventoryPartId: Value(_catalogPartId),
+        approvalStatus: const Value('approved'),
       ));
     }
     if (mounted) context.pop();
@@ -915,10 +916,46 @@ class _LaborPickerRow extends StatelessWidget {
 }
 
 // ─── Vendor Picker Sheet ──────────────────────────────────────────────────────
-class _VendorPickerSheet extends StatelessWidget {
+class _VendorPickerSheet extends StatefulWidget {
   final List<Vendor> vendors;
   final VoidCallback? onCreateNew;
   const _VendorPickerSheet({required this.vendors, this.onCreateNew});
+
+  @override
+  State<_VendorPickerSheet> createState() => _VendorPickerSheetState();
+}
+
+class _VendorPickerSheetState extends State<_VendorPickerSheet> {
+  final _searchCtrl = TextEditingController();
+  late List<Vendor> _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.vendors;
+    _searchCtrl.addListener(_onSearch);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.removeListener(_onSearch);
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    final q = _searchCtrl.text.toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.vendors
+          : widget.vendors
+              .where((v) =>
+                  v.name.toLowerCase().contains(q) ||
+                  (v.contactName?.toLowerCase().contains(q) ?? false) ||
+                  (v.accountNumber?.toLowerCase().contains(q) ?? false))
+              .toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -928,7 +965,7 @@ class _VendorPickerSheet extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
       ),
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.5,
+        maxHeight: MediaQuery.of(context).size.height * 0.65,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -952,13 +989,21 @@ class _VendorPickerSheet extends StatelessWidget {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: CupertinoSearchTextField(
+              controller: _searchCtrl,
+              autofocus: true,
+              placeholder: 'Search',
+            ),
+          ),
           Container(height: 0.5, color: const Color(0xFFE5E5EA)),
           // ── "+ Add Vendor" row ─────────────────────────────────────────
-          if (onCreateNew != null) ...[
+          if (widget.onCreateNew != null) ...[
             GestureDetector(
               onTap: () {
                 Navigator.pop(context);
-                onCreateNew!();
+                widget.onCreateNew!();
               },
               child: Container(
                 color: CupertinoColors.white,
@@ -976,48 +1021,58 @@ class _VendorPickerSheet extends StatelessWidget {
                 ),
               ),
             ),
-            if (vendors.isNotEmpty)
+            if (_filtered.isNotEmpty)
               Container(
                   height: 0.5,
                   color: const Color(0xFFE5E5EA),
                   margin: const EdgeInsets.only(left: 16)),
           ],
-          if (vendors.isNotEmpty)
-          Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: vendors.length,
-              separatorBuilder: (_, __) => Container(
-                height: 0.5,
-                color: const Color(0xFFE5E5EA),
-                margin: const EdgeInsets.only(left: 16),
-              ),
-              itemBuilder: (context, i) => GestureDetector(
-                onTap: () => Navigator.pop(context, vendors[i]),
-                child: Container(
-                  color: CupertinoColors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(vendors[i].name,
-                          style: const TextStyle(
-                              fontSize: 16, color: Color(0xFF1C1C1E))),
-                      if (vendors[i].contactName != null)
-                        Text(vendors[i].contactName!,
+          if (_filtered.isNotEmpty)
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: _filtered.length,
+                separatorBuilder: (_, __) => Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E5EA),
+                  margin: const EdgeInsets.only(left: 16),
+                ),
+                itemBuilder: (context, i) => GestureDetector(
+                  onTap: () => Navigator.pop(context, _filtered[i]),
+                  child: Container(
+                    color: CupertinoColors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_filtered[i].name,
                             style: const TextStyle(
-                                fontSize: 13, color: Color(0xFF8E8E93))),
-                      if (vendors[i].accountNumber != null)
-                        Text('Acct: ${vendors[i].accountNumber}',
-                            style: const TextStyle(
-                                fontSize: 13, color: Color(0xFF8E8E93))),
-                    ],
+                                fontSize: 16, color: Color(0xFF1C1C1E))),
+                        if (_filtered[i].contactName != null)
+                          Text(_filtered[i].contactName!,
+                              style: const TextStyle(
+                                  fontSize: 13, color: Color(0xFF8E8E93))),
+                        if (_filtered[i].accountNumber != null)
+                          Text('Acct: ${_filtered[i].accountNumber}',
+                              style: const TextStyle(
+                                  fontSize: 13, color: Color(0xFF8E8E93))),
+                      ],
+                    ),
                   ),
                 ),
               ),
+            )
+          else if (_searchCtrl.text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'No vendors match "${_searchCtrl.text}"',
+                style:
+                    const TextStyle(fontSize: 15, color: Color(0xFF8E8E93)),
+                textAlign: TextAlign.center,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -1025,9 +1080,42 @@ class _VendorPickerSheet extends StatelessWidget {
 }
 
 // ─── Labor Picker Sheet ───────────────────────────────────────────────────────
-class _LaborPickerSheet extends StatelessWidget {
+class _LaborPickerSheet extends StatefulWidget {
   final List<EstimateLineItem> laborLines;
   const _LaborPickerSheet({required this.laborLines});
+
+  @override
+  State<_LaborPickerSheet> createState() => _LaborPickerSheetState();
+}
+
+class _LaborPickerSheetState extends State<_LaborPickerSheet> {
+  final _searchCtrl = TextEditingController();
+  late List<EstimateLineItem> _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.laborLines;
+    _searchCtrl.addListener(_onSearch);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.removeListener(_onSearch);
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    final q = _searchCtrl.text.toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.laborLines
+          : widget.laborLines
+              .where((l) => l.description.toLowerCase().contains(q))
+              .toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1037,7 +1125,7 @@ class _LaborPickerSheet extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
       ),
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.5,
+        maxHeight: MediaQuery.of(context).size.height * 0.65,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1061,38 +1149,57 @@ class _LaborPickerSheet extends StatelessWidget {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: CupertinoSearchTextField(
+              controller: _searchCtrl,
+              autofocus: true,
+              placeholder: 'Search',
+            ),
+          ),
           Container(height: 0.5, color: const Color(0xFFE5E5EA)),
-          Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: laborLines.length,
-              separatorBuilder: (_, __) => Container(
-                height: 0.5,
-                color: const Color(0xFFE5E5EA),
-                margin: const EdgeInsets.only(left: 16),
-              ),
-              itemBuilder: (context, i) => GestureDetector(
-                onTap: () => Navigator.pop(context, laborLines[i]),
-                child: Container(
-                  color: CupertinoColors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
-                  child: Row(
-                    children: [
-                      const Icon(CupertinoIcons.wrench_fill,
-                          size: 16, color: Color(0xFF8E8E93)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(laborLines[i].description,
-                            style: const TextStyle(
-                                fontSize: 16, color: Color(0xFF1C1C1E))),
-                      ),
-                    ],
+          if (_filtered.isNotEmpty)
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: _filtered.length,
+                separatorBuilder: (_, __) => Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E5EA),
+                  margin: const EdgeInsets.only(left: 16),
+                ),
+                itemBuilder: (context, i) => GestureDetector(
+                  onTap: () => Navigator.pop(context, _filtered[i]),
+                  child: Container(
+                    color: CupertinoColors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        const Icon(CupertinoIcons.wrench_fill,
+                            size: 16, color: Color(0xFF8E8E93)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(_filtered[i].description,
+                              style: const TextStyle(
+                                  fontSize: 16, color: Color(0xFF1C1C1E))),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
+            )
+          else if (_searchCtrl.text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'No labor lines match "${_searchCtrl.text}"',
+                style:
+                    const TextStyle(fontSize: 15, color: Color(0xFF8E8E93)),
+                textAlign: TextAlign.center,
+              ),
             ),
-          ),
         ],
       ),
     );

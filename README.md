@@ -1,12 +1,12 @@
 # AutoShopPro
 
-A cross-platform automotive shop management app built with Flutter, inspired by Tekmetric, Shopmonkey, and AutoLeap. One codebase, four platforms: **Windows, macOS, Android, and iOS**.
+A cross-platform automotive shop management app built with Flutter. One codebase, four platforms: **Windows, macOS, Android, and iOS**.
 
 ---
 
 ## Project Status
 
-**v0.7.0 — Parts Counter** — Module 2 Phase 1. Parts inventory with stock tracking, catalog picker on estimates, stock deduction on RO mark-done, tiered markup rules, and a full Settings screen.
+**v0.7.1 — Smooth Operator** — UX polish session. New line items default to approved, inline search in every picker sheet, right-click context menus on line items, service templates for common jobs, and a global search screen accessible from the sidebar or ⌘F.
 
 **v0.6.0 — Full Bay** — Module 1 complete. RO list status filters, edit RO note, technician management (add/edit/delete), and assign technician to repair orders with bottom sheet picker.
 
@@ -90,9 +90,9 @@ A cross-platform automotive shop management app built with Flutter, inspired by 
 
 ## Design Philosophy
 
-The app should feel like it was designed by Apple — clean, minimal, and confident.
+The app is designed to feel native on every platform — not a generic cross-platform UI, but something that belongs on each OS.
 
-**Widgets:** Always use `flutter_cupertino` equivalents. No Material widgets.
+**Widgets:** Cupertino widgets throughout. No Material design.
 
 **Navigation:**
 - Desktop (macOS/Windows): Sidebar navigation, generous whitespace, translucent sidebars
@@ -105,20 +105,8 @@ The app should feel like it was designed by Apple — clean, minimal, and confid
 
 **Typography:** Clean, hierarchical — large bold titles, smaller muted subtitles, SF Pro style
 
-**Animations:** Smooth, physics-based, subtle — nothing flashy
+**Animations:** Smooth, physics-based, subtle
 
-**Cards & Lists:** Should feel like native iOS grouped table views
+**Cards & Lists:** Native macOS grouped lists on desktop; native iOS table views on mobile
 
-**Spacing:** Generous and breathable, like Apple apps
-
----
-
-## Coding Rules
-
-This project is built by a beginner. All code contributions must follow these rules:
-
-- Always explain what code does **before** writing it
-- Keep changes **small and focused** — one thing at a time
-- Always specify **exactly which file to open** and where to paste code
-- Never rewrite large chunks without explaining why
-- After each change, explain **how to verify it worked**
+**Spacing:** Generous and breathable

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
 import '../customers/customers_provider.dart';
 import 'markup_rules_provider.dart';
@@ -393,6 +394,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Service Templates ──────────────────────────────────────
+                  _sectionHeader('SERVICE TEMPLATES'),
+                  Container(
+                    color: CupertinoColors.systemBackground,
+                    child: GestureDetector(
+                      onTap: () =>
+                          context.push('/settings/service-templates'),
+                      child: Container(
+                        color: CupertinoColors.systemBackground,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        child: const Row(
+                          children: [
+                            Icon(CupertinoIcons.doc_text,
+                                size: 18, color: Color(0xFF007AFF)),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text('Manage Templates',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF007AFF))),
+                            ),
+                            Icon(CupertinoIcons.chevron_right,
+                                size: 16, color: Color(0xFFC7C7CC)),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
 

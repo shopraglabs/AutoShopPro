@@ -348,9 +348,10 @@ class _SectionHeader extends StatelessWidget {
 }
 
 // ─── Generic Picker Sheet ─────────────────────────────────────────────────────
-// A scrollable bottom sheet that lets the user pick one item from a list.
+// A searchable bottom sheet that lets the user pick one item from a list.
+// Typing in the search field filters items in real time — no separate search box.
 // An optional "+ New …" row appears at the top when onCreateNew is provided.
-class _PickerSheet<T> extends StatelessWidget {
+class _PickerSheet<T> extends StatefulWidget {
   final String title;
   final List<T> items;
   final String Function(T) labelFor;
@@ -369,6 +370,42 @@ class _PickerSheet<T> extends StatelessWidget {
   });
 
   @override
+  State<_PickerSheet<T>> createState() => _PickerSheetState<T>();
+}
+
+class _PickerSheetState<T> extends State<_PickerSheet<T>> {
+  final _searchCtrl = TextEditingController();
+  late List<T> _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.items;
+    _searchCtrl.addListener(_onSearch);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.removeListener(_onSearch);
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    final q = _searchCtrl.text.toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.items
+          : widget.items
+              .where((item) =>
+                  widget.labelFor(item).toLowerCase().contains(q) ||
+                  (widget.sublabelFor?.call(item)?.toLowerCase().contains(q) ??
+                      false))
+              .toList();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
@@ -376,7 +413,7 @@ class _PickerSheet<T> extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
       ),
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.55,
+        maxHeight: MediaQuery.of(context).size.height * 0.65,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -388,7 +425,7 @@ class _PickerSheet<T> extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    title,
+                    widget.title,
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
@@ -404,14 +441,23 @@ class _PickerSheet<T> extends StatelessWidget {
               ],
             ),
           ),
+          // ── Inline search field ───────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: CupertinoSearchTextField(
+              controller: _searchCtrl,
+              autofocus: true,
+              placeholder: 'Search',
+            ),
+          ),
           Container(height: 0.5, color: const Color(0xFFE5E5EA)),
 
           // ── "+ New …" row (shown when onCreateNew is provided) ───────────
-          if (onCreateNew != null) ...[
+          if (widget.onCreateNew != null) ...[
             GestureDetector(
               onTap: () {
                 Navigator.pop(context); // dismiss the sheet
-                onCreateNew!(); // navigate to create form
+                widget.onCreateNew!(); // navigate to create form
               },
               child: Container(
                 color: CupertinoColors.white,
@@ -423,7 +469,7 @@ class _PickerSheet<T> extends StatelessWidget {
                         size: 18, color: Color(0xFF007AFF)),
                     const SizedBox(width: 10),
                     Text(
-                      createNewLabel ?? 'Create New',
+                      widget.createNewLabel ?? 'Create New',
                       style: const TextStyle(
                           fontSize: 16, color: Color(0xFF007AFF)),
                     ),
@@ -431,29 +477,29 @@ class _PickerSheet<T> extends StatelessWidget {
                 ),
               ),
             ),
-            if (items.isNotEmpty)
+            if (_filtered.isNotEmpty)
               Container(
                   height: 0.5,
                   color: const Color(0xFFE5E5EA),
                   margin: const EdgeInsets.only(left: 16)),
           ],
 
-          // ── Scrollable list of items ──────────────────────────────────────
-          if (items.isNotEmpty)
+          // ── Scrollable list of filtered items ────────────────────────────
+          if (_filtered.isNotEmpty)
             Flexible(
               child: ListView.separated(
                 shrinkWrap: true,
-                itemCount: items.length,
+                itemCount: _filtered.length,
                 separatorBuilder: (_, __) => Container(
                   height: 0.5,
                   color: const Color(0xFFE5E5EA),
                   margin: const EdgeInsets.only(left: 16),
                 ),
                 itemBuilder: (context, i) {
-                  final sub = sublabelFor?.call(items[i]);
+                  final sub = widget.sublabelFor?.call(_filtered[i]);
                   final showSub = sub != null && sub.isNotEmpty;
                   return GestureDetector(
-                    onTap: () => Navigator.pop(context, items[i]),
+                    onTap: () => Navigator.pop(context, _filtered[i]),
                     child: Container(
                       color: CupertinoColors.white,
                       padding: const EdgeInsets.symmetric(
@@ -462,7 +508,7 @@ class _PickerSheet<T> extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            labelFor(items[i]),
+                            widget.labelFor(_filtered[i]),
                             style: const TextStyle(
                               fontSize: 16,
                               color: Color(0xFF1C1C1E),
@@ -481,6 +527,15 @@ class _PickerSheet<T> extends StatelessWidget {
                     ),
                   );
                 },
+              ),
+            )
+          else if (_searchCtrl.text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'No results for "${_searchCtrl.text}"',
+                style: const TextStyle(fontSize: 15, color: Color(0xFF8E8E93)),
+                textAlign: TextAlign.center,
               ),
             ),
         ],
