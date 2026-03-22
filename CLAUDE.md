@@ -40,7 +40,12 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **macOS menu bar** — AutoShopPro / File (⌘N, ⇧⌘N) / Window / Help
 - **Right-click context menus** — on customer, estimate, and vendor list rows; contextMenuBuilder on all CupertinoTextFields
 - **Technicians** — list, add/edit/delete, specialty + phone fields
-- **Database** — Drift/SQLite, schema v14, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians
+- **Parts Inventory** — list (searchable, stock badges), add/edit/delete form, stock qty tracking
+- **Catalog picker** — on Add Part form, picks from inventory to auto-fill description/cost/sell price; markup tier auto-applies based on cost
+- **Stock tracking** — deducts when RO line item is checked off, restores when unchecked
+- **Settings screen** — at `/settings`, sidebar gear icon + ⌘,; sections: shop info, default labor rate, default tax rate, parts markup rules
+- **Markup rules** — tiered matrix (cost range → markup %), add/edit/delete tiers
+- **Database** — Drift/SQLite, schema v17, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
@@ -205,4 +210,4 @@ contextMenuBuilder: (context, editableTextState) =>
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.6.0 Full Bay
+v0.7.0 Parts Counter

@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,7 +35,7 @@ class AutoShopProApp extends StatelessWidget {
                   LogicalKeyboardKey.comma,
                   meta: true,
                 ),
-                onSelected: _showSettingsDialog,
+                onSelected: _openSettings,
               ),
             ]),
             const PlatformMenuItemGroup(members: [
@@ -162,82 +161,11 @@ Future<void> _showAboutDialog() async {
   );
 }
 
-// Settings: single dialog with all settings — Cmd+, convention.
-Future<void> _showSettingsDialog() async {
+// Settings: navigate to the Settings screen — Cmd+, convention.
+Future<void> _openSettings() async {
   final ctx = _ctx;
   if (ctx == null) return;
-  final db = ProviderScope.containerOf(ctx).read(dbProvider);
-  final settings = await db.getOrCreateSettings();
-  if (!ctx.mounted) return;
-
-  final laborCtrl = TextEditingController(
-      text: settings.defaultLaborRate.toStringAsFixed(2));
-  final markupCtrl = TextEditingController(
-      text: settings.defaultPartsMarkup.toStringAsFixed(1));
-
-  showCupertinoDialog(
-    context: ctx,
-    builder: (d) => CupertinoAlertDialog(
-      title: const Text('Settings'),
-      content: Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Labor rate
-            const Text('Default Labor Rate',
-                style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93),
-                    fontWeight: FontWeight.w500)),
-            const SizedBox(height: 6),
-            CupertinoTextField(
-              controller: laborCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              placeholder: '120.00',
-              prefix: const Padding(
-                  padding: EdgeInsets.only(left: 8), child: Text('\$')),
-            ),
-            const SizedBox(height: 14),
-            // Parts markup
-            const Text('Default Parts Markup',
-                style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93),
-                    fontWeight: FontWeight.w500)),
-            const SizedBox(height: 6),
-            CupertinoTextField(
-              controller: markupCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              placeholder: '30.0',
-              suffix: const Padding(
-                  padding: EdgeInsets.only(right: 8), child: Text('%')),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        CupertinoDialogAction(
-          onPressed: () => Navigator.pop(d),
-          child: const Text('Cancel'),
-        ),
-        CupertinoDialogAction(
-          isDefaultAction: true,
-          onPressed: () async {
-            final rate =
-                double.tryParse(laborCtrl.text) ?? settings.defaultLaborRate;
-            final markup = double.tryParse(markupCtrl.text) ??
-                settings.defaultPartsMarkup;
-            await db.saveSettings(ShopSettingsCompanion(
-              id: const Value(1),
-              defaultLaborRate: Value(rate),
-              defaultPartsMarkup: Value(markup),
-            ));
-            if (d.mounted) Navigator.pop(d);
-          },
-          child: const Text('Save'),
-        ),
-      ],
-    ),
-  );
+  ctx.push('/settings');
 }
 
 // File menu helpers — navigate to the new-estimate / new-customer forms.
@@ -304,8 +232,10 @@ class _AppShellState extends State<AppShell> {
   ];
 
   // Figure out which nav item is active by matching the current URL path.
+  // Returns -1 when on /settings so no main nav item is highlighted.
   int _selectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
+    if (location.startsWith('/settings')) return -1;
     final index = _routes.indexWhere((r) => location.startsWith(r));
     return index < 0 ? 0 : index;
   }
@@ -387,6 +317,46 @@ class _AppShellState extends State<AppShell> {
                     ),
                   );
                 }),
+                const Spacer(),
+                // ── Settings gear at the bottom of the sidebar ─────────────
+                GestureDetector(
+                  onTap: () => context.go('/settings'),
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(8, 2, 8, 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selected == -1
+                          ? const Color(0xFF007AFF)
+                          : CupertinoColors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          CupertinoIcons.settings,
+                          size: 18,
+                          color: selected == -1
+                              ? CupertinoColors.white
+                              : const Color(0xFF3C3C43),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Settings',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: selected == -1
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: selected == -1
+                                ? CupertinoColors.white
+                                : const Color(0xFF3C3C43),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

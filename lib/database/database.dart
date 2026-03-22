@@ -73,6 +73,8 @@ class EstimateLineItems extends Table {
   BoolColumn get isDone => boolean().nullable()();
   // Customer approval status: null = pending, 'approved', 'declined'
   TextColumn get approvalStatus => text().nullable()();
+  // Which inventory part this line item was sourced from (null = not from catalog)
+  IntColumn get inventoryPartId => integer().nullable()();
 }
 
 class Vendors extends Table {
@@ -104,6 +106,24 @@ class RepairOrders extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+// Parts the shop keeps in inventory. Stock levels drive the low-stock warnings.
+class InventoryParts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // The part's catalog or SKU number, e.g. "BP-4502"
+  TextColumn get partNumber => text().nullable()();
+  // Human-readable description, e.g. "Front Brake Pads"
+  TextColumn get description => text()();
+  // What the shop paid for this part
+  RealColumn get cost => real().withDefault(const Constant(0.0))();
+  // What the shop charges the customer for this part
+  RealColumn get sellPrice => real().withDefault(const Constant(0.0))();
+  // How many are currently on the shelf
+  IntColumn get stockQty => integer().withDefault(const Constant(0))();
+  // Quantity at or below which we show a "Low Stock" warning (default 2)
+  IntColumn get lowStockThreshold => integer().withDefault(const Constant(2))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 // A technician who works at the shop. ROs can be assigned to a technician.
 class Technicians extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -118,12 +138,29 @@ class Technicians extends Table {
 // The row is always id = 1. We use getOrCreateSettings() to read it safely.
 class ShopSettings extends Table {
   IntColumn get id => integer().autoIncrement()();
+  // The shop's name — shown on invoices and reports
+  TextColumn get shopName => text().nullable()();
   // Default hourly labor rate charged to customers, e.g. 120.0
   RealColumn get defaultLaborRate =>
       real().withDefault(const Constant(120.0))();
   // Default parts markup as a percentage, e.g. 30.0 means 30%
+  // Kept for backwards compatibility — markup rules take precedence when set
   RealColumn get defaultPartsMarkup =>
       real().withDefault(const Constant(30.0))();
+  // Default tax rate applied to new estimates, e.g. 8.5 means 8.5%
+  RealColumn get defaultTaxRate => real().withDefault(const Constant(0.0))();
+}
+
+// Tiered markup rules: parts within a cost range get a specific markup %.
+// Rows are ordered by minCost. The first matching rule wins.
+class MarkupRules extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // Lower bound of the part cost range (inclusive), e.g. 0.0
+  RealColumn get minCost => real()();
+  // Upper bound of the part cost range (exclusive). Null = no upper limit.
+  RealColumn get maxCost => real().nullable()();
+  // Markup percentage to apply, e.g. 50.0 means 50%
+  RealColumn get markupPercent => real()();
 }
 
 /// Combined estimate + customer + vehicle — used in the estimate list screen.
@@ -163,6 +200,8 @@ class RepairOrderWithDetails {
   Vendors,
   RepairOrders,
   Technicians,
+  InventoryParts,
+  MarkupRules,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -170,7 +209,7 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 17;
 
   // Drift runs this when it finds an older database on the device.
   @override
@@ -285,6 +324,35 @@ class AppDatabase extends _$AppDatabase {
             .get();
         if (techCol.isEmpty) {
           await m.addColumn(repairOrders, repairOrders.technicianId);
+        }
+      }
+      if (from < 15) {
+        // Added in v15: inventory_parts table.
+        await m.createTable(inventoryParts);
+      }
+      if (from < 16) {
+        // Added in v16: inventory_part_id on estimate_line_items.
+        final col = await m.database.customSelect(
+            "SELECT name FROM pragma_table_info('estimate_line_items') WHERE name='inventory_part_id'")
+            .get();
+        if (col.isEmpty) {
+          await m.addColumn(estimateLineItems, estimateLineItems.inventoryPartId);
+        }
+      }
+      if (from < 17) {
+        // Added in v17: markup_rules table + shop_name and default_tax_rate on shop_settings.
+        await m.createTable(markupRules);
+        final nameCol = await m.database.customSelect(
+            "SELECT name FROM pragma_table_info('shop_settings') WHERE name='shop_name'")
+            .get();
+        if (nameCol.isEmpty) {
+          await m.addColumn(shopSettings, shopSettings.shopName);
+        }
+        final taxCol = await m.database.customSelect(
+            "SELECT name FROM pragma_table_info('shop_settings') WHERE name='default_tax_rate'")
+            .get();
+        if (taxCol.isEmpty) {
+          await m.addColumn(shopSettings, shopSettings.defaultTaxRate);
         }
       }
     },
@@ -505,6 +573,42 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> deleteTechnician(int id) =>
       (delete(technicians)..where((t) => t.id.equals(id))).go();
+
+  // ─── Inventory Part Queries ───────────────────────────────────────────────
+
+  Stream<List<InventoryPart>> watchAllParts() =>
+      (select(inventoryParts)
+            ..orderBy([(p) => OrderingTerm.asc(p.description)]))
+          .watch();
+
+  Future<InventoryPart?> getPart(int id) =>
+      (select(inventoryParts)..where((p) => p.id.equals(id))).getSingleOrNull();
+
+  Future<int> insertPart(InventoryPartsCompanion entry) =>
+      into(inventoryParts).insert(entry);
+
+  Future<bool> updatePart(InventoryPart part) =>
+      update(inventoryParts).replace(part);
+
+  Future<int> deletePart(int id) =>
+      (delete(inventoryParts)..where((p) => p.id.equals(id))).go();
+
+  // ─── Markup Rule Queries ──────────────────────────────────────────────────
+
+  // Returns a live stream of all markup rules, ordered cheapest-first.
+  Stream<List<MarkupRule>> watchAllMarkupRules() =>
+      (select(markupRules)
+            ..orderBy([(r) => OrderingTerm.asc(r.minCost)]))
+          .watch();
+
+  Future<int> insertMarkupRule(MarkupRulesCompanion entry) =>
+      into(markupRules).insert(entry);
+
+  Future<bool> updateMarkupRule(MarkupRule rule) =>
+      update(markupRules).replace(rule);
+
+  Future<int> deleteMarkupRule(int id) =>
+      (delete(markupRules)..where((r) => r.id.equals(id))).go();
 }
 
 // Opens (or creates) the SQLite database file on the device.

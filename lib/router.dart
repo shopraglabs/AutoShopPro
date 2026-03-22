@@ -22,6 +22,9 @@ import 'features/repair_orders/ro_form_screen.dart';
 import 'features/technicians/technician_list_screen.dart';
 import 'features/technicians/technician_form_screen.dart';
 import 'features/technicians/technicians_provider.dart';
+import 'features/inventory/part_list_screen.dart';
+import 'features/inventory/part_form_screen.dart';
+import 'features/settings/settings_screen.dart';
 
 // The router defines every screen address in the app.
 // Think of each GoRoute as a page in a book — the 'path' is its page number,
@@ -240,8 +243,26 @@ final appRouter = GoRouter(
         // ── Module 2: Parts ───────────────────────────────────────────────────
         GoRoute(
           path: '/parts',
-          builder: (context, state) =>
-              const PlaceholderScreen(title: 'Parts'),
+          builder: (context, state) => const PartListScreen(),
+          routes: [
+            GoRoute(
+              path: 'new',
+              builder: (context, state) => const PartFormScreen(),
+            ),
+            GoRoute(
+              path: ':partId/edit',
+              builder: (context, state) {
+                final id = int.parse(state.pathParameters['partId']!);
+                return _PartEditLoader(partId: id);
+              },
+            ),
+          ],
+        ),
+
+        // ── Settings ──────────────────────────────────────────────────────
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => const SettingsScreen(),
         ),
 
         // ── Module 3: Payments ────────────────────────────────────────────────
@@ -481,6 +502,35 @@ class _VehicleEditLoader extends ConsumerWidget {
           );
         }
         return VehicleFormScreen(customerId: customerId, vehicle: vehicle);
+      },
+    );
+  }
+}
+
+// Fetches a part from the database by id, then shows the edit form.
+class _PartEditLoader extends ConsumerWidget {
+  final int partId;
+  const _PartEditLoader({required this.partId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(dbProvider);
+    return FutureBuilder(
+      future: db.getPart(partId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CupertinoPageScaffold(
+            child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        final part = snapshot.data;
+        if (part == null) {
+          return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(middle: Text('Edit Part')),
+            child: Center(child: Text('Part not found.')),
+          );
+        }
+        return PartFormScreen(part: part);
       },
     );
   }

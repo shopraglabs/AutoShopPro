@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
 import 'estimates_provider.dart';
 import '../vendors/vendors_provider.dart' show vendorsProvider;
+import '../inventory/inventory_provider.dart';
+import '../settings/markup_rules_provider.dart';
 
 // The form for adding a labor or parts line to an estimate.
 // type: 'labor' | 'part'
@@ -45,6 +47,8 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
   String? _vendorName;
   int? _parentLaborId;
   String? _parentLaborDesc;
+  int? _catalogPartId;
+  String? _catalogPartName;
 
   // Guard flag: prevents markup sync from triggering infinite listener loops
   bool _syncingMarkup = false;
@@ -139,9 +143,35 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
 
   // ── Markup sync logic ────────────────────────────────────────────────────
 
-  // Called when Unit Cost or Markup % changes → recalculate Markup $ and List
-  void _onCostChanged() => _recalcFromCostAndPercent();
+  // Called when Unit Cost changes → apply matching markup tier, then recalc.
+  void _onCostChanged() {
+    _applyMarkupTier();
+    _recalcFromCostAndPercent();
+  }
+
   void _onMarkupPercentChanged() => _recalcFromCostAndPercent();
+
+  // Looks up the markup rules for the current cost and sets the markup %
+  // if a matching tier is found. Uses the syncingMarkup guard so setting
+  // the percent field doesn't trigger an infinite listener loop.
+  void _applyMarkupTier() {
+    final cost = double.tryParse(_unitCost.text);
+    if (cost == null) return;
+    final rules = ref.read(markupRulesProvider).value ?? [];
+    for (final rule in rules) {
+      final withinMax =
+          rule.maxCost == null || cost < rule.maxCost!;
+      if (cost >= rule.minCost && withinMax) {
+        final newPct = rule.markupPercent.toStringAsFixed(1);
+        if (_markupPercent.text != newPct) {
+          _syncingMarkup = true;
+          _markupPercent.text = newPct;
+          _syncingMarkup = false;
+        }
+        return;
+      }
+    }
+  }
 
   void _recalcFromCostAndPercent() {
     if (_syncingMarkup) return;
@@ -247,6 +277,52 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     });
   }
 
+  Future<void> _pickFromCatalog() async {
+    final parts = ref.read(inventoryPartsProvider).value ?? [];
+    final picked = await showCupertinoModalPopup<InventoryPart>(
+      context: context,
+      builder: (_) => _CatalogPickerSheet(
+        parts: parts,
+        onAddNew: () => context.push('/parts/new'),
+      ),
+    );
+    if (picked != null) {
+      // Temporarily remove listeners to prevent feedback loops during fill
+      _unitCost.removeListener(_onCostChanged);
+      _markupPercent.removeListener(_onMarkupPercentChanged);
+      _markupDollar.removeListener(_onMarkupDollarChanged);
+      _unitList.removeListener(_onListChanged);
+
+      _description.text = picked.description;
+      _unitCost.text = picked.cost.toStringAsFixed(2);
+      _unitList.text = picked.sellPrice.toStringAsFixed(2);
+      // Derive markup from cost and sell price
+      if (picked.cost > 0) {
+        final dollar = picked.sellPrice - picked.cost;
+        final pct = dollar / picked.cost * 100;
+        _markupDollar.text = dollar.toStringAsFixed(2);
+        _markupPercent.text = pct.toStringAsFixed(1);
+      }
+
+      _unitCost.addListener(_onCostChanged);
+      _markupPercent.addListener(_onMarkupPercentChanged);
+      _markupDollar.addListener(_onMarkupDollarChanged);
+      _unitList.addListener(_onListChanged);
+
+      setState(() {
+        _catalogPartId = picked.id;
+        _catalogPartName = picked.description;
+      });
+    }
+  }
+
+  void _clearCatalogLink() {
+    setState(() {
+      _catalogPartId = null;
+      _catalogPartName = null;
+    });
+  }
+
   // ── Save ─────────────────────────────────────────────────────────────────
 
   Future<void> _save() async {
@@ -286,13 +362,15 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     final db = ref.read(dbProvider);
 
     if (_isEditing) {
-      await db.updateLineItem(widget.lineItem!.copyWith(
+      final existing = widget.lineItem!;
+      await db.updateLineItem(existing.copyWith(
         description: desc,
         quantity: qty,
         unitPrice: price,
         unitCost: Value(unitCost),
         vendorId: Value(_vendorId),
         parentLaborId: Value(_parentLaborId),
+        inventoryPartId: Value(_catalogPartId ?? existing.inventoryPartId),
       ));
     } else {
       await db.insertLineItem(EstimateLineItemsCompanion.insert(
@@ -304,6 +382,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         unitCost: Value(unitCost),
         vendorId: Value(_vendorId),
         parentLaborId: Value(_parentLaborId),
+        inventoryPartId: Value(_catalogPartId),
       ));
     }
     if (mounted) context.pop();
@@ -340,6 +419,12 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch providers so streams are active before the user taps a picker,
+    // and so markup rules are available for auto-fill when cost is typed.
+    ref.watch(vendorsProvider);
+    ref.watch(inventoryPartsProvider);
+    ref.watch(markupRulesProvider);
+
     final title = _isEditing
         ? (_isLabor ? 'Edit Labor' : 'Edit Part')
         : (_isLabor ? 'Add Labor' : 'Add Part');
@@ -406,6 +491,15 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                       ],
                     ),
                   ] else ...[
+                    // ── Parts: From Catalog picker ───────────────────
+                    _CatalogPickerRow(
+                      selectedName: _catalogPartName,
+                      onTap: () => _pickFromCatalog(),
+                      onClear: _catalogPartName != null
+                          ? _clearCatalogLink
+                          : null,
+                    ),
+                    _divider(),
                     // ── Parts: Unit Cost ─────────────────────────────
                     _Field(
                       label: 'Unit Cost',
@@ -540,6 +634,10 @@ class _Field extends StatelessWidget {
               textCapitalization: textCapitalization,
               inputFormatters: inputFormatters,
               autofocus: autofocus,
+              onTap: () => controller.selection = TextSelection(
+                baseOffset: 0,
+                extentOffset: controller.text.length,
+              ),
               contextMenuBuilder: (context, editableTextState) {
                 return CupertinoAdaptiveTextSelectionToolbar.editableText(
                   editableTextState: editableTextState,
@@ -995,6 +1093,217 @@ class _LaborPickerSheet extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Catalog Picker Row ───────────────────────────────────────────────────────
+class _CatalogPickerRow extends StatelessWidget {
+  final String? selectedName;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+
+  const _CatalogPickerRow({
+    required this.selectedName,
+    required this.onTap,
+    this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        color: CupertinoColors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 96,
+              child: Text('Catalog',
+                  style: TextStyle(fontSize: 16, color: Color(0xFF1C1C1E))),
+            ),
+            Expanded(
+              child: Text(
+                selectedName ?? 'Pick from inventory',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: selectedName != null
+                      ? const Color(0xFF1C1C1E)
+                      : const Color(0xFFC7C7CC),
+                ),
+              ),
+            ),
+            if (onClear != null)
+              GestureDetector(
+                onTap: onClear,
+                child: const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: Icon(CupertinoIcons.xmark_circle_fill,
+                      size: 18, color: Color(0xFFC7C7CC)),
+                ),
+              ),
+            const Icon(CupertinoIcons.chevron_right,
+                size: 16, color: Color(0xFFC7C7CC)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Catalog Picker Sheet ─────────────────────────────────────────────────────
+class _CatalogPickerSheet extends StatefulWidget {
+  final List<InventoryPart> parts;
+  final VoidCallback? onAddNew;
+  const _CatalogPickerSheet({required this.parts, this.onAddNew});
+
+  @override
+  State<_CatalogPickerSheet> createState() => _CatalogPickerSheetState();
+}
+
+class _CatalogPickerSheetState extends State<_CatalogPickerSheet> {
+  String _search = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _search.isEmpty
+        ? widget.parts
+        : widget.parts
+            .where((p) =>
+                p.description.toLowerCase().contains(_search.toLowerCase()) ||
+                (p.partNumber?.toLowerCase().contains(_search.toLowerCase()) ??
+                    false))
+            .toList();
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: CupertinoColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.6,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text('Pick from Catalog',
+                      style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1C1C1E))),
+                ),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: CupertinoSearchTextField(
+              placeholder: 'Search parts…',
+              onChanged: (v) => setState(() => _search = v),
+            ),
+          ),
+          Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+          if (widget.onAddNew != null) ...[
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                widget.onAddNew!();
+              },
+              child: Container(
+                color: CupertinoColors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: const Row(
+                  children: [
+                    Icon(CupertinoIcons.plus_circle_fill,
+                        size: 18, color: Color(0xFF007AFF)),
+                    SizedBox(width: 10),
+                    Text('Add to Inventory',
+                        style: TextStyle(
+                            fontSize: 16, color: Color(0xFF007AFF))),
+                  ],
+                ),
+              ),
+            ),
+            if (filtered.isNotEmpty)
+              Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E5EA),
+                  margin: const EdgeInsets.only(left: 16)),
+          ],
+          if (filtered.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                _search.isEmpty
+                    ? 'No parts in inventory yet.'
+                    : 'No parts match "$_search".',
+                style: const TextStyle(
+                    fontSize: 15, color: CupertinoColors.secondaryLabel),
+              ),
+            )
+          else
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: filtered.length,
+                separatorBuilder: (_, __) => Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E5EA),
+                  margin: const EdgeInsets.only(left: 16),
+                ),
+                itemBuilder: (context, i) {
+                  final part = filtered[i];
+                  return GestureDetector(
+                    onTap: () => Navigator.pop(context, part),
+                    child: Container(
+                      color: CupertinoColors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(part.description,
+                                    style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Color(0xFF1C1C1E))),
+                                if (part.partNumber != null &&
+                                    part.partNumber!.isNotEmpty)
+                                  Text(part.partNumber!,
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF8E8E93))),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '\$${part.sellPrice.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                fontSize: 15, color: Color(0xFF8E8E93)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
         ],
       ),
     );

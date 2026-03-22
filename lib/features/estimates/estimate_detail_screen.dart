@@ -322,8 +322,7 @@ class _CustomerVehicleHeader extends ConsumerWidget {
                       ),
                     ),
                     if (vehicle?.licensePlate != null &&
-                        vehicle!.licensePlate!.isNotEmpty &&
-                        vehicle.licensePlate != 'NO PLATE') ...[
+                        vehicle!.licensePlate!.isNotEmpty) ...[
                       const SizedBox(width: 6),
                       Text(
                         '· ${vehicle.licensePlate}',

@@ -51,12 +51,14 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
     }
     setState(() => _saving = true);
     final db = ref.read(dbProvider);
+    final settings = await db.getOrCreateSettings();
     final id = await db.insertEstimate(EstimatesCompanion.insert(
       customerId: _customer!.id,
       vehicleId: Value(_vehicle?.id),
       customerComplaint: Value(
           _complaint.text.trim().isEmpty ? null : _complaint.text.trim()),
       note: Value(_note.text.trim().isEmpty ? null : _note.text.trim()),
+      taxRate: Value(settings.defaultTaxRate),
     ));
     if (mounted) {
       // Replace this screen with the estimate detail so Back goes to the list
@@ -100,9 +102,7 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
         labelFor: (v) => [v.year?.toString(), v.make, v.model]
             .whereType<String>()
             .join(' '),
-        sublabelFor: (v) => (v.licensePlate != null &&
-                v.licensePlate!.isNotEmpty &&
-                v.licensePlate != 'NO PLATE')
+        sublabelFor: (v) => (v.licensePlate != null && v.licensePlate!.isNotEmpty)
             ? v.licensePlate
             : null,
         createNewLabel: 'New Vehicle',
@@ -233,9 +233,7 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
                                             color: Color(0xFF1C1C1E)),
                                       ),
                                       if (_vehicle!.licensePlate != null &&
-                                          _vehicle!.licensePlate!.isNotEmpty &&
-                                          _vehicle!.licensePlate !=
-                                              'NO PLATE')
+                                          _vehicle!.licensePlate!.isNotEmpty)
                                         Text(
                                           _vehicle!.licensePlate!,
                                           style: const TextStyle(
@@ -453,9 +451,7 @@ class _PickerSheet<T> extends StatelessWidget {
                 ),
                 itemBuilder: (context, i) {
                   final sub = sublabelFor?.call(items[i]);
-                  final showSub = sub != null &&
-                      sub.isNotEmpty &&
-                      sub != 'NO PLATE';
+                  final showSub = sub != null && sub.isNotEmpty;
                   return GestureDetector(
                     onTap: () => Navigator.pop(context, items[i]),
                     child: Container(

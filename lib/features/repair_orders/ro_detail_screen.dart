@@ -932,10 +932,25 @@ class _LineItemRow extends StatelessWidget {
   });
 
   Future<void> _toggleDone() async {
-    final done = !(item.isDone ?? false);
-    await ref
-        .read(dbProvider)
-        .updateLineItem(item.copyWith(isDone: Value(done)));
+    final wasDone = item.isDone ?? false;
+    final nowDone = !wasDone;
+    final db = ref.read(dbProvider);
+
+    await db.updateLineItem(item.copyWith(isDone: Value(nowDone)));
+
+    // Adjust inventory stock when a parts line item is checked/unchecked.
+    // Only parts linked to the catalog (inventoryPartId != null) are tracked.
+    if (item.type == 'part' && item.inventoryPartId != null) {
+      final part = await db.getPart(item.inventoryPartId!);
+      if (part != null) {
+        final qty = item.quantity.round();
+        // Checking off → deduct stock. Unchecking → restore stock.
+        final newStock = nowDone
+            ? part.stockQty - qty
+            : part.stockQty + qty;
+        await db.updatePart(part.copyWith(stockQty: newStock));
+      }
+    }
   }
 
   @override

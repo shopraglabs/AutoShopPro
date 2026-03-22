@@ -6,6 +6,8 @@ A cross-platform automotive shop management app built with Flutter, inspired by 
 
 ## Project Status
 
+**v0.7.0 — Parts Counter** — Module 2 Phase 1. Parts inventory with stock tracking, catalog picker on estimates, stock deduction on RO mark-done, tiered markup rules, and a full Settings screen.
+
 **v0.6.0 — Full Bay** — Module 1 complete. RO list status filters, edit RO note, technician management (add/edit/delete), and assign technician to repair orders with bottom sheet picker.
 
 **v0.5.0 — Sign-Off** — Full write-up workflow: customer complaints, parts with cost/markup pricing, parts linked to labor lines, individual item approval/decline on estimates, declined items excluded from repair orders.

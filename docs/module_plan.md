@@ -81,15 +81,17 @@ The heart of the app. Everything else depends on this.
 ## Module 2 — Parts & Ordering
 
 ### Inventory
-- ⬜ Part model (part number, description, cost, sell price, stock quantity)
-- ⬜ Parts list screen
-- ⬜ Add / edit part form
-- ⬜ Stock level display (in stock / low stock / out of stock)
+- ✅ Part model (part number, description, cost, sell price, stock quantity)
+- ✅ Parts list screen
+- ✅ Add / edit part form
+- ✅ Stock level display (in stock / low stock / out of stock)
+- ✅ Catalog picker on Add Part form — pick from inventory, auto-fills description/cost/sell price
+- ✅ Stock deduction when RO line item is checked off; restore when unchecked
 
 ### Cost & Markup Rules
-- ⬜ Markup rule model (flat %, matrix by cost tier)
-- ⬜ Apply markup rules when adding parts to RO
-- ⬜ Markup settings screen
+- ✅ Markup rule model (tiered matrix by cost range)
+- ✅ Apply markup tier automatically when cost is typed on Add Part form
+- ✅ Markup rules settings screen (add, edit, delete tiers)
 
 ### Supplier Integrations
 - ⬜ PartsTech API integration
@@ -248,6 +250,7 @@ The heart of the app. Everything else depends on this.
 - ✅ Totals section shows "X items declined −$Y.YY" footnote
 
 ### Module 1 Complete (v0.6.0 Full Bay)
+
 - ✅ RO list status filter pills (All / Open / In Progress / Completed / Closed)
 - ✅ Edit RO details form (internal note, accessible from ACTIONS on non-closed ROs)
 - ✅ Technicians table (schema v14) — name, specialty, phone
@@ -255,6 +258,17 @@ The heart of the app. Everything else depends on this.
 - ✅ Assign technician to RO (bottom sheet picker with "+ New Technician" option)
 - ✅ Assigned technician shown in RO detail header
 - ✅ Technicians row added to Repair Orders hub screen
+
+---
+
+### Module 2 Phase 1 — Parts Inventory & Settings (v0.7.0 Parts Counter)
+- ✅ Parts inventory — list, add/edit/delete, stock badges
+- ✅ Catalog picker on Add Part form — auto-fills description, cost, sell price
+- ✅ Stock deduction on RO mark-done; restore on uncheck
+- ✅ Markup rules — tiered matrix, auto-apply on cost entry, add/edit/delete
+- ✅ Settings screen — shop info, default labor rate, default tax rate, markup rules
+- ✅ Default tax rate applied to new estimates
+- ✅ ⌘, navigates to Settings screen; gear icon in sidebar
 
 ---
 
