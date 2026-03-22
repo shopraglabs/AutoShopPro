@@ -111,6 +111,7 @@ When adding a new Flutter plugin with native macOS code:
 - Keep each session focused on one clear goal
 - Tell me when it is a good stopping point
 - When starting a session, start with "Current version: (insert version number and name) — this session goal: (list goals for the this session here)"
+- When all session goals are complete, **ask Jim if he's ready to close out before doing anything** — do not automatically run the close-out steps
 - When ending a session, assign a version number with a cool name, summarize what was built, and update these four files:
 
   **1. `docs/module_plan.md`**
@@ -184,6 +185,16 @@ if (from == 6) {
 }
 ```
 Rename operations must only run once — `from == N` prevents them from running again if the device is already past that version.
+
+### Right-Click Context Menus on Text Fields
+- Always add a `contextMenuBuilder` to every `CupertinoTextField` and `CupertinoTextField.borderless` so right-click shows copy/cut/paste on macOS.
+- Apply to every form screen — customer, vehicle, vendor, estimate, line item, technician, and any new forms added in future sessions.
+```dart
+contextMenuBuilder: (context, editableTextState) =>
+    CupertinoAdaptiveTextSelectionToolbar.editableText(
+      editableTextState: editableTextState,
+    ),
+```
 
 ### Build Log
 - To read: `python3 docs/update_build_log.py read`
