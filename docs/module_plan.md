@@ -11,7 +11,7 @@ Track build progress here. Check off tasks as they are completed.
 The heart of the app. Everything else depends on this.
 
 ### Customer & Vehicle Records
-- ✅ Customer model (name, phone, email)
+- ✅ Customer model (name, phone, email, internal note)
 - ✅ Vehicle model (year, make, model, VIN, mileage, license plate)
 - ✅ Link vehicles to customers (one customer → many vehicles)
 - ✅ Customer list screen (searchable, live-updating)

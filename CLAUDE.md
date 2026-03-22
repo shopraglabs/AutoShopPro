@@ -149,24 +149,40 @@ When adding a new Flutter plugin with native macOS code:
   ```
 - Reason: on macOS with go_router, `Navigator.pop(context)` can close the wrong route instead of the dialog.
 
-### Missing Dependencies — Navigate, Don't Block
-- If a screen requires something that doesn't exist yet (e.g. no customers when creating an estimate), navigate directly to the creation screen instead of showing a dead-end dialog:
+### Missing Dependencies — Always Show Picker with Create Option
+- If a screen requires selecting something (customer, vehicle, vendor), always show the picker sheet even if the list is empty. The sheet includes a "+ New …" row at the top that navigates to the creation form. Never show a dead-end dialog or navigate away silently.
+- The `_PickerSheet<T>` widget accepts `onCreateNew: VoidCallback?` and `createNewLabel: String?` for this purpose. Example from estimate form:
   ```dart
-  if (customers.isEmpty) {
-    context.push('/repair-orders/customers/new');
-    return;
-  }
+  _PickerSheet<Customer>(
+    title: 'Select Customer',
+    items: customers,          // can be empty — picker still shows
+    labelFor: (c) => c.name,
+    createNewLabel: 'New Customer',
+    onCreateNew: () => context.push('/repair-orders/customers/new'),
+  )
   ```
 
 ### Database Migrations
-- Always use `from == N` (not `from < N`) for migrations that run SQL statements like `ALTER TABLE RENAME` that would fail if run more than once.
-- For `addColumn`, guard with a PRAGMA check in case a partial migration already ran:
-  ```dart
+Two different patterns — use the right one for the situation:
+
+**`addColumn` → always use `from < N` with a PRAGMA guard:**
+```dart
+if (from < 10) {
   final cols = await m.database.customSelect(
     "SELECT name FROM pragma_table_info('table') WHERE name='col'"
   ).get();
-  if (cols.isEmpty) { await m.addColumn(...); }
-  ```
+  if (cols.isEmpty) { await m.addColumn(myTable, myTable.myColumn); }
+}
+```
+Using `from < N` (not `from == N`) ensures devices that jump multiple versions (e.g. v9 → v13 directly) still get every column. The PRAGMA guard makes it safe to run even if the column was already added in a prior partial run.
+
+**`ALTER TABLE RENAME` → use `from == N` (runs exactly once):**
+```dart
+if (from == 6) {
+  await m.database.customStatement('ALTER TABLE old_name RENAME TO new_name');
+}
+```
+Rename operations must only run once — `from == N` prevents them from running again if the device is already past that version.
 
 ### Build Log
 - To read: `python3 docs/update_build_log.py read`
