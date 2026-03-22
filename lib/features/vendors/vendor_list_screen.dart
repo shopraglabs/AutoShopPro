@@ -157,20 +157,13 @@ class _VendorRow extends ConsumerWidget {
                   ),
                 ),
                 if (vendor.phone != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: Text(vendor.phone!,
-                        style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF8E8E93))),
-                  ),
-                CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: () => _confirmDelete(context, ref),
-                  child: const Icon(CupertinoIcons.trash,
-                      size: 18,
-                      color: CupertinoColors.destructiveRed),
-                ),
+                  Text(vendor.phone!,
+                      style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF8E8E93))),
+                const SizedBox(width: 8),
+                const Icon(CupertinoIcons.chevron_right,
+                    size: 16, color: Color(0xFFC7C7CC)),
               ],
             ),
           ),

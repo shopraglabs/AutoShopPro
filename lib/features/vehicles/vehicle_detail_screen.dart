@@ -19,12 +19,18 @@ class VehicleDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final db = ref.watch(dbProvider);
-    return FutureBuilder<Vehicle?>(
-      future: db.getVehicle(vehicleId),
+    return StreamBuilder<Vehicle?>(
+      stream: db.watchVehicle(vehicleId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CupertinoPageScaffold(
             child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(middle: Text('Vehicle')),
+            child: Center(child: Text('Error loading vehicle.')),
           );
         }
         final vehicle = snapshot.data;

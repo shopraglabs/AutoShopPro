@@ -49,6 +49,17 @@ class $CustomersTable extends Customers
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _internalNoteMeta = const VerificationMeta(
+    'internalNote',
+  );
+  @override
+  late final GeneratedColumn<String> internalNote = GeneratedColumn<String>(
+    'internal_note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -62,7 +73,14 @@ class $CustomersTable extends Customers
     defaultValue: currentDateAndTime,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, phone, email, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    phone,
+    email,
+    internalNote,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -98,6 +116,15 @@ class $CustomersTable extends Customers
         email.isAcceptableOrUnknown(data['email']!, _emailMeta),
       );
     }
+    if (data.containsKey('internal_note')) {
+      context.handle(
+        _internalNoteMeta,
+        internalNote.isAcceptableOrUnknown(
+          data['internal_note']!,
+          _internalNoteMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -129,6 +156,10 @@ class $CustomersTable extends Customers
         DriftSqlType.string,
         data['${effectivePrefix}email'],
       ),
+      internalNote: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}internal_note'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -147,12 +178,14 @@ class Customer extends DataClass implements Insertable<Customer> {
   final String name;
   final String? phone;
   final String? email;
+  final String? internalNote;
   final DateTime createdAt;
   const Customer({
     required this.id,
     required this.name,
     this.phone,
     this.email,
+    this.internalNote,
     required this.createdAt,
   });
   @override
@@ -165,6 +198,9 @@ class Customer extends DataClass implements Insertable<Customer> {
     }
     if (!nullToAbsent || email != null) {
       map['email'] = Variable<String>(email);
+    }
+    if (!nullToAbsent || internalNote != null) {
+      map['internal_note'] = Variable<String>(internalNote);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -180,6 +216,9 @@ class Customer extends DataClass implements Insertable<Customer> {
       email: email == null && nullToAbsent
           ? const Value.absent()
           : Value(email),
+      internalNote: internalNote == null && nullToAbsent
+          ? const Value.absent()
+          : Value(internalNote),
       createdAt: Value(createdAt),
     );
   }
@@ -194,6 +233,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       name: serializer.fromJson<String>(json['name']),
       phone: serializer.fromJson<String?>(json['phone']),
       email: serializer.fromJson<String?>(json['email']),
+      internalNote: serializer.fromJson<String?>(json['internalNote']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -205,6 +245,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       'name': serializer.toJson<String>(name),
       'phone': serializer.toJson<String?>(phone),
       'email': serializer.toJson<String?>(email),
+      'internalNote': serializer.toJson<String?>(internalNote),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -214,12 +255,14 @@ class Customer extends DataClass implements Insertable<Customer> {
     String? name,
     Value<String?> phone = const Value.absent(),
     Value<String?> email = const Value.absent(),
+    Value<String?> internalNote = const Value.absent(),
     DateTime? createdAt,
   }) => Customer(
     id: id ?? this.id,
     name: name ?? this.name,
     phone: phone.present ? phone.value : this.phone,
     email: email.present ? email.value : this.email,
+    internalNote: internalNote.present ? internalNote.value : this.internalNote,
     createdAt: createdAt ?? this.createdAt,
   );
   Customer copyWithCompanion(CustomersCompanion data) {
@@ -228,6 +271,9 @@ class Customer extends DataClass implements Insertable<Customer> {
       name: data.name.present ? data.name.value : this.name,
       phone: data.phone.present ? data.phone.value : this.phone,
       email: data.email.present ? data.email.value : this.email,
+      internalNote: data.internalNote.present
+          ? data.internalNote.value
+          : this.internalNote,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -239,13 +285,15 @@ class Customer extends DataClass implements Insertable<Customer> {
           ..write('name: $name, ')
           ..write('phone: $phone, ')
           ..write('email: $email, ')
+          ..write('internalNote: $internalNote, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, phone, email, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, phone, email, internalNote, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -254,6 +302,7 @@ class Customer extends DataClass implements Insertable<Customer> {
           other.name == this.name &&
           other.phone == this.phone &&
           other.email == this.email &&
+          other.internalNote == this.internalNote &&
           other.createdAt == this.createdAt);
 }
 
@@ -262,12 +311,14 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
   final Value<String> name;
   final Value<String?> phone;
   final Value<String?> email;
+  final Value<String?> internalNote;
   final Value<DateTime> createdAt;
   const CustomersCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
+    this.internalNote = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   CustomersCompanion.insert({
@@ -275,6 +326,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     required String name,
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
+    this.internalNote = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Customer> custom({
@@ -282,6 +334,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     Expression<String>? name,
     Expression<String>? phone,
     Expression<String>? email,
+    Expression<String>? internalNote,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -289,6 +342,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       if (name != null) 'name': name,
       if (phone != null) 'phone': phone,
       if (email != null) 'email': email,
+      if (internalNote != null) 'internal_note': internalNote,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -298,6 +352,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     Value<String>? name,
     Value<String?>? phone,
     Value<String?>? email,
+    Value<String?>? internalNote,
     Value<DateTime>? createdAt,
   }) {
     return CustomersCompanion(
@@ -305,6 +360,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       name: name ?? this.name,
       phone: phone ?? this.phone,
       email: email ?? this.email,
+      internalNote: internalNote ?? this.internalNote,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -324,6 +380,9 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     if (email.present) {
       map['email'] = Variable<String>(email.value);
     }
+    if (internalNote.present) {
+      map['internal_note'] = Variable<String>(internalNote.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -337,6 +396,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
           ..write('name: $name, ')
           ..write('phone: $phone, ')
           ..write('email: $email, ')
+          ..write('internalNote: $internalNote, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -930,6 +990,18 @@ class $EstimatesTable extends Estimates
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _customerComplaintMeta = const VerificationMeta(
+    'customerComplaint',
+  );
+  @override
+  late final GeneratedColumn<String> customerComplaint =
+      GeneratedColumn<String>(
+        'customer_complaint',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _noteMeta = const VerificationMeta('note');
   @override
   late final GeneratedColumn<String> note = GeneratedColumn<String>(
@@ -978,6 +1050,7 @@ class $EstimatesTable extends Estimates
     id,
     customerId,
     vehicleId,
+    customerComplaint,
     note,
     status,
     taxRate,
@@ -1010,6 +1083,15 @@ class $EstimatesTable extends Estimates
       context.handle(
         _vehicleIdMeta,
         vehicleId.isAcceptableOrUnknown(data['vehicle_id']!, _vehicleIdMeta),
+      );
+    }
+    if (data.containsKey('customer_complaint')) {
+      context.handle(
+        _customerComplaintMeta,
+        customerComplaint.isAcceptableOrUnknown(
+          data['customer_complaint']!,
+          _customerComplaintMeta,
+        ),
       );
     }
     if (data.containsKey('note')) {
@@ -1057,6 +1139,10 @@ class $EstimatesTable extends Estimates
         DriftSqlType.int,
         data['${effectivePrefix}vehicle_id'],
       ),
+      customerComplaint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}customer_complaint'],
+      ),
       note: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}note'],
@@ -1086,6 +1172,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
   final int id;
   final int customerId;
   final int? vehicleId;
+  final String? customerComplaint;
   final String? note;
   final String status;
   final double taxRate;
@@ -1094,6 +1181,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
     required this.id,
     required this.customerId,
     this.vehicleId,
+    this.customerComplaint,
     this.note,
     required this.status,
     required this.taxRate,
@@ -1106,6 +1194,9 @@ class Estimate extends DataClass implements Insertable<Estimate> {
     map['customer_id'] = Variable<int>(customerId);
     if (!nullToAbsent || vehicleId != null) {
       map['vehicle_id'] = Variable<int>(vehicleId);
+    }
+    if (!nullToAbsent || customerComplaint != null) {
+      map['customer_complaint'] = Variable<String>(customerComplaint);
     }
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
@@ -1123,6 +1214,9 @@ class Estimate extends DataClass implements Insertable<Estimate> {
       vehicleId: vehicleId == null && nullToAbsent
           ? const Value.absent()
           : Value(vehicleId),
+      customerComplaint: customerComplaint == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customerComplaint),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       status: Value(status),
       taxRate: Value(taxRate),
@@ -1139,6 +1233,9 @@ class Estimate extends DataClass implements Insertable<Estimate> {
       id: serializer.fromJson<int>(json['id']),
       customerId: serializer.fromJson<int>(json['customerId']),
       vehicleId: serializer.fromJson<int?>(json['vehicleId']),
+      customerComplaint: serializer.fromJson<String?>(
+        json['customerComplaint'],
+      ),
       note: serializer.fromJson<String?>(json['note']),
       status: serializer.fromJson<String>(json['status']),
       taxRate: serializer.fromJson<double>(json['taxRate']),
@@ -1152,6 +1249,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
       'id': serializer.toJson<int>(id),
       'customerId': serializer.toJson<int>(customerId),
       'vehicleId': serializer.toJson<int?>(vehicleId),
+      'customerComplaint': serializer.toJson<String?>(customerComplaint),
       'note': serializer.toJson<String?>(note),
       'status': serializer.toJson<String>(status),
       'taxRate': serializer.toJson<double>(taxRate),
@@ -1163,6 +1261,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
     int? id,
     int? customerId,
     Value<int?> vehicleId = const Value.absent(),
+    Value<String?> customerComplaint = const Value.absent(),
     Value<String?> note = const Value.absent(),
     String? status,
     double? taxRate,
@@ -1171,6 +1270,9 @@ class Estimate extends DataClass implements Insertable<Estimate> {
     id: id ?? this.id,
     customerId: customerId ?? this.customerId,
     vehicleId: vehicleId.present ? vehicleId.value : this.vehicleId,
+    customerComplaint: customerComplaint.present
+        ? customerComplaint.value
+        : this.customerComplaint,
     note: note.present ? note.value : this.note,
     status: status ?? this.status,
     taxRate: taxRate ?? this.taxRate,
@@ -1183,6 +1285,9 @@ class Estimate extends DataClass implements Insertable<Estimate> {
           ? data.customerId.value
           : this.customerId,
       vehicleId: data.vehicleId.present ? data.vehicleId.value : this.vehicleId,
+      customerComplaint: data.customerComplaint.present
+          ? data.customerComplaint.value
+          : this.customerComplaint,
       note: data.note.present ? data.note.value : this.note,
       status: data.status.present ? data.status.value : this.status,
       taxRate: data.taxRate.present ? data.taxRate.value : this.taxRate,
@@ -1196,6 +1301,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
           ..write('id: $id, ')
           ..write('customerId: $customerId, ')
           ..write('vehicleId: $vehicleId, ')
+          ..write('customerComplaint: $customerComplaint, ')
           ..write('note: $note, ')
           ..write('status: $status, ')
           ..write('taxRate: $taxRate, ')
@@ -1205,8 +1311,16 @@ class Estimate extends DataClass implements Insertable<Estimate> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, customerId, vehicleId, note, status, taxRate, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    customerId,
+    vehicleId,
+    customerComplaint,
+    note,
+    status,
+    taxRate,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1214,6 +1328,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
           other.id == this.id &&
           other.customerId == this.customerId &&
           other.vehicleId == this.vehicleId &&
+          other.customerComplaint == this.customerComplaint &&
           other.note == this.note &&
           other.status == this.status &&
           other.taxRate == this.taxRate &&
@@ -1224,6 +1339,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
   final Value<int> id;
   final Value<int> customerId;
   final Value<int?> vehicleId;
+  final Value<String?> customerComplaint;
   final Value<String?> note;
   final Value<String> status;
   final Value<double> taxRate;
@@ -1232,6 +1348,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
     this.id = const Value.absent(),
     this.customerId = const Value.absent(),
     this.vehicleId = const Value.absent(),
+    this.customerComplaint = const Value.absent(),
     this.note = const Value.absent(),
     this.status = const Value.absent(),
     this.taxRate = const Value.absent(),
@@ -1241,6 +1358,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
     this.id = const Value.absent(),
     required int customerId,
     this.vehicleId = const Value.absent(),
+    this.customerComplaint = const Value.absent(),
     this.note = const Value.absent(),
     this.status = const Value.absent(),
     this.taxRate = const Value.absent(),
@@ -1250,6 +1368,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
     Expression<int>? id,
     Expression<int>? customerId,
     Expression<int>? vehicleId,
+    Expression<String>? customerComplaint,
     Expression<String>? note,
     Expression<String>? status,
     Expression<double>? taxRate,
@@ -1259,6 +1378,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
       if (id != null) 'id': id,
       if (customerId != null) 'customer_id': customerId,
       if (vehicleId != null) 'vehicle_id': vehicleId,
+      if (customerComplaint != null) 'customer_complaint': customerComplaint,
       if (note != null) 'note': note,
       if (status != null) 'status': status,
       if (taxRate != null) 'tax_rate': taxRate,
@@ -1270,6 +1390,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
     Value<int>? id,
     Value<int>? customerId,
     Value<int?>? vehicleId,
+    Value<String?>? customerComplaint,
     Value<String?>? note,
     Value<String>? status,
     Value<double>? taxRate,
@@ -1279,6 +1400,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
       id: id ?? this.id,
       customerId: customerId ?? this.customerId,
       vehicleId: vehicleId ?? this.vehicleId,
+      customerComplaint: customerComplaint ?? this.customerComplaint,
       note: note ?? this.note,
       status: status ?? this.status,
       taxRate: taxRate ?? this.taxRate,
@@ -1297,6 +1419,9 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
     }
     if (vehicleId.present) {
       map['vehicle_id'] = Variable<int>(vehicleId.value);
+    }
+    if (customerComplaint.present) {
+      map['customer_complaint'] = Variable<String>(customerComplaint.value);
     }
     if (note.present) {
       map['note'] = Variable<String>(note.value);
@@ -1319,6 +1444,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
           ..write('id: $id, ')
           ..write('customerId: $customerId, ')
           ..write('vehicleId: $vehicleId, ')
+          ..write('customerComplaint: $customerComplaint, ')
           ..write('note: $note, ')
           ..write('status: $status, ')
           ..write('taxRate: $taxRate, ')
@@ -1401,6 +1527,17 @@ class $EstimateLineItemsTable extends EstimateLineItems
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _unitCostMeta = const VerificationMeta(
+    'unitCost',
+  );
+  @override
+  late final GeneratedColumn<double> unitCost = GeneratedColumn<double>(
+    'unit_cost',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _vendorIdMeta = const VerificationMeta(
     'vendorId',
   );
@@ -1412,6 +1549,40 @@ class $EstimateLineItemsTable extends EstimateLineItems
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _parentLaborIdMeta = const VerificationMeta(
+    'parentLaborId',
+  );
+  @override
+  late final GeneratedColumn<int> parentLaborId = GeneratedColumn<int>(
+    'parent_labor_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isDoneMeta = const VerificationMeta('isDone');
+  @override
+  late final GeneratedColumn<bool> isDone = GeneratedColumn<bool>(
+    'is_done',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_done" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _approvalStatusMeta = const VerificationMeta(
+    'approvalStatus',
+  );
+  @override
+  late final GeneratedColumn<String> approvalStatus = GeneratedColumn<String>(
+    'approval_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1420,7 +1591,11 @@ class $EstimateLineItemsTable extends EstimateLineItems
     description,
     quantity,
     unitPrice,
+    unitCost,
     vendorId,
+    parentLaborId,
+    isDone,
+    approvalStatus,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1478,10 +1653,40 @@ class $EstimateLineItemsTable extends EstimateLineItems
     } else if (isInserting) {
       context.missing(_unitPriceMeta);
     }
+    if (data.containsKey('unit_cost')) {
+      context.handle(
+        _unitCostMeta,
+        unitCost.isAcceptableOrUnknown(data['unit_cost']!, _unitCostMeta),
+      );
+    }
     if (data.containsKey('vendor_id')) {
       context.handle(
         _vendorIdMeta,
         vendorId.isAcceptableOrUnknown(data['vendor_id']!, _vendorIdMeta),
+      );
+    }
+    if (data.containsKey('parent_labor_id')) {
+      context.handle(
+        _parentLaborIdMeta,
+        parentLaborId.isAcceptableOrUnknown(
+          data['parent_labor_id']!,
+          _parentLaborIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_done')) {
+      context.handle(
+        _isDoneMeta,
+        isDone.isAcceptableOrUnknown(data['is_done']!, _isDoneMeta),
+      );
+    }
+    if (data.containsKey('approval_status')) {
+      context.handle(
+        _approvalStatusMeta,
+        approvalStatus.isAcceptableOrUnknown(
+          data['approval_status']!,
+          _approvalStatusMeta,
+        ),
       );
     }
     return context;
@@ -1517,9 +1722,25 @@ class $EstimateLineItemsTable extends EstimateLineItems
         DriftSqlType.double,
         data['${effectivePrefix}unit_price'],
       )!,
+      unitCost: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}unit_cost'],
+      ),
       vendorId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}vendor_id'],
+      ),
+      parentLaborId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}parent_labor_id'],
+      ),
+      isDone: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_done'],
+      ),
+      approvalStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}approval_status'],
       ),
     );
   }
@@ -1538,7 +1759,11 @@ class EstimateLineItem extends DataClass
   final String description;
   final double quantity;
   final double unitPrice;
+  final double? unitCost;
   final int? vendorId;
+  final int? parentLaborId;
+  final bool? isDone;
+  final String? approvalStatus;
   const EstimateLineItem({
     required this.id,
     required this.estimateId,
@@ -1546,7 +1771,11 @@ class EstimateLineItem extends DataClass
     required this.description,
     required this.quantity,
     required this.unitPrice,
+    this.unitCost,
     this.vendorId,
+    this.parentLaborId,
+    this.isDone,
+    this.approvalStatus,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1557,8 +1786,20 @@ class EstimateLineItem extends DataClass
     map['description'] = Variable<String>(description);
     map['quantity'] = Variable<double>(quantity);
     map['unit_price'] = Variable<double>(unitPrice);
+    if (!nullToAbsent || unitCost != null) {
+      map['unit_cost'] = Variable<double>(unitCost);
+    }
     if (!nullToAbsent || vendorId != null) {
       map['vendor_id'] = Variable<int>(vendorId);
+    }
+    if (!nullToAbsent || parentLaborId != null) {
+      map['parent_labor_id'] = Variable<int>(parentLaborId);
+    }
+    if (!nullToAbsent || isDone != null) {
+      map['is_done'] = Variable<bool>(isDone);
+    }
+    if (!nullToAbsent || approvalStatus != null) {
+      map['approval_status'] = Variable<String>(approvalStatus);
     }
     return map;
   }
@@ -1571,9 +1812,21 @@ class EstimateLineItem extends DataClass
       description: Value(description),
       quantity: Value(quantity),
       unitPrice: Value(unitPrice),
+      unitCost: unitCost == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unitCost),
       vendorId: vendorId == null && nullToAbsent
           ? const Value.absent()
           : Value(vendorId),
+      parentLaborId: parentLaborId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentLaborId),
+      isDone: isDone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isDone),
+      approvalStatus: approvalStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(approvalStatus),
     );
   }
 
@@ -1589,7 +1842,11 @@ class EstimateLineItem extends DataClass
       description: serializer.fromJson<String>(json['description']),
       quantity: serializer.fromJson<double>(json['quantity']),
       unitPrice: serializer.fromJson<double>(json['unitPrice']),
+      unitCost: serializer.fromJson<double?>(json['unitCost']),
       vendorId: serializer.fromJson<int?>(json['vendorId']),
+      parentLaborId: serializer.fromJson<int?>(json['parentLaborId']),
+      isDone: serializer.fromJson<bool?>(json['isDone']),
+      approvalStatus: serializer.fromJson<String?>(json['approvalStatus']),
     );
   }
   @override
@@ -1602,7 +1859,11 @@ class EstimateLineItem extends DataClass
       'description': serializer.toJson<String>(description),
       'quantity': serializer.toJson<double>(quantity),
       'unitPrice': serializer.toJson<double>(unitPrice),
+      'unitCost': serializer.toJson<double?>(unitCost),
       'vendorId': serializer.toJson<int?>(vendorId),
+      'parentLaborId': serializer.toJson<int?>(parentLaborId),
+      'isDone': serializer.toJson<bool?>(isDone),
+      'approvalStatus': serializer.toJson<String?>(approvalStatus),
     };
   }
 
@@ -1613,7 +1874,11 @@ class EstimateLineItem extends DataClass
     String? description,
     double? quantity,
     double? unitPrice,
+    Value<double?> unitCost = const Value.absent(),
     Value<int?> vendorId = const Value.absent(),
+    Value<int?> parentLaborId = const Value.absent(),
+    Value<bool?> isDone = const Value.absent(),
+    Value<String?> approvalStatus = const Value.absent(),
   }) => EstimateLineItem(
     id: id ?? this.id,
     estimateId: estimateId ?? this.estimateId,
@@ -1621,7 +1886,15 @@ class EstimateLineItem extends DataClass
     description: description ?? this.description,
     quantity: quantity ?? this.quantity,
     unitPrice: unitPrice ?? this.unitPrice,
+    unitCost: unitCost.present ? unitCost.value : this.unitCost,
     vendorId: vendorId.present ? vendorId.value : this.vendorId,
+    parentLaborId: parentLaborId.present
+        ? parentLaborId.value
+        : this.parentLaborId,
+    isDone: isDone.present ? isDone.value : this.isDone,
+    approvalStatus: approvalStatus.present
+        ? approvalStatus.value
+        : this.approvalStatus,
   );
   EstimateLineItem copyWithCompanion(EstimateLineItemsCompanion data) {
     return EstimateLineItem(
@@ -1635,7 +1908,15 @@ class EstimateLineItem extends DataClass
           : this.description,
       quantity: data.quantity.present ? data.quantity.value : this.quantity,
       unitPrice: data.unitPrice.present ? data.unitPrice.value : this.unitPrice,
+      unitCost: data.unitCost.present ? data.unitCost.value : this.unitCost,
       vendorId: data.vendorId.present ? data.vendorId.value : this.vendorId,
+      parentLaborId: data.parentLaborId.present
+          ? data.parentLaborId.value
+          : this.parentLaborId,
+      isDone: data.isDone.present ? data.isDone.value : this.isDone,
+      approvalStatus: data.approvalStatus.present
+          ? data.approvalStatus.value
+          : this.approvalStatus,
     );
   }
 
@@ -1648,7 +1929,11 @@ class EstimateLineItem extends DataClass
           ..write('description: $description, ')
           ..write('quantity: $quantity, ')
           ..write('unitPrice: $unitPrice, ')
-          ..write('vendorId: $vendorId')
+          ..write('unitCost: $unitCost, ')
+          ..write('vendorId: $vendorId, ')
+          ..write('parentLaborId: $parentLaborId, ')
+          ..write('isDone: $isDone, ')
+          ..write('approvalStatus: $approvalStatus')
           ..write(')'))
         .toString();
   }
@@ -1661,7 +1946,11 @@ class EstimateLineItem extends DataClass
     description,
     quantity,
     unitPrice,
+    unitCost,
     vendorId,
+    parentLaborId,
+    isDone,
+    approvalStatus,
   );
   @override
   bool operator ==(Object other) =>
@@ -1673,7 +1962,11 @@ class EstimateLineItem extends DataClass
           other.description == this.description &&
           other.quantity == this.quantity &&
           other.unitPrice == this.unitPrice &&
-          other.vendorId == this.vendorId);
+          other.unitCost == this.unitCost &&
+          other.vendorId == this.vendorId &&
+          other.parentLaborId == this.parentLaborId &&
+          other.isDone == this.isDone &&
+          other.approvalStatus == this.approvalStatus);
 }
 
 class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
@@ -1683,7 +1976,11 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
   final Value<String> description;
   final Value<double> quantity;
   final Value<double> unitPrice;
+  final Value<double?> unitCost;
   final Value<int?> vendorId;
+  final Value<int?> parentLaborId;
+  final Value<bool?> isDone;
+  final Value<String?> approvalStatus;
   const EstimateLineItemsCompanion({
     this.id = const Value.absent(),
     this.estimateId = const Value.absent(),
@@ -1691,7 +1988,11 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     this.description = const Value.absent(),
     this.quantity = const Value.absent(),
     this.unitPrice = const Value.absent(),
+    this.unitCost = const Value.absent(),
     this.vendorId = const Value.absent(),
+    this.parentLaborId = const Value.absent(),
+    this.isDone = const Value.absent(),
+    this.approvalStatus = const Value.absent(),
   });
   EstimateLineItemsCompanion.insert({
     this.id = const Value.absent(),
@@ -1700,7 +2001,11 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     required String description,
     this.quantity = const Value.absent(),
     required double unitPrice,
+    this.unitCost = const Value.absent(),
     this.vendorId = const Value.absent(),
+    this.parentLaborId = const Value.absent(),
+    this.isDone = const Value.absent(),
+    this.approvalStatus = const Value.absent(),
   }) : estimateId = Value(estimateId),
        type = Value(type),
        description = Value(description),
@@ -1712,7 +2017,11 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     Expression<String>? description,
     Expression<double>? quantity,
     Expression<double>? unitPrice,
+    Expression<double>? unitCost,
     Expression<int>? vendorId,
+    Expression<int>? parentLaborId,
+    Expression<bool>? isDone,
+    Expression<String>? approvalStatus,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1721,7 +2030,11 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
       if (description != null) 'description': description,
       if (quantity != null) 'quantity': quantity,
       if (unitPrice != null) 'unit_price': unitPrice,
+      if (unitCost != null) 'unit_cost': unitCost,
       if (vendorId != null) 'vendor_id': vendorId,
+      if (parentLaborId != null) 'parent_labor_id': parentLaborId,
+      if (isDone != null) 'is_done': isDone,
+      if (approvalStatus != null) 'approval_status': approvalStatus,
     });
   }
 
@@ -1732,7 +2045,11 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     Value<String>? description,
     Value<double>? quantity,
     Value<double>? unitPrice,
+    Value<double?>? unitCost,
     Value<int?>? vendorId,
+    Value<int?>? parentLaborId,
+    Value<bool?>? isDone,
+    Value<String?>? approvalStatus,
   }) {
     return EstimateLineItemsCompanion(
       id: id ?? this.id,
@@ -1741,7 +2058,11 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
       description: description ?? this.description,
       quantity: quantity ?? this.quantity,
       unitPrice: unitPrice ?? this.unitPrice,
+      unitCost: unitCost ?? this.unitCost,
       vendorId: vendorId ?? this.vendorId,
+      parentLaborId: parentLaborId ?? this.parentLaborId,
+      isDone: isDone ?? this.isDone,
+      approvalStatus: approvalStatus ?? this.approvalStatus,
     );
   }
 
@@ -1766,8 +2087,20 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     if (unitPrice.present) {
       map['unit_price'] = Variable<double>(unitPrice.value);
     }
+    if (unitCost.present) {
+      map['unit_cost'] = Variable<double>(unitCost.value);
+    }
     if (vendorId.present) {
       map['vendor_id'] = Variable<int>(vendorId.value);
+    }
+    if (parentLaborId.present) {
+      map['parent_labor_id'] = Variable<int>(parentLaborId.value);
+    }
+    if (isDone.present) {
+      map['is_done'] = Variable<bool>(isDone.value);
+    }
+    if (approvalStatus.present) {
+      map['approval_status'] = Variable<String>(approvalStatus.value);
     }
     return map;
   }
@@ -1781,7 +2114,11 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
           ..write('description: $description, ')
           ..write('quantity: $quantity, ')
           ..write('unitPrice: $unitPrice, ')
-          ..write('vendorId: $vendorId')
+          ..write('unitCost: $unitCost, ')
+          ..write('vendorId: $vendorId, ')
+          ..write('parentLaborId: $parentLaborId, ')
+          ..write('isDone: $isDone, ')
+          ..write('approvalStatus: $approvalStatus')
           ..write(')'))
         .toString();
   }
@@ -2946,6 +3283,7 @@ typedef $$CustomersTableCreateCompanionBuilder =
       required String name,
       Value<String?> phone,
       Value<String?> email,
+      Value<String?> internalNote,
       Value<DateTime> createdAt,
     });
 typedef $$CustomersTableUpdateCompanionBuilder =
@@ -2954,6 +3292,7 @@ typedef $$CustomersTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String?> phone,
       Value<String?> email,
+      Value<String?> internalNote,
       Value<DateTime> createdAt,
     });
 
@@ -2983,6 +3322,11 @@ class $$CustomersTableFilterComposer
 
   ColumnFilters<String> get email => $composableBuilder(
     column: $table.email,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get internalNote => $composableBuilder(
+    column: $table.internalNote,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3021,6 +3365,11 @@ class $$CustomersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get internalNote => $composableBuilder(
+    column: $table.internalNote,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -3047,6 +3396,11 @@ class $$CustomersTableAnnotationComposer
 
   GeneratedColumn<String> get email =>
       $composableBuilder(column: $table.email, builder: (column) => column);
+
+  GeneratedColumn<String> get internalNote => $composableBuilder(
+    column: $table.internalNote,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -3084,12 +3438,14 @@ class $$CustomersTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String?> phone = const Value.absent(),
                 Value<String?> email = const Value.absent(),
+                Value<String?> internalNote = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CustomersCompanion(
                 id: id,
                 name: name,
                 phone: phone,
                 email: email,
+                internalNote: internalNote,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -3098,12 +3454,14 @@ class $$CustomersTableTableManager
                 required String name,
                 Value<String?> phone = const Value.absent(),
                 Value<String?> email = const Value.absent(),
+                Value<String?> internalNote = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CustomersCompanion.insert(
                 id: id,
                 name: name,
                 phone: phone,
                 email: email,
+                internalNote: internalNote,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -3401,6 +3759,7 @@ typedef $$EstimatesTableCreateCompanionBuilder =
       Value<int> id,
       required int customerId,
       Value<int?> vehicleId,
+      Value<String?> customerComplaint,
       Value<String?> note,
       Value<String> status,
       Value<double> taxRate,
@@ -3411,6 +3770,7 @@ typedef $$EstimatesTableUpdateCompanionBuilder =
       Value<int> id,
       Value<int> customerId,
       Value<int?> vehicleId,
+      Value<String?> customerComplaint,
       Value<String?> note,
       Value<String> status,
       Value<double> taxRate,
@@ -3438,6 +3798,11 @@ class $$EstimatesTableFilterComposer
 
   ColumnFilters<int> get vehicleId => $composableBuilder(
     column: $table.vehicleId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customerComplaint => $composableBuilder(
+    column: $table.customerComplaint,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3486,6 +3851,11 @@ class $$EstimatesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get customerComplaint => $composableBuilder(
+    column: $table.customerComplaint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get note => $composableBuilder(
     column: $table.note,
     builder: (column) => ColumnOrderings(column),
@@ -3526,6 +3896,11 @@ class $$EstimatesTableAnnotationComposer
 
   GeneratedColumn<int> get vehicleId =>
       $composableBuilder(column: $table.vehicleId, builder: (column) => column);
+
+  GeneratedColumn<String> get customerComplaint => $composableBuilder(
+    column: $table.customerComplaint,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
@@ -3571,6 +3946,7 @@ class $$EstimatesTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<int> customerId = const Value.absent(),
                 Value<int?> vehicleId = const Value.absent(),
+                Value<String?> customerComplaint = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<double> taxRate = const Value.absent(),
@@ -3579,6 +3955,7 @@ class $$EstimatesTableTableManager
                 id: id,
                 customerId: customerId,
                 vehicleId: vehicleId,
+                customerComplaint: customerComplaint,
                 note: note,
                 status: status,
                 taxRate: taxRate,
@@ -3589,6 +3966,7 @@ class $$EstimatesTableTableManager
                 Value<int> id = const Value.absent(),
                 required int customerId,
                 Value<int?> vehicleId = const Value.absent(),
+                Value<String?> customerComplaint = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<double> taxRate = const Value.absent(),
@@ -3597,6 +3975,7 @@ class $$EstimatesTableTableManager
                 id: id,
                 customerId: customerId,
                 vehicleId: vehicleId,
+                customerComplaint: customerComplaint,
                 note: note,
                 status: status,
                 taxRate: taxRate,
@@ -3632,7 +4011,11 @@ typedef $$EstimateLineItemsTableCreateCompanionBuilder =
       required String description,
       Value<double> quantity,
       required double unitPrice,
+      Value<double?> unitCost,
       Value<int?> vendorId,
+      Value<int?> parentLaborId,
+      Value<bool?> isDone,
+      Value<String?> approvalStatus,
     });
 typedef $$EstimateLineItemsTableUpdateCompanionBuilder =
     EstimateLineItemsCompanion Function({
@@ -3642,7 +4025,11 @@ typedef $$EstimateLineItemsTableUpdateCompanionBuilder =
       Value<String> description,
       Value<double> quantity,
       Value<double> unitPrice,
+      Value<double?> unitCost,
       Value<int?> vendorId,
+      Value<int?> parentLaborId,
+      Value<bool?> isDone,
+      Value<String?> approvalStatus,
     });
 
 class $$EstimateLineItemsTableFilterComposer
@@ -3684,8 +4071,28 @@ class $$EstimateLineItemsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<double> get unitCost => $composableBuilder(
+    column: $table.unitCost,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get vendorId => $composableBuilder(
     column: $table.vendorId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get parentLaborId => $composableBuilder(
+    column: $table.parentLaborId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDone => $composableBuilder(
+    column: $table.isDone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get approvalStatus => $composableBuilder(
+    column: $table.approvalStatus,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3729,8 +4136,28 @@ class $$EstimateLineItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get unitCost => $composableBuilder(
+    column: $table.unitCost,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get vendorId => $composableBuilder(
     column: $table.vendorId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get parentLaborId => $composableBuilder(
+    column: $table.parentLaborId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDone => $composableBuilder(
+    column: $table.isDone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get approvalStatus => $composableBuilder(
+    column: $table.approvalStatus,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -3766,8 +4193,24 @@ class $$EstimateLineItemsTableAnnotationComposer
   GeneratedColumn<double> get unitPrice =>
       $composableBuilder(column: $table.unitPrice, builder: (column) => column);
 
+  GeneratedColumn<double> get unitCost =>
+      $composableBuilder(column: $table.unitCost, builder: (column) => column);
+
   GeneratedColumn<int> get vendorId =>
       $composableBuilder(column: $table.vendorId, builder: (column) => column);
+
+  GeneratedColumn<int> get parentLaborId => $composableBuilder(
+    column: $table.parentLaborId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isDone =>
+      $composableBuilder(column: $table.isDone, builder: (column) => column);
+
+  GeneratedColumn<String> get approvalStatus => $composableBuilder(
+    column: $table.approvalStatus,
+    builder: (column) => column,
+  );
 }
 
 class $$EstimateLineItemsTableTableManager
@@ -3816,7 +4259,11 @@ class $$EstimateLineItemsTableTableManager
                 Value<String> description = const Value.absent(),
                 Value<double> quantity = const Value.absent(),
                 Value<double> unitPrice = const Value.absent(),
+                Value<double?> unitCost = const Value.absent(),
                 Value<int?> vendorId = const Value.absent(),
+                Value<int?> parentLaborId = const Value.absent(),
+                Value<bool?> isDone = const Value.absent(),
+                Value<String?> approvalStatus = const Value.absent(),
               }) => EstimateLineItemsCompanion(
                 id: id,
                 estimateId: estimateId,
@@ -3824,7 +4271,11 @@ class $$EstimateLineItemsTableTableManager
                 description: description,
                 quantity: quantity,
                 unitPrice: unitPrice,
+                unitCost: unitCost,
                 vendorId: vendorId,
+                parentLaborId: parentLaborId,
+                isDone: isDone,
+                approvalStatus: approvalStatus,
               ),
           createCompanionCallback:
               ({
@@ -3834,7 +4285,11 @@ class $$EstimateLineItemsTableTableManager
                 required String description,
                 Value<double> quantity = const Value.absent(),
                 required double unitPrice,
+                Value<double?> unitCost = const Value.absent(),
                 Value<int?> vendorId = const Value.absent(),
+                Value<int?> parentLaborId = const Value.absent(),
+                Value<bool?> isDone = const Value.absent(),
+                Value<String?> approvalStatus = const Value.absent(),
               }) => EstimateLineItemsCompanion.insert(
                 id: id,
                 estimateId: estimateId,
@@ -3842,7 +4297,11 @@ class $$EstimateLineItemsTableTableManager
                 description: description,
                 quantity: quantity,
                 unitPrice: unitPrice,
+                unitCost: unitCost,
                 vendorId: vendorId,
+                parentLaborId: parentLaborId,
+                isDone: isDone,
+                approvalStatus: approvalStatus,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

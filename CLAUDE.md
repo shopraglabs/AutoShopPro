@@ -28,17 +28,18 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 
 ## What's Built So Far
 - **App shell** — sidebar nav (desktop), tab bar (mobile), all 5 module placeholders
-- **Customers** — list (searchable), detail, add/edit/delete, phone/name formatting
-- **Vehicles** — list per customer, detail, add/edit/delete, VIN decode (NHTSA API), all formatters
-- **Estimates** — list, create (customer + vehicle picker), detail (labor + parts + totals), delete
-- **Line items** — add labor (hrs × rate, default rate from settings), add parts (qty × price, vendor picker), swipe to delete, live total preview
-- **Repair Orders** — convert estimate → RO, RO list (color-coded status), RO detail, status flow (Open → In Progress → Completed → Closed)
+- **Customers** — list (searchable), detail, add/edit/delete, phone/name formatting, internal note field
+- **Vehicles** — list per customer, detail, add/edit/delete, VIN decode (NHTSA API), all formatters, "NO PLATE" auto-stored when plate is blank
+- **Estimates** — list, create (customer + vehicle picker with "+ New" options), detail (labor + parts + totals), customer complaint field, delete
+- **Line items** — add labor (hrs × rate, default rate from settings), add parts (unit cost + markup % / $ / list, vendor picker, link to labor line), swipe to delete, live total preview, edit existing items
+- **Parts display** — grouped under their linked labor line sub-header in estimate and RO detail
+- **Estimate approval** — tap circle badge on any line item to approve or decline; declined items show strikethrough/gray and are excluded from totals; "X items declined" footnote in totals section
+- **Repair Orders** — convert estimate → RO (declined items excluded), RO list (color-coded status), RO detail, status flow (Open → In Progress → Completed → Closed), mark items done per line item, Edit Estimate link on non-closed ROs
 - **Vendors** — list, add/edit/delete, account # forced uppercase, contact name
 - **Shop settings** — default labor rate + parts markup, stored in DB, accessible via ⌘,
 - **macOS menu bar** — AutoShopPro / File (⌘N, ⇧⌘N) / Window / Help
-- **Right-click context menus** — on customer, estimate, and vendor list rows
-- **Edit line items** — tap any labor or part row on an estimate to edit it; pre-filled form, saves via updateLineItem
-- **Database** — Drift/SQLite, schema v9, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders
+- **Right-click context menus** — on customer, estimate, and vendor list rows; contextMenuBuilder on all CupertinoTextFields
+- **Database** — Drift/SQLite, schema v13, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
@@ -176,4 +177,4 @@ When adding a new Flutter plugin with native macOS code:
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.4.0 Open Bay
+v0.5.0 Sign-Off

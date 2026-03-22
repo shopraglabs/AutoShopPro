@@ -152,6 +152,8 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
     // Strip commas before parsing so "45,000" → 45000
     int? parseInt(String s) =>
         int.tryParse(s.replaceAll(',', '').trim());
+    // If no plate was entered, record "NO PLATE" so it's explicit — not just empty
+    final plateValue = _plate.text.trim().isEmpty ? 'NO PLATE' : _plate.text.trim();
 
     if (_isEditing) {
       await db.updateVehicle(widget.vehicle!.copyWith(
@@ -160,7 +162,7 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
         model: Value(blankToNull(_model.text)),
         vin: Value(blankToNull(_vin.text)),
         mileage: Value(parseInt(_mileage.text)),
-        licensePlate: Value(blankToNull(_plate.text)),
+        licensePlate: Value(plateValue),
       ));
     } else {
       await db.insertVehicle(VehiclesCompanion.insert(
@@ -170,7 +172,7 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
         model: Value(blankToNull(_model.text)),
         vin: Value(blankToNull(_vin.text)),
         mileage: Value(parseInt(_mileage.text)),
-        licensePlate: Value(blankToNull(_plate.text)),
+        licensePlate: Value(plateValue),
       ));
     }
 

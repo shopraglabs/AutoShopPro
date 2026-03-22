@@ -27,12 +27,27 @@ class LineItemFormScreen extends ConsumerStatefulWidget {
 }
 
 class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
+  // Shared fields (labor + parts)
   late final TextEditingController _description;
   late final TextEditingController _quantity;
-  late final TextEditingController _unitPrice;
+
+  // Labor-only field
+  late final TextEditingController _laborRate;
+
+  // Parts-only fields
+  late final TextEditingController _unitCost;
+  late final TextEditingController _markupPercent;
+  late final TextEditingController _markupDollar;
+  late final TextEditingController _unitList;
+
   bool _saving = false;
   int? _vendorId;
   String? _vendorName;
+  int? _parentLaborId;
+  String? _parentLaborDesc;
+
+  // Guard flag: prevents markup sync from triggering infinite listener loops
+  bool _syncingMarkup = false;
 
   bool get _isLabor => widget.type == 'labor';
   bool get _isEditing => widget.lineItem != null;
@@ -45,19 +60,66 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
   void initState() {
     super.initState();
     final li = widget.lineItem;
-    if (li != null) {
-      // Pre-fill all fields from the existing line item
-      _description = TextEditingController(text: li.description);
-      _quantity = TextEditingController(text: _qtyStr(li.quantity));
-      _unitPrice = TextEditingController(
-          text: li.unitPrice.toStringAsFixed(2));
-      _vendorId = li.vendorId;
-      if (li.vendorId != null) _loadVendorName(li.vendorId!);
+
+    _description = TextEditingController(text: li?.description ?? '');
+    _quantity = TextEditingController(
+        text: li != null ? _qtyStr(li.quantity) : '1');
+    _laborRate = TextEditingController();
+    _unitCost = TextEditingController();
+    _markupPercent = TextEditingController();
+    _markupDollar = TextEditingController();
+    _unitList = TextEditingController();
+
+    if (_isLabor) {
+      if (li != null) {
+        _laborRate.text = li.unitPrice.toStringAsFixed(2);
+      } else {
+        _loadDefaultLaborRate();
+      }
     } else {
-      _description = TextEditingController();
-      _quantity = TextEditingController(text: '1');
-      _unitPrice = TextEditingController();
-      if (_isLabor) _loadDefaultLaborRate();
+      // Parts: wire up the auto-sync listeners
+      _unitCost.addListener(_onCostChanged);
+      _markupPercent.addListener(_onMarkupPercentChanged);
+      _markupDollar.addListener(_onMarkupDollarChanged);
+      _unitList.addListener(_onListChanged);
+
+      if (li != null) {
+        // Pre-fill from existing line item
+        final cost = li.unitCost;
+        final list = li.unitPrice;
+        _unitList.text = list.toStringAsFixed(2);
+        if (cost != null) {
+          _unitCost.text = cost.toStringAsFixed(2);
+          // Derive markup % from stored cost and list price
+          if (cost > 0) {
+            final pct = (list - cost) / cost * 100;
+            final dollar = list - cost;
+            _markupPercent.text = pct.toStringAsFixed(1);
+            _markupDollar.text = dollar.toStringAsFixed(2);
+          }
+        }
+        _vendorId = li.vendorId;
+        _parentLaborId = li.parentLaborId;
+        if (li.vendorId != null) _loadVendorName(li.vendorId!);
+        if (li.parentLaborId != null) _loadLaborDesc(li.parentLaborId!);
+      } else {
+        _loadDefaultMarkup();
+      }
+    }
+  }
+
+  Future<void> _loadDefaultLaborRate() async {
+    final settings = await ref.read(dbProvider).getOrCreateSettings();
+    if (mounted && _laborRate.text.isEmpty) {
+      _laborRate.text = settings.defaultLaborRate.toStringAsFixed(2);
+    }
+  }
+
+  Future<void> _loadDefaultMarkup() async {
+    final settings = await ref.read(dbProvider).getOrCreateSettings();
+    if (mounted && _markupPercent.text.isEmpty) {
+      _markupPercent.text =
+          settings.defaultPartsMarkup.toStringAsFixed(1);
     }
   }
 
@@ -68,16 +130,70 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     }
   }
 
+  Future<void> _loadLaborDesc(int laborId) async {
+    final item = await ref.read(dbProvider).getLineItem(laborId);
+    if (mounted && item != null) {
+      setState(() => _parentLaborDesc = item.description);
+    }
+  }
+
+  // ── Markup sync logic ────────────────────────────────────────────────────
+
+  // Called when Unit Cost or Markup % changes → recalculate Markup $ and List
+  void _onCostChanged() => _recalcFromCostAndPercent();
+  void _onMarkupPercentChanged() => _recalcFromCostAndPercent();
+
+  void _recalcFromCostAndPercent() {
+    if (_syncingMarkup) return;
+    final cost = double.tryParse(_unitCost.text);
+    final pct = double.tryParse(_markupPercent.text);
+    if (cost == null || pct == null) return;
+    _syncingMarkup = true;
+    final dollar = cost * pct / 100;
+    final list = cost + dollar;
+    _markupDollar.text = dollar.toStringAsFixed(2);
+    _unitList.text = list.toStringAsFixed(2);
+    _syncingMarkup = false;
+  }
+
+  // Called when Markup $ changes → recalculate Markup % and List
+  void _onMarkupDollarChanged() {
+    if (_syncingMarkup) return;
+    final cost = double.tryParse(_unitCost.text);
+    final dollar = double.tryParse(_markupDollar.text);
+    if (cost == null || dollar == null) return;
+    _syncingMarkup = true;
+    final pct = cost > 0 ? dollar / cost * 100 : 0.0;
+    final list = cost + dollar;
+    _markupPercent.text = pct.toStringAsFixed(1);
+    _unitList.text = list.toStringAsFixed(2);
+    _syncingMarkup = false;
+  }
+
+  // Called when Unit List changes directly → back-calculate Markup $ and %
+  void _onListChanged() {
+    if (_syncingMarkup) return;
+    final cost = double.tryParse(_unitCost.text);
+    final list = double.tryParse(_unitList.text);
+    if (cost == null || list == null) return;
+    _syncingMarkup = true;
+    final dollar = list - cost;
+    final pct = cost > 0 ? dollar / cost * 100 : 0.0;
+    _markupDollar.text = dollar.toStringAsFixed(2);
+    _markupPercent.text = pct.toStringAsFixed(1);
+    _syncingMarkup = false;
+  }
+
+  // ── Pickers ──────────────────────────────────────────────────────────────
+
   Future<void> _pickVendor() async {
     final vendors = ref.read(vendorsProvider).value ?? [];
-    if (vendors.isEmpty) {
-      // No vendors yet — take them straight to the new vendor form.
-      context.push('/repair-orders/vendors/new');
-      return;
-    }
     final picked = await showCupertinoModalPopup<Vendor>(
       context: context,
-      builder: (_) => _VendorPickerSheet(vendors: vendors),
+      builder: (_) => _VendorPickerSheet(
+        vendors: vendors,
+        onCreateNew: () => context.push('/repair-orders/vendors/new'),
+      ),
     );
     if (picked != null) {
       setState(() {
@@ -87,26 +203,55 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     }
   }
 
-  Future<void> _loadDefaultLaborRate() async {
-    final db = ref.read(dbProvider);
-    final settings = await db.getOrCreateSettings();
-    if (mounted && _unitPrice.text.isEmpty) {
-      _unitPrice.text = settings.defaultLaborRate.toStringAsFixed(2);
+  Future<void> _pickLaborLine() async {
+    // Get all line items for this estimate, filter to labor only
+    final all =
+        ref.read(lineItemsProvider(widget.estimateId)).value ?? [];
+    final laborLines = all.where((l) => l.type == 'labor').toList();
+
+    if (laborLines.isEmpty) {
+      showCupertinoDialog(
+        context: context,
+        builder: (dialogCtx) => CupertinoAlertDialog(
+          title: const Text('No labor lines'),
+          content: const Text(
+              'Add a labor line to this estimate first, then you can link parts to it.'),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final picked = await showCupertinoModalPopup<EstimateLineItem>(
+      context: context,
+      builder: (_) => _LaborPickerSheet(laborLines: laborLines),
+    );
+    if (picked != null) {
+      setState(() {
+        _parentLaborId = picked.id;
+        _parentLaborDesc = picked.description;
+      });
     }
   }
 
-  @override
-  void dispose() {
-    _description.dispose();
-    _quantity.dispose();
-    _unitPrice.dispose();
-    super.dispose();
+  void _clearLaborLink() {
+    setState(() {
+      _parentLaborId = null;
+      _parentLaborDesc = null;
+    });
   }
+
+  // ── Save ─────────────────────────────────────────────────────────────────
 
   Future<void> _save() async {
     final desc = _description.text.trim();
     final qty = double.tryParse(_quantity.text.replaceAll(',', ''));
-    final price = double.tryParse(_unitPrice.text.replaceAll(',', ''));
 
     if (desc.isEmpty) {
       _showError('Please enter a description.');
@@ -118,19 +263,36 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
           : 'Please enter a valid quantity.');
       return;
     }
-    if (price == null || price < 0) {
-      _showError('Please enter a valid price.');
-      return;
+
+    double? price;
+    double? unitCost;
+
+    if (_isLabor) {
+      price = double.tryParse(_laborRate.text.replaceAll(',', ''));
+      if (price == null || price < 0) {
+        _showError('Please enter a valid rate.');
+        return;
+      }
+    } else {
+      price = double.tryParse(_unitList.text.replaceAll(',', ''));
+      unitCost = double.tryParse(_unitCost.text.replaceAll(',', ''));
+      if (price == null || price < 0) {
+        _showError('Please enter a valid unit list price.');
+        return;
+      }
     }
 
     setState(() => _saving = true);
     final db = ref.read(dbProvider);
+
     if (_isEditing) {
       await db.updateLineItem(widget.lineItem!.copyWith(
         description: desc,
         quantity: qty,
         unitPrice: price,
+        unitCost: Value(unitCost),
         vendorId: Value(_vendorId),
+        parentLaborId: Value(_parentLaborId),
       ));
     } else {
       await db.insertLineItem(EstimateLineItemsCompanion.insert(
@@ -139,7 +301,9 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         description: desc,
         quantity: Value(qty),
         unitPrice: price,
+        unitCost: Value(unitCost),
         vendorId: Value(_vendorId),
+        parentLaborId: Value(_parentLaborId),
       ));
     }
     if (mounted) context.pop();
@@ -160,6 +324,18 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _description.dispose();
+    _quantity.dispose();
+    _laborRate.dispose();
+    _unitCost.dispose();
+    _markupPercent.dispose();
+    _markupDollar.dispose();
+    _unitList.dispose();
+    super.dispose();
   }
 
   @override
@@ -186,12 +362,12 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         child: ListView(
           children: [
             const SizedBox(height: 28),
-            // Section label changes based on type
             _sectionHeader(_isLabor ? 'LABOR' : 'PART'),
             Container(
               color: CupertinoColors.white,
               child: Column(
                 children: [
+                  // ── Shared: Description ──────────────────────────────
                   _Field(
                     label: 'Description',
                     controller: _description,
@@ -202,35 +378,81 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                     autofocus: true,
                   ),
                   _divider(),
+                  // ── Shared: Qty / Hours ──────────────────────────────
                   _Field(
                     label: _isLabor ? 'Hours' : 'Qty',
                     controller: _quantity,
                     placeholder: _isLabor ? '2.5' : '1',
-                    keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
                           RegExp(r'^\d*\.?\d*')),
                     ],
                   ),
                   _divider(),
-                  _Field(
-                    label: _isLabor ? 'Rate/hr' : 'Unit \$',
-                    controller: _unitPrice,
-                    placeholder: _isLabor ? '120.00' : '45.00',
-                    keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*\.?\d*')),
-                    ],
-                  ),
-                  // Vendor picker — parts only
-                  if (!_isLabor) ...[
+
+                  if (_isLabor) ...[
+                    // ── Labor: Rate/hr ───────────────────────────────
+                    _Field(
+                      label: 'Rate/hr',
+                      controller: _laborRate,
+                      placeholder: '120.00',
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                    ),
+                  ] else ...[
+                    // ── Parts: Unit Cost ─────────────────────────────
+                    _Field(
+                      label: 'Unit Cost',
+                      controller: _unitCost,
+                      placeholder: '10.00',
+                      prefix: '\$',
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                    ),
                     _divider(),
+                    // ── Parts: Markup % and Markup $ (side-by-side) ──
+                    _MarkupRow(
+                      percentController: _markupPercent,
+                      dollarController: _markupDollar,
+                    ),
+                    _divider(),
+                    // ── Parts: Unit List ─────────────────────────────
+                    _Field(
+                      label: 'Unit List',
+                      controller: _unitList,
+                      placeholder: '13.00',
+                      prefix: '\$',
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                    ),
+                    _divider(),
+                    // ── Parts: Vendor picker ─────────────────────────
                     _VendorPickerRow(
                       selectedName: _vendorName,
                       onTap: () => _pickVendor(),
+                    ),
+                    _divider(),
+                    // ── Parts: Labor association picker ──────────────
+                    _LaborPickerRow(
+                      selectedDesc: _parentLaborDesc,
+                      onTap: () => _pickLaborLine(),
+                      onClear: _parentLaborDesc != null
+                          ? _clearLaborLink
+                          : null,
                     ),
                   ],
                 ],
@@ -241,7 +463,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
             _LinePreview(
               isLabor: _isLabor,
               quantityController: _quantity,
-              priceController: _unitPrice,
+              priceController: _isLabor ? _laborRate : _unitList,
             ),
           ],
         ),
@@ -269,11 +491,13 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
       );
 }
 
+// ─── Field ────────────────────────────────────────────────────────────────────
 // A single labeled text field row.
 class _Field extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final String placeholder;
+  final String? prefix;
   final TextInputType? keyboardType;
   final TextCapitalization textCapitalization;
   final List<TextInputFormatter>? inputFormatters;
@@ -283,6 +507,7 @@ class _Field extends StatelessWidget {
     required this.label,
     required this.controller,
     required this.placeholder,
+    this.prefix,
     this.keyboardType,
     this.textCapitalization = TextCapitalization.none,
     this.inputFormatters,
@@ -303,6 +528,10 @@ class _Field extends StatelessWidget {
                   fontSize: 16, color: Color(0xFF1C1C1E)),
             ),
           ),
+          if (prefix != null)
+            Text(prefix!,
+                style: const TextStyle(
+                    fontSize: 16, color: Color(0xFF8E8E93))),
           Expanded(
             child: CupertinoTextField.borderless(
               controller: controller,
@@ -311,6 +540,11 @@ class _Field extends StatelessWidget {
               textCapitalization: textCapitalization,
               inputFormatters: inputFormatters,
               autofocus: autofocus,
+              contextMenuBuilder: (context, editableTextState) {
+                return CupertinoAdaptiveTextSelectionToolbar.editableText(
+                  editableTextState: editableTextState,
+                );
+              },
               style: const TextStyle(
                   fontSize: 16, color: Color(0xFF1C1C1E)),
               placeholderStyle: const TextStyle(
@@ -324,6 +558,95 @@ class _Field extends StatelessWidget {
   }
 }
 
+// ─── Markup Row ───────────────────────────────────────────────────────────────
+// Two side-by-side text fields for markup % and markup $.
+// Editing one auto-updates the other (logic lives in the parent state).
+class _MarkupRow extends StatelessWidget {
+  final TextEditingController percentController;
+  final TextEditingController dollarController;
+
+  const _MarkupRow({
+    required this.percentController,
+    required this.dollarController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 96,
+            child: Text('Markup',
+                style: TextStyle(fontSize: 16, color: Color(0xFF1C1C1E))),
+          ),
+          // Percent field
+          Expanded(
+            child: CupertinoTextField.borderless(
+              controller: percentController,
+              placeholder: '30.0',
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              ],
+              contextMenuBuilder: (context, editableTextState) {
+                return CupertinoAdaptiveTextSelectionToolbar.editableText(
+                  editableTextState: editableTextState,
+                );
+              },
+              style: const TextStyle(fontSize: 16, color: Color(0xFF1C1C1E)),
+              placeholderStyle:
+                  const TextStyle(fontSize: 16, color: Color(0xFFC7C7CC)),
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              suffix: const Padding(
+                padding: EdgeInsets.only(right: 4),
+                child: Text('%',
+                    style: TextStyle(
+                        fontSize: 15, color: Color(0xFF8E8E93))),
+              ),
+            ),
+          ),
+          Container(
+              width: 0.5,
+              height: 30,
+              color: const Color(0xFFE5E5EA),
+              margin: const EdgeInsets.symmetric(horizontal: 8)),
+          // Dollar field
+          Expanded(
+            child: CupertinoTextField.borderless(
+              controller: dollarController,
+              placeholder: '3.00',
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              ],
+              contextMenuBuilder: (context, editableTextState) {
+                return CupertinoAdaptiveTextSelectionToolbar.editableText(
+                  editableTextState: editableTextState,
+                );
+              },
+              style: const TextStyle(fontSize: 16, color: Color(0xFF1C1C1E)),
+              placeholderStyle:
+                  const TextStyle(fontSize: 16, color: Color(0xFFC7C7CC)),
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              prefix: const Padding(
+                padding: EdgeInsets.only(right: 4),
+                child: Text('\$',
+                    style: TextStyle(
+                        fontSize: 15, color: Color(0xFF8E8E93))),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Line Preview ─────────────────────────────────────────────────────────────
 // Shows a live "Line total: $X.XX" preview that updates as the user types.
 class _LinePreview extends StatefulWidget {
   final bool isLabor;
@@ -371,7 +694,7 @@ class _LinePreviewState extends State<_LinePreview> {
     final lineTotal = qty * price;
     final label = widget.isLabor
         ? '${qty.toStringAsFixed(qty % 1 == 0 ? 0 : 1)} hr × \$${price.toStringAsFixed(2)}/hr'
-        : '${qty.toStringAsFixed(qty % 1 == 0 ? 0 : 1)} × \$${price.toStringAsFixed(2)}';
+        : '${qty.toStringAsFixed(qty % 1 == 0 ? 0 : 1)} × \$${price.toStringAsFixed(2)} list';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -438,10 +761,66 @@ class _VendorPickerRow extends StatelessWidget {
   }
 }
 
+// ─── Labor Picker Row ─────────────────────────────────────────────────────────
+class _LaborPickerRow extends StatelessWidget {
+  final String? selectedDesc;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+
+  const _LaborPickerRow({
+    required this.selectedDesc,
+    required this.onTap,
+    this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        color: CupertinoColors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 96,
+              child: Text('Labor',
+                  style: TextStyle(fontSize: 16, color: Color(0xFF1C1C1E))),
+            ),
+            Expanded(
+              child: Text(
+                selectedDesc ?? 'Optional',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: selectedDesc != null
+                      ? const Color(0xFF1C1C1E)
+                      : const Color(0xFFC7C7CC),
+                ),
+              ),
+            ),
+            if (onClear != null)
+              GestureDetector(
+                onTap: onClear,
+                child: const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: Icon(CupertinoIcons.xmark_circle_fill,
+                      size: 18, color: Color(0xFFC7C7CC)),
+                ),
+              ),
+            const Icon(CupertinoIcons.chevron_right,
+                size: 16, color: Color(0xFFC7C7CC)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Vendor Picker Sheet ──────────────────────────────────────────────────────
 class _VendorPickerSheet extends StatelessWidget {
   final List<Vendor> vendors;
-  const _VendorPickerSheet({required this.vendors});
+  final VoidCallback? onCreateNew;
+  const _VendorPickerSheet({required this.vendors, this.onCreateNew});
 
   @override
   Widget build(BuildContext context) {
@@ -476,6 +855,36 @@ class _VendorPickerSheet extends StatelessWidget {
             ),
           ),
           Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+          // ── "+ Add Vendor" row ─────────────────────────────────────────
+          if (onCreateNew != null) ...[
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                onCreateNew!();
+              },
+              child: Container(
+                color: CupertinoColors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: const Row(
+                  children: [
+                    Icon(CupertinoIcons.plus_circle_fill,
+                        size: 18, color: Color(0xFF007AFF)),
+                    SizedBox(width: 10),
+                    Text('Add Vendor',
+                        style: TextStyle(
+                            fontSize: 16, color: Color(0xFF007AFF))),
+                  ],
+                ),
+              ),
+            ),
+            if (vendors.isNotEmpty)
+              Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E5EA),
+                  margin: const EdgeInsets.only(left: 16)),
+          ],
+          if (vendors.isNotEmpty)
           Flexible(
             child: ListView.separated(
               shrinkWrap: true,
@@ -505,6 +914,81 @@ class _VendorPickerSheet extends StatelessWidget {
                         Text('Acct: ${vendors[i].accountNumber}',
                             style: const TextStyle(
                                 fontSize: 13, color: Color(0xFF8E8E93))),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Labor Picker Sheet ───────────────────────────────────────────────────────
+class _LaborPickerSheet extends StatelessWidget {
+  final List<EstimateLineItem> laborLines;
+  const _LaborPickerSheet({required this.laborLines});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: CupertinoColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.5,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text('Link to Labor',
+                      style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1C1C1E))),
+                ),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ),
+          Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: laborLines.length,
+              separatorBuilder: (_, __) => Container(
+                height: 0.5,
+                color: const Color(0xFFE5E5EA),
+                margin: const EdgeInsets.only(left: 16),
+              ),
+              itemBuilder: (context, i) => GestureDetector(
+                onTap: () => Navigator.pop(context, laborLines[i]),
+                child: Container(
+                  color: CupertinoColors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      const Icon(CupertinoIcons.wrench_fill,
+                          size: 16, color: Color(0xFF8E8E93)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(laborLines[i].description,
+                            style: const TextStyle(
+                                fontSize: 16, color: Color(0xFF1C1C1E))),
+                      ),
                     ],
                   ),
                 ),

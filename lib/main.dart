@@ -140,7 +140,7 @@ Future<void> _showAboutDialog() async {
         padding: EdgeInsets.only(top: 6),
         child: Column(
           children: [
-            Text('Version 0.2.0', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text('Version 0.4.0', style: TextStyle(fontWeight: FontWeight.w600)),
             SizedBox(height: 4),
             Text(
               'Professional shop management for independent automotive repair shops.',

@@ -17,6 +17,8 @@ class Customers extends Table {
   TextColumn get name => text()();
   TextColumn get phone => text().nullable()();
   TextColumn get email => text().nullable()();
+  // Shop-facing note about this customer (e.g. "Fleet account, net-30 terms")
+  TextColumn get internalNote => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -39,7 +41,9 @@ class Estimates extends Table {
   IntColumn get customerId => integer()();
   // Which vehicle (optional — can be added later)
   IntColumn get vehicleId => integer().nullable()();
-  // Optional short note, e.g. "Check engine light, oil change"
+  // What the customer says is wrong — captured at write-up
+  TextColumn get customerComplaint => text().nullable()();
+  // Optional internal note
   TextColumn get note => text().nullable()();
   // 'draft' | 'approved' | 'declined'
   TextColumn get status => text().withDefault(const Constant('draft'))();
@@ -57,10 +61,18 @@ class EstimateLineItems extends Table {
   TextColumn get description => text()();
   // Hours for labor, units for parts
   RealColumn get quantity => real().withDefault(const Constant(1.0))();
-  // Rate per hour for labor, price per unit for parts
+  // What the shop charges the customer (rate/hr for labor, list price for parts)
   RealColumn get unitPrice => real()();
+  // What the shop paid for the part (parts only, optional)
+  RealColumn get unitCost => real().nullable()();
   // Which vendor this part came from (parts only, optional)
   IntColumn get vendorId => integer().nullable()();
+  // Which labor line this part is associated with (parts only, optional)
+  IntColumn get parentLaborId => integer().nullable()();
+  // Whether this item has been marked done on the repair order (null = not done)
+  BoolColumn get isDone => boolean().nullable()();
+  // Customer approval status: null = pending, 'approved', 'declined'
+  TextColumn get approvalStatus => text().nullable()();
 }
 
 class Vendors extends Table {
@@ -145,7 +157,7 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 13;
 
   // Drift runs this when it finds an older database on the device.
   @override
@@ -201,6 +213,57 @@ class AppDatabase extends _$AppDatabase {
         // Add the repair_orders table.
         await m.createTable(repairOrders);
       }
+      if (from < 10) {
+        // Added in v10: unit_cost and parent_labor_id on estimate_line_items.
+        // Using from < 10 (not from == 9) so devices jumping from any older
+        // version to v11+ still get these columns. PRAGMA guards make it safe
+        // to run even if the column was already added in a prior partial run.
+        final costCol = await m.database.customSelect(
+            "SELECT name FROM pragma_table_info('estimate_line_items') WHERE name='unit_cost'")
+            .get();
+        if (costCol.isEmpty) {
+          await m.addColumn(estimateLineItems, estimateLineItems.unitCost);
+        }
+        final laborCol = await m.database.customSelect(
+            "SELECT name FROM pragma_table_info('estimate_line_items') WHERE name='parent_labor_id'")
+            .get();
+        if (laborCol.isEmpty) {
+          await m.addColumn(estimateLineItems, estimateLineItems.parentLaborId);
+        }
+      }
+      if (from < 11) {
+        // Added in v11: customer_complaint on estimates.
+        final col = await m.database.customSelect(
+            "SELECT name FROM pragma_table_info('estimates') WHERE name='customer_complaint'")
+            .get();
+        if (col.isEmpty) {
+          await m.addColumn(estimates, estimates.customerComplaint);
+        }
+      }
+      if (from < 12) {
+        // Added in v12: internal_note on customers, is_done on estimate_line_items.
+        final noteCol = await m.database.customSelect(
+            "SELECT name FROM pragma_table_info('customers') WHERE name='internal_note'")
+            .get();
+        if (noteCol.isEmpty) {
+          await m.addColumn(customers, customers.internalNote);
+        }
+        final doneCol = await m.database.customSelect(
+            "SELECT name FROM pragma_table_info('estimate_line_items') WHERE name='is_done'")
+            .get();
+        if (doneCol.isEmpty) {
+          await m.addColumn(estimateLineItems, estimateLineItems.isDone);
+        }
+      }
+      if (from < 13) {
+        // Added in v13: approval_status on estimate_line_items.
+        final approvalCol = await m.database.customSelect(
+            "SELECT name FROM pragma_table_info('estimate_line_items') WHERE name='approval_status'")
+            .get();
+        if (approvalCol.isEmpty) {
+          await m.addColumn(estimateLineItems, estimateLineItems.approvalStatus);
+        }
+      }
     },
   );
 
@@ -213,6 +276,10 @@ class AppDatabase extends _$AppDatabase {
   // Fetches a single customer by id (returns null if not found).
   Future<Customer?> getCustomer(int id) =>
       (select(customers)..where((c) => c.id.equals(id))).getSingleOrNull();
+
+  // Watches a single customer — emits a new value whenever the record changes.
+  Stream<Customer?> watchCustomer(int id) =>
+      (select(customers)..where((c) => c.id.equals(id))).watchSingleOrNull();
 
   // Adds a new customer row and returns the new row's id.
   Future<int> insertCustomer(CustomersCompanion entry) =>
@@ -235,6 +302,10 @@ class AppDatabase extends _$AppDatabase {
   // Fetches a single vehicle by id.
   Future<Vehicle?> getVehicle(int id) =>
       (select(vehicles)..where((v) => v.id.equals(id))).getSingleOrNull();
+
+  // Watches a single vehicle — emits a new value whenever the record changes.
+  Stream<Vehicle?> watchVehicle(int id) =>
+      (select(vehicles)..where((v) => v.id.equals(id))).watchSingleOrNull();
 
   // Adds a new vehicle and returns the new row's id.
   Future<int> insertVehicle(VehiclesCompanion entry) =>
@@ -269,6 +340,10 @@ class AppDatabase extends _$AppDatabase {
   // Returns a live stream of a single estimate by id.
   Stream<Estimate?> watchEstimate(int id) =>
       (select(estimates)..where((e) => e.id.equals(id))).watchSingleOrNull();
+
+  // Fetches a single estimate by id (one-time read, returns null if not found).
+  Future<Estimate?> getEstimate(int id) =>
+      (select(estimates)..where((e) => e.id.equals(id))).getSingleOrNull();
 
   // Adds a new estimate and returns its new id.
   Future<int> insertEstimate(EstimatesCompanion entry) =>

@@ -37,6 +37,13 @@ The heart of the app. Everything else depends on this.
 - ✅ Default labor rate auto-filled from shop settings
 - ✅ Edit existing line items
 - ✅ Convert estimate → Repair Order
+- ✅ Customer complaint field on new estimate form
+- ✅ Parts linked to labor lines (grouped display in detail)
+- ✅ Unit cost + markup % / markup $ / unit list price fields on Add Part
+- ✅ Add customer / add vehicle / add vendor from within picker sheets
+- ✅ Partial estimate approval — approve or decline individual line items
+- ✅ Declined items shown with strikethrough/gray; excluded from totals
+- ✅ Totals section shows "X items declined −$Y.YY" footnote
 
 ### Vendors
 - ✅ Vendor model (name, contact, phone, account #)
@@ -56,6 +63,9 @@ The heart of the app. Everything else depends on this.
 - ✅ RO list screen (color-coded status dots, customer name, vehicle)
 - ✅ RO detail screen (line items, totals, status badge, advancement action)
 - ✅ Close RO
+- ✅ Mark items done on RO (checkmark toggle per line item while open)
+- ✅ Edit Estimate link from non-closed RO detail
+- ✅ Declined items filtered out of RO (not shown, not counted in totals)
 - ⬜ Edit RO details
 - ⬜ Assign technician to RO
 - ⬜ RO list status filters
@@ -64,7 +74,7 @@ The heart of the app. Everything else depends on this.
 - ✅ Drift database setup
 - ✅ Tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders
 - ✅ CRUD for customers, vehicles, estimates, line items, vendors, settings, repair orders
-- ✅ Schema versioning + migration strategy (v9)
+- ✅ Schema versioning + migration strategy (v13)
 
 ---
 
@@ -219,6 +229,23 @@ The heart of the app. Everything else depends on this.
 - ✅ Repair Orders hub row enabled (was "Coming soon")
 - ✅ Button/action design rule standardized — all actions use list-row style (blue icon + label + chevron)
 - ✅ Button style rule saved permanently to CLAUDE.md
+
+### Write-Up Polish & Approval (v0.5.0 Sign-Off)
+- ✅ Unit cost + markup % / markup $ / unit list price fields on Add Part (schema v10)
+- ✅ Markup % ↔ Markup $ auto-sync as you type
+- ✅ Parts can be linked to a labor line (parentLaborId, schema v10)
+- ✅ Parts grouped under their labor sub-header in estimate and RO detail
+- ✅ Customer complaint field added to estimate form and detail header (schema v11)
+- ✅ Internal note on customers — form field, detail display, auto-populates estimate note (schema v12)
+- ✅ License plate shown in vehicle picker dropdown and selected row
+- ✅ "NO PLATE" stored when plate field is empty on save
+- ✅ Mark items done on RO — checkmark toggle per line item (schema v12)
+- ✅ Edit Estimate link on non-closed RO detail
+- ✅ "+ New Customer" / "+ New Vehicle" / "+ Add Vendor" inside all picker sheets
+- ✅ Right-click copy/cut/paste (contextMenuBuilder) on all CupertinoTextFields
+- ✅ Partial estimate approval — approve/decline individual line items (schema v13)
+- ✅ Declined items: strikethrough + gray in estimate; filtered from RO entirely
+- ✅ Totals section shows "X items declined −$Y.YY" footnote
 
 ### Backend (Go — planned)
 - ⬜ Go project scaffolding

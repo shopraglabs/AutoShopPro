@@ -43,6 +43,32 @@ class _VendorFormScreenState extends ConsumerState<VendorFormScreen> {
     super.dispose();
   }
 
+  Future<void> _confirmDelete(BuildContext context) {
+    return showCupertinoDialog(
+      context: context,
+      builder: (dialogCtx) => CupertinoAlertDialog(
+        title: Text('Delete ${widget.vendor!.name}?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              await ref.read(dbProvider).deleteVendor(widget.vendor!.id);
+              if (mounted) context.pop();
+            },
+            child: const Text('Delete'),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _save() async {
     if (_name.text.trim().isEmpty) {
       showCupertinoDialog(
@@ -140,6 +166,22 @@ class _VendorFormScreenState extends ConsumerState<VendorFormScreen> {
                 ],
               ),
             ),
+            if (_isEditing) ...[
+              const SizedBox(height: 36),
+              Center(
+                child: CupertinoButton(
+                  onPressed: () => _confirmDelete(context),
+                  child: const Text(
+                    'Delete Vendor',
+                    style: TextStyle(
+                      color: CupertinoColors.destructiveRed,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 36),
+            ],
           ],
         ),
       ),

@@ -8,7 +8,7 @@ import 'estimates_provider.dart' show dbProvider;
 
 // ─── New Estimate Screen ──────────────────────────────────────────────────────
 // The user picks a customer, optionally picks a vehicle from that customer,
-// optionally writes a short note, then saves to create the estimate.
+// enters a customer complaint and an optional internal note, then saves.
 class EstimateFormScreen extends ConsumerStatefulWidget {
   const EstimateFormScreen({super.key});
 
@@ -20,11 +20,13 @@ class EstimateFormScreen extends ConsumerStatefulWidget {
 class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
   Customer? _customer;
   Vehicle? _vehicle;
+  final _complaint = TextEditingController();
   final _note = TextEditingController();
   bool _saving = false;
 
   @override
   void dispose() {
+    _complaint.dispose();
     _note.dispose();
     super.dispose();
   }
@@ -52,6 +54,8 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
     final id = await db.insertEstimate(EstimatesCompanion.insert(
       customerId: _customer!.id,
       vehicleId: Value(_vehicle?.id),
+      customerComplaint: Value(
+          _complaint.text.trim().isEmpty ? null : _complaint.text.trim()),
       note: Value(_note.text.trim().isEmpty ? null : _note.text.trim()),
     ));
     if (mounted) {
@@ -60,7 +64,8 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
     }
   }
 
-  // Opens a bottom sheet with a scrollable list of customers to pick from.
+  // Opens a bottom sheet with a scrollable list of customers.
+  // Always shows the picker — even if the list is empty, there's a "+ New" row.
   Future<void> _pickCustomer(List<Customer> customers) async {
     final picked = await showCupertinoModalPopup<Customer>(
       context: context,
@@ -68,6 +73,8 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
         title: 'Select Customer',
         items: customers,
         labelFor: (c) => c.name,
+        createNewLabel: 'New Customer',
+        onCreateNew: () => context.push('/repair-orders/customers/new'),
       ),
     );
     if (picked != null && picked != _customer) {
@@ -75,16 +82,16 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
         _customer = picked;
         _vehicle = null; // reset vehicle when customer changes
       });
+      // Auto-populate internal note from customer's stored note if field is empty
+      if ((picked.internalNote ?? '').isNotEmpty && _note.text.trim().isEmpty) {
+        _note.text = picked.internalNote!;
+      }
     }
   }
 
   // Opens a bottom sheet with vehicles belonging to the selected customer.
+  // Always shows the picker — even if empty, there's a "+ New Vehicle" row.
   Future<void> _pickVehicle(List<Vehicle> vehicles) async {
-    if (vehicles.isEmpty) {
-      // No vehicles for this customer — take them straight to the add vehicle form.
-      context.push('/repair-orders/customers/${_customer!.id}/vehicles/new');
-      return;
-    }
     final picked = await showCupertinoModalPopup<Vehicle>(
       context: context,
       builder: (_) => _PickerSheet<Vehicle>(
@@ -93,6 +100,14 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
         labelFor: (v) => [v.year?.toString(), v.make, v.model]
             .whereType<String>()
             .join(' '),
+        sublabelFor: (v) => (v.licensePlate != null &&
+                v.licensePlate!.isNotEmpty &&
+                v.licensePlate != 'NO PLATE')
+            ? v.licensePlate
+            : null,
+        createNewLabel: 'New Vehicle',
+        onCreateNew: () => context.push(
+            '/repair-orders/customers/${_customer!.id}/vehicles/new'),
       ),
     );
     if (picked != null) setState(() => _vehicle = picked);
@@ -123,6 +138,7 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
         child: ListView(
           children: [
             const SizedBox(height: 28),
+
             // ── Customer + Vehicle ─────────────────────────────────────────
             _SectionHeader(label: 'CUSTOMER'),
             Container(
@@ -133,12 +149,6 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
                   GestureDetector(
                     onTap: () {
                       final customers = customersAsync.value ?? [];
-                      if (customers.isEmpty) {
-                        // No customers yet — take them straight to the new customer form.
-                        // When they save the customer and come back, they can pick it.
-                        context.push('/repair-orders/customers/new');
-                        return;
-                      }
                       _pickCustomer(customers);
                     },
                     child: Container(
@@ -175,7 +185,6 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
                       ),
                     ),
                   ),
-                  // Divider
                   Container(
                     height: 0.5,
                     color: const Color(0xFFE5E5EA),
@@ -208,23 +217,41 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
                             ),
                           ),
                           Expanded(
-                            child: Text(
-                              _vehicle != null
-                                  ? [
-                                      _vehicle!.year?.toString(),
-                                      _vehicle!.make,
-                                      _vehicle!.model
-                                    ].whereType<String>().join(' ')
-                                  : _customer != null
-                                      ? 'Select…'
-                                      : 'Select customer first',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: _vehicle != null
-                                    ? const Color(0xFF1C1C1E)
-                                    : const Color(0xFFC7C7CC),
-                              ),
-                            ),
+                            child: _vehicle != null
+                                ? Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        [
+                                          _vehicle!.year?.toString(),
+                                          _vehicle!.make,
+                                          _vehicle!.model
+                                        ].whereType<String>().join(' '),
+                                        style: const TextStyle(
+                                            fontSize: 16,
+                                            color: Color(0xFF1C1C1E)),
+                                      ),
+                                      if (_vehicle!.licensePlate != null &&
+                                          _vehicle!.licensePlate!.isNotEmpty &&
+                                          _vehicle!.licensePlate !=
+                                              'NO PLATE')
+                                        Text(
+                                          _vehicle!.licensePlate!,
+                                          style: const TextStyle(
+                                              fontSize: 13,
+                                              color: Color(0xFF8E8E93)),
+                                        ),
+                                    ],
+                                  )
+                                : Text(
+                                    _customer != null
+                                        ? 'Select…'
+                                        : 'Select customer first',
+                                    style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Color(0xFFC7C7CC)),
+                                  ),
                           ),
                           if (_customer != null)
                             const Icon(
@@ -239,19 +266,53 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
                 ],
               ),
             ),
+
             const SizedBox(height: 20),
-            // ── Note ──────────────────────────────────────────────────────
-            _SectionHeader(label: 'NOTE (OPTIONAL)'),
+
+            // ── Customer Complaint ─────────────────────────────────────────
+            _SectionHeader(label: 'CUSTOMER COMPLAINT'),
+            Container(
+              color: CupertinoColors.white,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+              child: CupertinoTextField.borderless(
+                controller: _complaint,
+                placeholder: 'e.g. Check engine light on, car shakes at highway speed',
+                maxLines: 3,
+                minLines: 3,
+                textCapitalization: TextCapitalization.sentences,
+                contextMenuBuilder: (context, editableTextState) {
+                  return CupertinoAdaptiveTextSelectionToolbar.editableText(
+                    editableTextState: editableTextState,
+                  );
+                },
+                style: const TextStyle(
+                    fontSize: 16, color: Color(0xFF1C1C1E)),
+                placeholderStyle: const TextStyle(
+                    fontSize: 16, color: Color(0xFFC7C7CC)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── Internal Note ──────────────────────────────────────────────
+            _SectionHeader(label: 'INTERNAL NOTE (OPTIONAL)'),
             Container(
               color: CupertinoColors.white,
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
               child: CupertinoTextField.borderless(
                 controller: _note,
-                placeholder: 'e.g. Check engine light, oil change',
+                placeholder: 'e.g. Customer is a regular, has fleet account',
                 maxLines: 3,
                 minLines: 3,
                 textCapitalization: TextCapitalization.sentences,
+                contextMenuBuilder: (context, editableTextState) {
+                  return CupertinoAdaptiveTextSelectionToolbar.editableText(
+                    editableTextState: editableTextState,
+                  );
+                },
                 style: const TextStyle(
                     fontSize: 16, color: Color(0xFF1C1C1E)),
                 placeholderStyle: const TextStyle(
@@ -290,22 +351,28 @@ class _SectionHeader extends StatelessWidget {
 
 // ─── Generic Picker Sheet ─────────────────────────────────────────────────────
 // A scrollable bottom sheet that lets the user pick one item from a list.
-// T is the type of item (Customer or Vehicle).
+// An optional "+ New …" row appears at the top when onCreateNew is provided.
 class _PickerSheet<T> extends StatelessWidget {
   final String title;
   final List<T> items;
   final String Function(T) labelFor;
+  // Optional secondary line shown in gray below the main label (e.g. plate number)
+  final String? Function(T)? sublabelFor;
+  final String? createNewLabel;
+  final VoidCallback? onCreateNew;
 
   const _PickerSheet({
     required this.title,
     required this.items,
     required this.labelFor,
+    this.sublabelFor,
+    this.createNewLabel,
+    this.onCreateNew,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      // White card that slides up from the bottom
       decoration: const BoxDecoration(
         color: CupertinoColors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
@@ -316,7 +383,7 @@ class _PickerSheet<T> extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle + title
+          // Title + Cancel
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
@@ -340,35 +407,86 @@ class _PickerSheet<T> extends StatelessWidget {
             ),
           ),
           Container(height: 0.5, color: const Color(0xFFE5E5EA)),
-          // Scrollable list
-          Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: items.length,
-              separatorBuilder: (_, __) => Container(
-                height: 0.5,
-                color: const Color(0xFFE5E5EA),
-                margin: const EdgeInsets.only(left: 16),
-              ),
-              itemBuilder: (context, i) {
-                return GestureDetector(
-                  onTap: () => Navigator.pop(context, items[i]),
-                  child: Container(
-                    color: CupertinoColors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                    child: Text(
-                      labelFor(items[i]),
+
+          // ── "+ New …" row (shown when onCreateNew is provided) ───────────
+          if (onCreateNew != null) ...[
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context); // dismiss the sheet
+                onCreateNew!(); // navigate to create form
+              },
+              child: Container(
+                color: CupertinoColors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    const Icon(CupertinoIcons.plus_circle_fill,
+                        size: 18, color: Color(0xFF007AFF)),
+                    const SizedBox(width: 10),
+                    Text(
+                      createNewLabel ?? 'Create New',
                       style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF1C1C1E),
+                          fontSize: 16, color: Color(0xFF007AFF)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (items.isNotEmpty)
+              Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E5EA),
+                  margin: const EdgeInsets.only(left: 16)),
+          ],
+
+          // ── Scrollable list of items ──────────────────────────────────────
+          if (items.isNotEmpty)
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: items.length,
+                separatorBuilder: (_, __) => Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E5EA),
+                  margin: const EdgeInsets.only(left: 16),
+                ),
+                itemBuilder: (context, i) {
+                  final sub = sublabelFor?.call(items[i]);
+                  final showSub = sub != null &&
+                      sub.isNotEmpty &&
+                      sub != 'NO PLATE';
+                  return GestureDetector(
+                    onTap: () => Navigator.pop(context, items[i]),
+                    child: Container(
+                      color: CupertinoColors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            labelFor(items[i]),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF1C1C1E),
+                            ),
+                          ),
+                          if (showSub)
+                            Text(
+                              sub!,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF8E8E93),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
         ],
       ),
     );

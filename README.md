@@ -6,6 +6,8 @@ A cross-platform automotive shop management app built with Flutter, inspired by 
 
 ## Project Status
 
+**v0.5.0 — Sign-Off** — Full write-up workflow: customer complaints, parts with cost/markup pricing, parts linked to labor lines, individual item approval/decline on estimates, declined items excluded from repair orders.
+
 **v0.4.0 — Open Bay** — Module 1 complete. Full repair order engine working: create estimate, convert to RO, track job status (Open → In Progress → Completed → Closed).
 
 **v0.3.0 — Write-Up** — Customers, vehicles, VIN decode, estimates (labor + parts + totals), vendors, shop settings, and Apple-style macOS menu bar all working.

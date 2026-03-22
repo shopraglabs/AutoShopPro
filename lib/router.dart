@@ -252,6 +252,12 @@ class _CustomerEditLoader extends ConsumerWidget {
             child: Center(child: CupertinoActivityIndicator()),
           );
         }
+        if (snapshot.hasError) {
+          return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(middle: Text('Edit Customer')),
+            child: Center(child: Text('Error loading customer.')),
+          );
+        }
         final customer = snapshot.data;
         if (customer == null) {
           return const CupertinoPageScaffold(
@@ -281,6 +287,12 @@ class _VendorEditLoader extends ConsumerWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CupertinoPageScaffold(
             child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(middle: Text('Edit Vendor')),
+            child: Center(child: Text('Error loading vendor.')),
           );
         }
         final vendor = snapshot.data;
@@ -315,6 +327,12 @@ class _LineItemEditLoader extends ConsumerWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CupertinoPageScaffold(
             child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(middle: Text('Edit')),
+            child: Center(child: Text('Error loading line item.')),
           );
         }
         final lineItem = snapshot.data;
@@ -353,6 +371,12 @@ class _VehicleEditLoader extends ConsumerWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CupertinoPageScaffold(
             child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(middle: Text('Edit Vehicle')),
+            child: Center(child: Text('Error loading vehicle.')),
           );
         }
         final vehicle = snapshot.data;

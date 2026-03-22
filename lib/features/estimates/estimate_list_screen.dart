@@ -100,7 +100,7 @@ class _EstimateRow extends ConsumerWidget {
       context: context,
       builder: (dialogCtx) => CupertinoAlertDialog(
         title: Text('Delete ${_estimateNumber(item.estimate.id)}?'),
-        content: const Text('This cannot be undone.'),
+        content: const Text('All line items on this estimate will also be deleted. This cannot be undone.'),
         actions: [
           CupertinoDialogAction(
             isDestructiveAction: true,

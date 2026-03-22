@@ -23,12 +23,18 @@ class CustomerDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final db = ref.watch(dbProvider);
-    return FutureBuilder<Customer?>(
-      future: db.getCustomer(customerId),
+    return StreamBuilder<Customer?>(
+      stream: db.watchCustomer(customerId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CupertinoPageScaffold(
             child: Center(child: CupertinoActivityIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return const CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(middle: Text('Customer')),
+            child: Center(child: Text('Error loading customer.')),
           );
         }
         final customer = snapshot.data;
@@ -116,6 +122,13 @@ class _CustomerDetail extends ConsumerWidget {
                     icon: CupertinoIcons.mail_solid,
                     label: 'Email',
                     value: customer.email!,
+                  ),
+                if (customer.internalNote != null &&
+                    customer.internalNote!.isNotEmpty)
+                  _DetailRow(
+                    icon: CupertinoIcons.pencil_ellipsis_rectangle,
+                    label: 'Internal Note',
+                    value: customer.internalNote!,
                   ),
               ],
               emptyMessage: 'No contact info saved',

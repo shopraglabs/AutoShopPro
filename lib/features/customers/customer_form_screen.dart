@@ -21,6 +21,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
   late final TextEditingController _name;
   late final TextEditingController _phone;
   late final TextEditingController _email;
+  late final TextEditingController _internalNote;
   bool _saving = false;
 
   bool get _isEditing => widget.customer != null;
@@ -32,6 +33,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     _name = TextEditingController(text: c?.name ?? '');
     _phone = TextEditingController(text: c?.phone ?? '');
     _email = TextEditingController(text: c?.email ?? '');
+    _internalNote = TextEditingController(text: c?.internalNote ?? '');
   }
 
   @override
@@ -39,6 +41,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     _name.dispose();
     _phone.dispose();
     _email.dispose();
+    _internalNote.dispose();
     super.dispose();
   }
 
@@ -73,12 +76,14 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
         name: name,
         phone: Value(blankToNull(_phone.text)),
         email: Value(blankToNull(_email.text)),
+        internalNote: Value(blankToNull(_internalNote.text)),
       ));
     } else {
       final newId = await db.insertCustomer(CustomersCompanion.insert(
         name: name,
         phone: Value(blankToNull(_phone.text)),
         email: Value(blankToNull(_email.text)),
+        internalNote: Value(blankToNull(_internalNote.text)),
       ));
       if (mounted) context.go('/repair-orders/customers/$newId');
       return;
@@ -132,6 +137,40 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                   keyboardType: TextInputType.emailAddress,
                 ),
               ],
+            ),
+            const SizedBox(height: 20),
+            // Internal note — shop-facing only, auto-populates on new estimates
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: const Text(
+                'INTERNAL NOTE (OPTIONAL)',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF8E8E93),
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            Container(
+              color: CupertinoColors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+              child: CupertinoTextField.borderless(
+                controller: _internalNote,
+                placeholder: 'e.g. Fleet account, net-30 terms, always calls ahead',
+                maxLines: 3,
+                minLines: 3,
+                textCapitalization: TextCapitalization.sentences,
+                contextMenuBuilder: (context, editableTextState) {
+                  return CupertinoAdaptiveTextSelectionToolbar.editableText(
+                    editableTextState: editableTextState,
+                  );
+                },
+                style: const TextStyle(fontSize: 16, color: Color(0xFF1C1C1E)),
+                placeholderStyle:
+                    const TextStyle(fontSize: 16, color: Color(0xFFC7C7CC)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -160,7 +161,10 @@ class _RoDetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lineItems = lineItemsAsync.value ?? [];
+    // Declined items are excluded from the repair order — only approved/pending work shows
+    final lineItems = (lineItemsAsync.value ?? [])
+        .where((l) => l.approvalStatus != 'declined')
+        .toList();
     final laborLines = lineItems.where((l) => l.type == 'labor').toList();
     final partLines = lineItems.where((l) => l.type == 'part').toList();
 
@@ -238,14 +242,20 @@ class _RoDetailView extends ConsumerWidget {
             // ── Labor lines ───────────────────────────────────────────────
             if (laborLines.isNotEmpty) ...[
               _sectionHeader('LABOR'),
-              _LineItemSection(items: laborLines),
+              _LineItemSection(
+                  items: laborLines,
+                  laborLines: const [],
+                  canMark: ro.status != 'closed'),
               const SizedBox(height: 20),
             ],
 
             // ── Parts lines ───────────────────────────────────────────────
             if (partLines.isNotEmpty) ...[
               _sectionHeader('PARTS'),
-              _LineItemSection(items: partLines),
+              _LineItemSection(
+                  items: partLines,
+                  laborLines: laborLines,
+                  canMark: ro.status != 'closed'),
               const SizedBox(height: 20),
             ],
 
@@ -284,38 +294,71 @@ class _RoDetailView extends ConsumerWidget {
             ],
 
             // ── Actions ───────────────────────────────────────────────────
-            if (next != null) ...[
+            if (next != null || (ro.estimateId != null && ro.status != 'closed')) ...[
               _sectionHeader('ACTIONS'),
-              GestureDetector(
-                onTap: () => _advanceStatus(ref, next.nextStatus),
-                child: Container(
-                  color: CupertinoColors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _nextIcon(ro.status),
-                        size: 18,
-                        color: const Color(0xFF007AFF),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          next.buttonLabel,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF007AFF),
+              Container(
+                color: CupertinoColors.white,
+                child: Column(
+                  children: [
+                    // Edit Estimate — visible on any non-closed RO with an estimate
+                    if (ro.estimateId != null && ro.status != 'closed') ...[
+                      GestureDetector(
+                        onTap: () => context
+                            .push('/repair-orders/estimates/${ro.estimateId}'),
+                        child: Container(
+                          color: CupertinoColors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          child: const Row(
+                            children: [
+                              Icon(CupertinoIcons.doc_text,
+                                  size: 18, color: Color(0xFF007AFF)),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text('Edit Estimate',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: Color(0xFF007AFF))),
+                              ),
+                              Icon(CupertinoIcons.chevron_right,
+                                  size: 16, color: Color(0xFFC7C7CC)),
+                            ],
                           ),
                         ),
                       ),
-                      const Icon(
-                        CupertinoIcons.chevron_right,
-                        size: 16,
-                        color: Color(0xFFC7C7CC),
-                      ),
+                      if (next != null)
+                        Container(
+                            height: 0.5,
+                            color: const Color(0xFFE5E5EA),
+                            margin: const EdgeInsets.only(left: 46)),
                     ],
-                  ),
+                    // Status advancement button
+                    if (next != null)
+                      GestureDetector(
+                        onTap: () => _advanceStatus(ref, next.nextStatus),
+                        child: Container(
+                          color: CupertinoColors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          child: Row(
+                            children: [
+                              Icon(_nextIcon(ro.status),
+                                  size: 18,
+                                  color: const Color(0xFF007AFF)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(next.buttonLabel,
+                                    style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Color(0xFF007AFF))),
+                              ),
+                              const Icon(CupertinoIcons.chevron_right,
+                                  size: 16, color: Color(0xFFC7C7CC)),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -367,11 +410,24 @@ class _CustomerVehicleHeader extends ConsumerWidget {
       future: Future.wait([
         db.getCustomer(ro.customerId),
         if (ro.vehicleId != null) db.getVehicle(ro.vehicleId!),
+        if (ro.estimateId != null) db.getEstimate(ro.estimateId!),
       ]),
       builder: (context, snapshot) {
         final results = snapshot.data ?? [];
         final customer = results.isNotEmpty ? results[0] as Customer? : null;
-        final vehicle = results.length > 1 ? results[1] as Vehicle? : null;
+
+        // vehicle is the second result only when vehicleId was not null
+        Vehicle? vehicle;
+        Estimate? estimate;
+        if (ro.vehicleId != null && results.length >= 2) {
+          vehicle = results[1] as Vehicle?;
+          if (ro.estimateId != null && results.length >= 3) {
+            estimate = results[2] as Estimate?;
+          }
+        } else if (ro.vehicleId == null && ro.estimateId != null &&
+            results.length >= 2) {
+          estimate = results[1] as Estimate?;
+        }
 
         final vehicleLabel = vehicle != null
             ? [vehicle.year?.toString(), vehicle.make, vehicle.model]
@@ -407,20 +463,48 @@ class _CustomerVehicleHeader extends ConsumerWidget {
                     const Icon(CupertinoIcons.car_fill,
                         size: 15, color: Color(0xFF8E8E93)),
                     const SizedBox(width: 6),
-                    Text(
-                      vehicleLabel,
-                      style: const TextStyle(
-                          fontSize: 15, color: Color(0xFF8E8E93)),
+                    Text(vehicleLabel,
+                        style: const TextStyle(
+                            fontSize: 15, color: Color(0xFF8E8E93))),
+                    if (vehicle?.licensePlate != null &&
+                        vehicle!.licensePlate!.isNotEmpty &&
+                        vehicle.licensePlate != 'NO PLATE') ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        '· ${vehicle.licensePlate}',
+                        style: const TextStyle(
+                            fontSize: 15, color: Color(0xFFAEAEB2)),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+              // Customer complaint from the linked estimate
+              if (estimate?.customerComplaint != null &&
+                  estimate!.customerComplaint!.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(CupertinoIcons.chat_bubble_text_fill,
+                        size: 14, color: Color(0xFF8E8E93)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        estimate.customerComplaint!,
+                        style: const TextStyle(
+                            fontSize: 14, color: Color(0xFF1C1C1E)),
+                      ),
                     ),
                   ],
                 ),
               ],
               if (ro.note != null && ro.note!.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   ro.note!,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     color: Color(0xFF8E8E93),
                     fontStyle: FontStyle.italic,
                   ),
@@ -435,19 +519,81 @@ class _CustomerVehicleHeader extends ConsumerWidget {
 }
 
 // ─── Line Item Section (read-only on RO) ─────────────────────────────────────
+// Groups parts by their linked labor line when assignments exist.
+// canMark: true when the RO is not closed — rows show a checkmark toggle.
 class _LineItemSection extends ConsumerWidget {
   final List<EstimateLineItem> items;
-  const _LineItemSection({required this.items});
+  final List<EstimateLineItem> laborLines;
+  final bool canMark;
+  const _LineItemSection(
+      {required this.items,
+      required this.laborLines,
+      required this.canMark});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hasAnyAssigned =
+        laborLines.isNotEmpty && items.any((p) => p.parentLaborId != null);
+
+    if (!hasAnyAssigned) {
+      return _buildGroup(context, ref, items);
+    }
+
+    final groups = <({String? label, List<EstimateLineItem> parts})>[];
+    for (final labor in laborLines) {
+      final linked = items.where((p) => p.parentLaborId == labor.id).toList();
+      if (linked.isNotEmpty) {
+        groups.add((label: labor.description, parts: linked));
+      }
+    }
+    final unassigned = items.where((p) => p.parentLaborId == null).toList();
+    if (unassigned.isNotEmpty) {
+      groups.add((label: null, parts: unassigned));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (int g = 0; g < groups.length; g++) ...[
+          if (g > 0) const SizedBox(height: 12),
+          if (groups[g].label != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              child: Row(
+                children: [
+                  const Icon(CupertinoIcons.arrow_turn_down_right,
+                      size: 11, color: Color(0xFF8E8E93)),
+                  const SizedBox(width: 4),
+                  Text(
+                    groups[g].label!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF8E8E93),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          _buildGroup(context, ref, groups[g].parts),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildGroup(
+      BuildContext context, WidgetRef ref, List<EstimateLineItem> groupItems) {
     return Container(
       color: CupertinoColors.white,
       child: Column(
         children: [
-          for (int i = 0; i < items.length; i++) ...[
-            _LineItemRow(item: items[i], ref: ref),
-            if (i < items.length - 1)
+          for (int i = 0; i < groupItems.length; i++) ...[
+            _LineItemRow(
+                item: groupItems[i],
+                laborLines: laborLines,
+                canMark: canMark,
+                ref: ref),
+            if (i < groupItems.length - 1)
               Container(
                 height: 0.5,
                 color: const Color(0xFFE5E5EA),
@@ -462,62 +608,128 @@ class _LineItemSection extends ConsumerWidget {
 
 class _LineItemRow extends StatelessWidget {
   final EstimateLineItem item;
+  final List<EstimateLineItem> laborLines;
+  final bool canMark;
   final WidgetRef ref;
-  const _LineItemRow({required this.item, required this.ref});
+  const _LineItemRow({
+    required this.item,
+    required this.laborLines,
+    required this.canMark,
+    required this.ref,
+  });
+
+  Future<void> _toggleDone() async {
+    final done = !(item.isDone ?? false);
+    await ref
+        .read(dbProvider)
+        .updateLineItem(item.copyWith(isDone: Value(done)));
+  }
 
   @override
   Widget build(BuildContext context) {
+    final done = item.isDone ?? false;
     final lineTotal = item.quantity * item.unitPrice;
     final qtyLabel = item.type == 'labor'
         ? '${_qty(item.quantity)} hr @ \$${item.unitPrice.toStringAsFixed(2)}/hr'
         : '${_qty(item.quantity)} × \$${item.unitPrice.toStringAsFixed(2)}';
 
-    return Container(
-      color: CupertinoColors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.description,
-                  style: const TextStyle(
-                      fontSize: 15, color: Color(0xFF1C1C1E)),
-                ),
-                const SizedBox(height: 2),
-                if (item.type == 'part' && item.vendorId != null)
-                  FutureBuilder(
-                    future: ref.read(dbProvider).getVendor(item.vendorId!),
-                    builder: (context, snap) {
-                      final vendorName = snap.data?.name;
-                      final label = vendorName != null
-                          ? '$qtyLabel · $vendorName'
-                          : qtyLabel;
-                      return Text(label,
-                          style: const TextStyle(
-                              fontSize: 13, color: Color(0xFF8E8E93)));
-                    },
-                  )
-                else
-                  Text(qtyLabel,
-                      style: const TextStyle(
-                          fontSize: 13, color: Color(0xFF8E8E93))),
-              ],
+    final textColor =
+        done ? const Color(0xFFAAAAAA) : const Color(0xFF1C1C1E);
+    final subColor =
+        done ? const Color(0xFFCCCCCC) : const Color(0xFF8E8E93);
+    final decoration = done ? TextDecoration.lineThrough : null;
+
+    return GestureDetector(
+      onTap: canMark ? _toggleDone : null,
+      child: Container(
+        color: CupertinoColors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Checkmark circle — only shown when canMark
+            if (canMark) ...[
+              Icon(
+                done
+                    ? CupertinoIcons.checkmark_circle_fill
+                    : CupertinoIcons.circle,
+                size: 22,
+                color: done
+                    ? const Color(0xFF34C759)
+                    : const Color(0xFFC7C7CC),
+              ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.description,
+                    style: TextStyle(
+                        fontSize: 15,
+                        color: textColor,
+                        decoration: decoration,
+                        decorationColor: textColor),
+                  ),
+                  const SizedBox(height: 2),
+                  if (item.type == 'part') ...[
+                    if (item.vendorId != null)
+                      FutureBuilder(
+                        future:
+                            ref.read(dbProvider).getVendor(item.vendorId!),
+                        builder: (context, snap) {
+                          final vendorName = snap.data?.name;
+                          final label = vendorName != null
+                              ? '$qtyLabel · $vendorName'
+                              : qtyLabel;
+                          return Text(label,
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: subColor,
+                                  decoration: decoration,
+                                  decorationColor: subColor));
+                        },
+                      )
+                    else
+                      Text(qtyLabel,
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: subColor,
+                              decoration: decoration,
+                              decorationColor: subColor)),
+                    if (item.unitCost != null)
+                      Text(
+                        'Cost \$${item.unitCost!.toStringAsFixed(2)}',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: subColor,
+                            decoration: decoration,
+                            decorationColor: subColor),
+                      ),
+                  ] else
+                    Text(qtyLabel,
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: subColor,
+                            decoration: decoration,
+                            decorationColor: subColor)),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            _money(lineTotal),
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF1C1C1E),
+            const SizedBox(width: 12),
+            Text(
+              _money(lineTotal),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: textColor,
+                decoration: decoration,
+                decorationColor: textColor,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
