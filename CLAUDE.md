@@ -120,9 +120,10 @@ When adding a new Flutter plugin with native macOS code:
 - Uses semantic versioning: MAJOR.MINOR.PATCH
 - 0.x.x = in development, not ready for real users
 - 1.0.0 = first stable release to real shops
-- PATCH (0.1.0 → 0.1.1): under-the-hood changes, nothing visible
+- PATCH (0.1.0 → 0.1.1): bug fixes and polish — no new features
 - MINOR (0.1.x → 0.2.0): new module or major feature working
 - MAJOR (0.x.x → 1.0.0): app is shippable to real customers
+- **Naming convention:** MINOR and MAJOR versions get a cool name (e.g. "Buttoned Up"). PATCH versions inherit the name of their parent minor version (e.g. v0.10.1 → "Buttoned Up", same as v0.10.0).
 
 ## Session Rules
 - At the start of each session, check the current state of code
@@ -237,4 +238,4 @@ onTap: () => controller.selection = TextSelection(
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.10.0 Buttoned Up
+v0.10.1 Buttoned Up

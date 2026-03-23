@@ -174,7 +174,7 @@ The heart of the app. Everything else depends on this.
 
 ## Infrastructure & App Shell
 
-### App Foundation (v0.1.0 Bones ✅)
+### App Foundation (v0.1.0 — v0.1.1 Bones ✅)
 - ✅ Flutter project created
 - ✅ App running on macOS via Xcode
 - ✅ CupertinoApp with system blue theme (#007AFF)
@@ -188,7 +188,7 @@ The heart of the app. Everything else depends on this.
 - ✅ Git initialized and connected to GitHub
 - ✅ README.md, module_plan.md, AutoShopPro_Build_Log.docx created
 
-### Infrastructure (v0.1.1 Ignition ✅)
+### Infrastructure (v0.1.1 Bones ✅)
 - ✅ Riverpod state management setup
 - ✅ go_router navigation setup (ShellRoute with 5 module routes)
 - ✅ Drift database initialization (customers + vehicles tables)
@@ -279,7 +279,7 @@ The heart of the app. Everything else depends on this.
 
 ---
 
-### UX Polish & Search (v0.7.1 Smooth Operator)
+### UX Polish & Search (v0.7.1 Parts Counter)
 - ✅ New line items default to approved (no manual tap required)
 - ✅ Chevron on estimate line item rows + right-click context menu (Edit / Delete)
 - ✅ Inline search in all picker sheets — customer, vehicle, vendor, labor, technician, template
@@ -299,7 +299,7 @@ The heart of the app. Everything else depends on this.
 
 ---
 
-### UX Polish & RO Cleanup (v0.10.0 Buttoned Up)
+### UX Polish & RO Cleanup (v0.10.0 Buttoned Up — v0.10.1 Buttoned Up)
 - ✅ Scrollbars on vendor, technician, and part list screens (CupertinoScrollbar)
 - ✅ Hover cursors on list rows throughout the app (MouseRegion)
 - ✅ Dropdown context menus on desktop for category pickers, approval badge, invoice actions
@@ -322,6 +322,12 @@ The heart of the app. Everything else depends on this.
 - ✅ RO list shows date on each row (service date or createdAt)
 - ✅ RO list sorted by id descending (newest first, consistent order)
 - ✅ Schema v24 — estimateDate column on estimates
+- ✅ Left-click on invoice/estimate/approval/category buttons now shows action sheet (not context menu dropdown)
+- ✅ Right-click on those same buttons shows context menu at cursor position
+- ✅ "Show in Finder" replaced with "Open" on save-to-downloads dialogs
+- ✅ Hover cursors added to vehicle tiles and history rows on customer detail
+- ✅ "Add Parts" confirm button in template picker replaced with list-row style
+- ✅ Patch naming convention: patches inherit parent minor/major version name
 
 ---
 

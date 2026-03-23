@@ -766,7 +766,8 @@ class _RoDetailView extends ConsumerWidget {
                     ],
                     // Itemized Invoice
                     GestureDetector(
-                      onTapUp: (d) => _generateInvoice(context, ref, simple: false, position: d.globalPosition),
+                      onTap: () => _generateInvoice(context, ref, simple: false),
+                      onSecondaryTapUp: (d) => _generateInvoice(context, ref, simple: false, position: d.globalPosition),
                       child: Container(
                         color: CupertinoColors.white,
                         padding: const EdgeInsets.symmetric(
@@ -794,7 +795,8 @@ class _RoDetailView extends ConsumerWidget {
                         margin: const EdgeInsets.only(left: 46)),
                     // Simple Invoice
                     GestureDetector(
-                      onTapUp: (d) => _generateInvoice(context, ref, simple: true, position: d.globalPosition),
+                      onTap: () => _generateInvoice(context, ref, simple: true),
+                      onSecondaryTapUp: (d) => _generateInvoice(context, ref, simple: true, position: d.globalPosition),
                       child: Container(
                         color: CupertinoColors.white,
                         padding: const EdgeInsets.symmetric(

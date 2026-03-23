@@ -1130,16 +1130,16 @@ Future<void> _handleSave(
           content: Text(fileName),
           actions: [
             CupertinoDialogAction(
-              onPressed: () {
-                Navigator.pop(dialogCtx);
-                Process.run('open', ['-R', path]);
-              },
-              child: const Text('Show in Finder'),
-            ),
-            CupertinoDialogAction(
               isDefaultAction: true,
               onPressed: () => Navigator.pop(dialogCtx),
               child: const Text('OK'),
+            ),
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                Process.run('open', [path]);
+              },
+              child: const Text('Open'),
             ),
           ],
         ),
@@ -1617,16 +1617,16 @@ Future<void> _handleEstimateSave(
           content: Text(fileName),
           actions: [
             CupertinoDialogAction(
-              onPressed: () {
-                Navigator.pop(dialogCtx);
-                Process.run('open', ['-R', file.path]);
-              },
-              child: const Text('Show in Finder'),
-            ),
-            CupertinoDialogAction(
               isDefaultAction: true,
               onPressed: () => Navigator.pop(dialogCtx),
               child: const Text('OK'),
+            ),
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                Process.run('open', [file.path]);
+              },
+              child: const Text('Open'),
             ),
           ],
         ),

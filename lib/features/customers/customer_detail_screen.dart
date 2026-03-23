@@ -327,7 +327,9 @@ class _VehicleTile extends StatelessWidget {
       if (vehicle.mileage != null) '${vehicle.mileage} mi',
     ].join(' · ');
 
-    return GestureDetector(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
       onTap: onTap,
       child: Container(
         color: CupertinoColors.white,
@@ -373,6 +375,7 @@ class _VehicleTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -557,7 +560,9 @@ class _HistoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
       onTap: onTap,
       child: Container(
         color: CupertinoColors.white,
@@ -615,6 +620,7 @@ class _HistoryRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

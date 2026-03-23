@@ -614,7 +614,8 @@ class _EstimateDetailView extends ConsumerWidget {
                   _ActionRow(
                     icon: CupertinoIcons.doc_text_fill,
                     label: 'Save / Print / Email',
-                    onTapUp: (pos) => _printEstimate(context, ref, position: pos),
+                    onTap: () => _printEstimate(context, ref),
+                    onSecondaryTapUp: (pos) => _printEstimate(context, ref, position: pos),
                   ),
                   _ConvertRow(estimate: estimate),
                 ],
@@ -853,11 +854,11 @@ class _LineItemRow extends ConsumerWidget {
   // Opens the approval picker for this line item.
   // On desktop: shows an inline context menu at the tap position.
   // On mobile: shows a bottom action sheet.
-  void _showApprovalSheet(BuildContext context, WidgetRef ref, Offset position) {
+  void _showApprovalSheet(BuildContext context, WidgetRef ref, [Offset? position]) {
     final current = item.approvalStatus;
     final db = ref.read(dbProvider);
 
-    if (Platform.isMacOS || Platform.isWindows) {
+    if ((Platform.isMacOS || Platform.isWindows) && position != null) {
       showContextMenu(
         context: context,
         position: position,
@@ -1005,7 +1006,8 @@ class _LineItemRow extends ConsumerWidget {
               // ── Approval badge ──────────────────────────────────────────
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTapUp: (d) => _showApprovalSheet(context, ref, d.globalPosition),
+                onTap: () => _showApprovalSheet(context, ref),
+                onSecondaryTapUp: (d) => _showApprovalSheet(context, ref, d.globalPosition),
                 child: Padding(
                   padding: const EdgeInsets.only(right: 12, top: 1),
                   child: Icon(approvalIcon, size: 20, color: approvalColor),
@@ -1221,12 +1223,14 @@ class _ActionRow extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
   final ValueChanged<Offset>? onTapUp;
+  final ValueChanged<Offset>? onSecondaryTapUp;
 
   const _ActionRow({
     required this.icon,
     required this.label,
     this.onTap,
     this.onTapUp,
+    this.onSecondaryTapUp,
   });
 
   @override
@@ -1234,6 +1238,7 @@ class _ActionRow extends StatelessWidget {
     return GestureDetector(
       onTap: onTapUp == null ? onTap : null,
       onTapUp: onTapUp != null ? (d) => onTapUp!(d.globalPosition) : null,
+      onSecondaryTapUp: onSecondaryTapUp != null ? (d) => onSecondaryTapUp!(d.globalPosition) : null,
       child: Container(
         color: CupertinoColors.white,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -1663,18 +1668,44 @@ class _TemplatePartsSheetState extends State<_TemplatePartsSheet> {
               },
             ),
           ),
+          Container(height: 0.5, color: const Color(0xFFE5E5EA)),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: SizedBox(
-                width: double.infinity,
-                child: CupertinoButton.filled(
-                  onPressed: selectedCount > 0 ? _confirm : null,
-                  child: Text(
-                    selectedCount > 0
-                        ? 'Add $selectedCount Part${selectedCount == 1 ? '' : 's'}'
-                        : 'No Parts Selected',
-                  ),
+            child: GestureDetector(
+              onTap: selectedCount > 0 ? _confirm : null,
+              child: Container(
+                color: CupertinoColors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Icon(
+                      CupertinoIcons.checkmark_circle_fill,
+                      size: 18,
+                      color: selectedCount > 0
+                          ? const Color(0xFF007AFF)
+                          : const Color(0xFFC7C7CC),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        selectedCount > 0
+                            ? 'Add $selectedCount Part${selectedCount == 1 ? '' : 's'}'
+                            : 'No Parts Selected',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: selectedCount > 0
+                              ? const Color(0xFF007AFF)
+                              : const Color(0xFFC7C7CC),
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      CupertinoIcons.chevron_right,
+                      size: 16,
+                      color: selectedCount > 0
+                          ? const Color(0xFFC7C7CC)
+                          : const Color(0xFFE5E5EA),
+                    ),
+                  ],
                 ),
               ),
             ),

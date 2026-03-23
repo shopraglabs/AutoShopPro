@@ -6,13 +6,15 @@ A cross-platform automotive shop management app built with Flutter. One codebase
 
 ## Project Status
 
+**v0.10.1 — Buttoned Up** — Bug fix: left-clicking invoice/estimate/approval/category buttons now opens a proper action sheet instead of a context menu dropdown; "Show in Finder" replaced with "Open" on save dialogs; hover cursors and list-row style button fixes throughout.
+
 **v0.10.0 — Buttoned Up** — Simplified RO flow (Open → Closed only), "Other" line item type, invoice comment field on ROs (prints on PDF), editable customer concerns, vehicle history on vehicle detail, Complete All button on open ROs, desktop dropdown menus, and scrollbars throughout.
 
 **v0.9.0 — Dialed In** — UX polish: Add Part button under each labor row (auto-linked), customer complaints shown on estimate detail, template linked parts as opt-in dropdown with quantities, part number field on line items, new estimate from vehicle page goes through the form with customer/vehicle pre-filled, and number fields now select-all on tap throughout the app.
 
 **v0.8.0 — Linked Up** — Templates now link to inventory parts; applying a template drops in the labor line plus all linked parts in one tap. Parts inventory has categories (Part/Fluid/Filter/Chemical) and a full markup calculator with auto-tier rules. Labor names show as bold titles throughout estimates, ROs, and invoice PDFs.
 
-**v0.7.1 — Smooth Operator** — UX polish session. New line items default to approved, inline search in every picker sheet, right-click context menus on line items, service templates for common jobs, and a global search screen accessible from the sidebar or ⌘F.
+**v0.7.1 — Parts Counter** — UX polish session. New line items default to approved, inline search in every picker sheet, right-click context menus on line items, service templates for common jobs, and a global search screen accessible from the sidebar or ⌘F.
 
 **v0.7.0 — Parts Counter** — Module 2 Phase 1: parts inventory (list, add/edit/delete, stock badges), catalog picker on Add Part form, stock deduction on RO mark-done, tiered markup rules, and a full Settings screen.
 
@@ -26,7 +28,7 @@ A cross-platform automotive shop management app built with Flutter. One codebase
 
 **v0.2.0 — Intake** — Customer & Vehicle records fully working. Add, edit, delete, and search customers. Add vehicles to customers with year, make, model, VIN, mileage, and plate. Smart input formatting throughout (phone, mileage, plate, capitalization). All data saved locally to SQLite via Drift.
 
-**v0.1.1 — Ignition** — Infrastructure wired up. Riverpod state management, go_router navigation, and Drift local database (customers + vehicles tables) all running.
+**v0.1.1 — Bones** — Infrastructure wired up. Riverpod state management, go_router navigation, and Drift local database (customers + vehicles tables) all running.
 
 **v0.1.0 — Bones** — Adaptive app shell complete. Sidebar navigation on desktop, tab bar on mobile, all 5 module placeholders wired up.
 

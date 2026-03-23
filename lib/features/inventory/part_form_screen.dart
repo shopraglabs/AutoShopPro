@@ -459,7 +459,8 @@ class _PartFormScreenState extends ConsumerState<PartFormScreen> {
                   ),
                 ),
                 GestureDetector(
-                  onTapUp: (d) => _pickCategory(position: d.globalPosition),
+                  onTap: () => _pickCategory(),
+                  onSecondaryTapUp: (d) => _pickCategory(position: d.globalPosition),
                   child: Container(
                     color: CupertinoColors.systemBackground,
                     padding: const EdgeInsets.symmetric(
