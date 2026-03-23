@@ -65,7 +65,9 @@ The heart of the app. Everything else depends on this.
 - ✅ Close RO
 - ✅ Mark items done on RO (checkmark toggle per line item while open)
 - ✅ Edit Estimate link from non-closed RO detail
-- ✅ Declined items filtered out of RO (not shown, not counted in totals)
+- ✅ Declined items filtered out of RO totals and work items
+- ✅ Declined items shown in separate DECLINED section on RO detail (gray strikethrough, red X)
+- ✅ Declined items shown in DECLINED — NOT BILLED section on invoice PDFs
 - ✅ Edit RO details
 - ✅ Assign technician to RO
 - ✅ RO list status filters
@@ -315,6 +317,11 @@ The heart of the app. Everything else depends on this.
 - ✅ RO invoice comment field — Add/Edit on RO detail; prints on PDF invoices
 - ✅ Schema v23 — comment column on repair_orders
 - ✅ Apply Template removed from ADD ITEMS (template access is in Add Labor → Operation)
+- ✅ Estimate date field — editable date on estimate detail, stored as estimateDate, falls back to createdAt
+- ✅ RO service date read-only on detail screen; editable only via Edit Repair Order form
+- ✅ RO list shows date on each row (service date or createdAt)
+- ✅ RO list sorted by id descending (newest first, consistent order)
+- ✅ Schema v24 — estimateDate column on estimates
 
 ---
 

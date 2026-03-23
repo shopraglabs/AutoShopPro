@@ -5,9 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
 import 'repair_orders_provider.dart';
 
-// A simple form to edit the internal note on a Repair Order.
-// The customer, vehicle, and estimate are fixed once the RO is created —
-// only the note is editable here.
+// A simple form to edit the internal note and service date on a Repair Order.
+// The customer, vehicle, and estimate are fixed once the RO is created.
 class RoFormScreen extends ConsumerStatefulWidget {
   final RepairOrder ro;
   const RoFormScreen({super.key, required this.ro});
@@ -18,12 +17,14 @@ class RoFormScreen extends ConsumerStatefulWidget {
 
 class _RoFormScreenState extends ConsumerState<RoFormScreen> {
   late final TextEditingController _noteCtrl;
+  late DateTime _serviceDate;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
     _noteCtrl = TextEditingController(text: widget.ro.note ?? '');
+    _serviceDate = widget.ro.serviceDate ?? widget.ro.createdAt;
   }
 
   @override
@@ -39,16 +40,55 @@ class _RoFormScreenState extends ConsumerState<RoFormScreen> {
     await db.updateRepairOrder(
       widget.ro.copyWith(
         note: Value(trimmed.isEmpty ? null : trimmed),
+        serviceDate: Value(_serviceDate),
       ),
     );
     if (mounted) context.pop();
   }
 
+  void _pickDate() {
+    DateTime picked = _serviceDate;
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (ctx) => Container(
+        height: 300,
+        color: CupertinoColors.systemBackground,
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                CupertinoButton(
+                  onPressed: () {
+                    setState(() => _serviceDate = picked);
+                    Navigator.pop(ctx);
+                  },
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+            Expanded(
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: picked,
+                maximumDate: DateTime.now().add(const Duration(days: 365)),
+                onDateTimeChanged: (dt) => picked = dt,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _fmtDate(DateTime d) =>
+      '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}/${d.year}';
+
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: const Text('Edit RO'),
+        middle: const Text('Edit Repair Order'),
         trailing: _saving
             ? const CupertinoActivityIndicator()
             : CupertinoButton(
@@ -64,17 +104,49 @@ class _RoFormScreenState extends ConsumerState<RoFormScreen> {
         child: ListView(
           children: [
             const SizedBox(height: 28),
+
+            // ── Service Date ───────────────────────────────────────────────
+            _sectionHeader('SERVICE DATE'),
+            GestureDetector(
+              onTap: _pickDate,
+              child: Container(
+                color: CupertinoColors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    const Icon(CupertinoIcons.calendar,
+                        size: 18, color: Color(0xFF007AFF)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _fmtDate(_serviceDate),
+                        style: const TextStyle(
+                            fontSize: 16, color: Color(0xFF007AFF)),
+                      ),
+                    ),
+                    const Icon(CupertinoIcons.chevron_right,
+                        size: 16, color: Color(0xFFC7C7CC)),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 28),
+
+            // ── Internal Note ──────────────────────────────────────────────
             _sectionHeader('INTERNAL NOTE'),
             Container(
               color: CupertinoColors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: CupertinoTextField(
                 controller: _noteCtrl,
                 placeholder: 'Notes visible only to shop staff...',
                 maxLines: 6,
                 minLines: 3,
-                autofocus: true,
-                style: const TextStyle(fontSize: 15, color: Color(0xFF1C1C1E)),
+                style:
+                    const TextStyle(fontSize: 15, color: Color(0xFF1C1C1E)),
                 placeholderStyle:
                     const TextStyle(fontSize: 15, color: Color(0xFFC7C7CC)),
                 decoration: const BoxDecoration(),
@@ -85,11 +157,11 @@ class _RoFormScreenState extends ConsumerState<RoFormScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'This note is internal — customers do not see it.',
-                style: const TextStyle(fontSize: 13, color: Color(0xFF8E8E93)),
+                style: TextStyle(fontSize: 13, color: Color(0xFF8E8E93)),
               ),
             ),
           ],

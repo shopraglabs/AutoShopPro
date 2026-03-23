@@ -1033,6 +1033,17 @@ class $EstimatesTable extends Estimates
     requiredDuringInsert: false,
     defaultValue: const Constant(0.0),
   );
+  static const VerificationMeta _estimateDateMeta = const VerificationMeta(
+    'estimateDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> estimateDate = GeneratedColumn<DateTime>(
+    'estimate_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1054,6 +1065,7 @@ class $EstimatesTable extends Estimates
     note,
     status,
     taxRate,
+    estimateDate,
     createdAt,
   ];
   @override
@@ -1112,6 +1124,15 @@ class $EstimatesTable extends Estimates
         taxRate.isAcceptableOrUnknown(data['tax_rate']!, _taxRateMeta),
       );
     }
+    if (data.containsKey('estimate_date')) {
+      context.handle(
+        _estimateDateMeta,
+        estimateDate.isAcceptableOrUnknown(
+          data['estimate_date']!,
+          _estimateDateMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1155,6 +1176,10 @@ class $EstimatesTable extends Estimates
         DriftSqlType.double,
         data['${effectivePrefix}tax_rate'],
       )!,
+      estimateDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}estimate_date'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1176,6 +1201,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
   final String? note;
   final String status;
   final double taxRate;
+  final DateTime? estimateDate;
   final DateTime createdAt;
   const Estimate({
     required this.id,
@@ -1185,6 +1211,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
     this.note,
     required this.status,
     required this.taxRate,
+    this.estimateDate,
     required this.createdAt,
   });
   @override
@@ -1203,6 +1230,9 @@ class Estimate extends DataClass implements Insertable<Estimate> {
     }
     map['status'] = Variable<String>(status);
     map['tax_rate'] = Variable<double>(taxRate);
+    if (!nullToAbsent || estimateDate != null) {
+      map['estimate_date'] = Variable<DateTime>(estimateDate);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -1220,6 +1250,9 @@ class Estimate extends DataClass implements Insertable<Estimate> {
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       status: Value(status),
       taxRate: Value(taxRate),
+      estimateDate: estimateDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(estimateDate),
       createdAt: Value(createdAt),
     );
   }
@@ -1239,6 +1272,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
       note: serializer.fromJson<String?>(json['note']),
       status: serializer.fromJson<String>(json['status']),
       taxRate: serializer.fromJson<double>(json['taxRate']),
+      estimateDate: serializer.fromJson<DateTime?>(json['estimateDate']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1253,6 +1287,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
       'note': serializer.toJson<String?>(note),
       'status': serializer.toJson<String>(status),
       'taxRate': serializer.toJson<double>(taxRate),
+      'estimateDate': serializer.toJson<DateTime?>(estimateDate),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1265,6 +1300,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
     Value<String?> note = const Value.absent(),
     String? status,
     double? taxRate,
+    Value<DateTime?> estimateDate = const Value.absent(),
     DateTime? createdAt,
   }) => Estimate(
     id: id ?? this.id,
@@ -1276,6 +1312,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
     note: note.present ? note.value : this.note,
     status: status ?? this.status,
     taxRate: taxRate ?? this.taxRate,
+    estimateDate: estimateDate.present ? estimateDate.value : this.estimateDate,
     createdAt: createdAt ?? this.createdAt,
   );
   Estimate copyWithCompanion(EstimatesCompanion data) {
@@ -1291,6 +1328,9 @@ class Estimate extends DataClass implements Insertable<Estimate> {
       note: data.note.present ? data.note.value : this.note,
       status: data.status.present ? data.status.value : this.status,
       taxRate: data.taxRate.present ? data.taxRate.value : this.taxRate,
+      estimateDate: data.estimateDate.present
+          ? data.estimateDate.value
+          : this.estimateDate,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1305,6 +1345,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
           ..write('note: $note, ')
           ..write('status: $status, ')
           ..write('taxRate: $taxRate, ')
+          ..write('estimateDate: $estimateDate, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1319,6 +1360,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
     note,
     status,
     taxRate,
+    estimateDate,
     createdAt,
   );
   @override
@@ -1332,6 +1374,7 @@ class Estimate extends DataClass implements Insertable<Estimate> {
           other.note == this.note &&
           other.status == this.status &&
           other.taxRate == this.taxRate &&
+          other.estimateDate == this.estimateDate &&
           other.createdAt == this.createdAt);
 }
 
@@ -1343,6 +1386,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
   final Value<String?> note;
   final Value<String> status;
   final Value<double> taxRate;
+  final Value<DateTime?> estimateDate;
   final Value<DateTime> createdAt;
   const EstimatesCompanion({
     this.id = const Value.absent(),
@@ -1352,6 +1396,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
     this.note = const Value.absent(),
     this.status = const Value.absent(),
     this.taxRate = const Value.absent(),
+    this.estimateDate = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   EstimatesCompanion.insert({
@@ -1362,6 +1407,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
     this.note = const Value.absent(),
     this.status = const Value.absent(),
     this.taxRate = const Value.absent(),
+    this.estimateDate = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : customerId = Value(customerId);
   static Insertable<Estimate> custom({
@@ -1372,6 +1418,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
     Expression<String>? note,
     Expression<String>? status,
     Expression<double>? taxRate,
+    Expression<DateTime>? estimateDate,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -1382,6 +1429,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
       if (note != null) 'note': note,
       if (status != null) 'status': status,
       if (taxRate != null) 'tax_rate': taxRate,
+      if (estimateDate != null) 'estimate_date': estimateDate,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -1394,6 +1442,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
     Value<String?>? note,
     Value<String>? status,
     Value<double>? taxRate,
+    Value<DateTime?>? estimateDate,
     Value<DateTime>? createdAt,
   }) {
     return EstimatesCompanion(
@@ -1404,6 +1453,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
       note: note ?? this.note,
       status: status ?? this.status,
       taxRate: taxRate ?? this.taxRate,
+      estimateDate: estimateDate ?? this.estimateDate,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -1432,6 +1482,9 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
     if (taxRate.present) {
       map['tax_rate'] = Variable<double>(taxRate.value);
     }
+    if (estimateDate.present) {
+      map['estimate_date'] = Variable<DateTime>(estimateDate.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1448,6 +1501,7 @@ class EstimatesCompanion extends UpdateCompanion<Estimate> {
           ..write('note: $note, ')
           ..write('status: $status, ')
           ..write('taxRate: $taxRate, ')
+          ..write('estimateDate: $estimateDate, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -6121,6 +6175,7 @@ typedef $$EstimatesTableCreateCompanionBuilder =
       Value<String?> note,
       Value<String> status,
       Value<double> taxRate,
+      Value<DateTime?> estimateDate,
       Value<DateTime> createdAt,
     });
 typedef $$EstimatesTableUpdateCompanionBuilder =
@@ -6132,6 +6187,7 @@ typedef $$EstimatesTableUpdateCompanionBuilder =
       Value<String?> note,
       Value<String> status,
       Value<double> taxRate,
+      Value<DateTime?> estimateDate,
       Value<DateTime> createdAt,
     });
 
@@ -6176,6 +6232,11 @@ class $$EstimatesTableFilterComposer
 
   ColumnFilters<double> get taxRate => $composableBuilder(
     column: $table.taxRate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get estimateDate => $composableBuilder(
+    column: $table.estimateDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6229,6 +6290,11 @@ class $$EstimatesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get estimateDate => $composableBuilder(
+    column: $table.estimateDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -6269,6 +6335,11 @@ class $$EstimatesTableAnnotationComposer
   GeneratedColumn<double> get taxRate =>
       $composableBuilder(column: $table.taxRate, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get estimateDate => $composableBuilder(
+    column: $table.estimateDate,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 }
@@ -6308,6 +6379,7 @@ class $$EstimatesTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<double> taxRate = const Value.absent(),
+                Value<DateTime?> estimateDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => EstimatesCompanion(
                 id: id,
@@ -6317,6 +6389,7 @@ class $$EstimatesTableTableManager
                 note: note,
                 status: status,
                 taxRate: taxRate,
+                estimateDate: estimateDate,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -6328,6 +6401,7 @@ class $$EstimatesTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<double> taxRate = const Value.absent(),
+                Value<DateTime?> estimateDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => EstimatesCompanion.insert(
                 id: id,
@@ -6337,6 +6411,7 @@ class $$EstimatesTableTableManager
                 note: note,
                 status: status,
                 taxRate: taxRate,
+                estimateDate: estimateDate,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

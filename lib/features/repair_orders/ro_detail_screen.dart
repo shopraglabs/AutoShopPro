@@ -195,6 +195,9 @@ class _RoDetailView extends ConsumerWidget {
     final lineItems = (lineItemsAsync.value ?? [])
         .where((l) => l.approvalStatus != 'declined')
         .toList();
+    final declinedForInvoice = (lineItemsAsync.value ?? [])
+        .where((l) => l.approvalStatus == 'declined')
+        .toList();
 
     if (!context.mounted) return;
     await showInvoiceActions(
@@ -203,6 +206,7 @@ class _RoDetailView extends ConsumerWidget {
       customer: customer,
       vehicle: vehicle,
       lineItems: lineItems,
+      declinedItems: declinedForInvoice,
       taxRate: estimate?.taxRate ?? 0.0,
       shopName: settings.shopName,
       customerComplaint: estimate?.customerComplaint,
@@ -344,6 +348,9 @@ class _RoDetailView extends ConsumerWidget {
     final lineItems = (lineItemsAsync.value ?? [])
         .where((l) => l.approvalStatus != 'declined')
         .toList();
+    final declinedItems = (lineItemsAsync.value ?? [])
+        .where((l) => l.approvalStatus == 'declined')
+        .toList();
     final laborLines = lineItems.where((l) => l.type == 'labor').toList();
     final partLines = lineItems.where((l) => l.type == 'part').toList();
     final otherLines = lineItems.where((l) => l.type == 'other').toList();
@@ -414,39 +421,33 @@ class _RoDetailView extends ConsumerWidget {
 
             const SizedBox(height: 12),
 
-            // ── Service date ──────────────────────────────────────────────
-            GestureDetector(
-              onTap: () => _pickServiceDate(context, ref, ro),
-              child: Container(
-                color: CupertinoColors.systemBackground,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 13),
-                child: Row(
-                  children: [
-                    const Icon(CupertinoIcons.calendar,
-                        size: 17, color: Color(0xFF8E8E93)),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Service Date',
-                      style: TextStyle(
-                          fontSize: 15,
-                          color: CupertinoColors.secondaryLabel),
-                    ),
-                    const Spacer(),
-                    Text(
-                      ro.serviceDate != null
-                          ? _fmtDate(ro.serviceDate!)
-                          : _fmtDate(ro.createdAt),
-                      style: const TextStyle(
-                          fontSize: 15,
-                          color: CupertinoColors.label,
-                          fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(width: 6),
-                    const Icon(CupertinoIcons.chevron_right,
-                        size: 14, color: Color(0xFFC7C7CC)),
-                  ],
-                ),
+            // ── Service date (read-only — edit via Edit Repair Order) ─────
+            Container(
+              color: CupertinoColors.systemBackground,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 13),
+              child: Row(
+                children: [
+                  const Icon(CupertinoIcons.calendar,
+                      size: 17, color: Color(0xFF8E8E93)),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Service Date',
+                    style: TextStyle(
+                        fontSize: 15,
+                        color: CupertinoColors.secondaryLabel),
+                  ),
+                  const Spacer(),
+                  Text(
+                    ro.serviceDate != null
+                        ? _fmtDate(ro.serviceDate!)
+                        : _fmtDate(ro.createdAt),
+                    style: const TextStyle(
+                        fontSize: 15,
+                        color: CupertinoColors.label,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ],
               ),
             ),
 
@@ -515,6 +516,28 @@ class _RoDetailView extends ConsumerWidget {
                         label: 'Total',
                         value: _money(total),
                         bold: true),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+            ],
+
+            // ── Declined items ────────────────────────────────────────────
+            if (declinedItems.isNotEmpty) ...[
+              _sectionHeader('DECLINED'),
+              Container(
+                color: CupertinoColors.white,
+                child: Column(
+                  children: [
+                    for (int i = 0; i < declinedItems.length; i++) ...[
+                      _DeclinedItemRow(item: declinedItems[i]),
+                      if (i < declinedItems.length - 1)
+                        Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 16),
+                        ),
+                    ],
                   ],
                 ),
               ),
@@ -1225,6 +1248,54 @@ class _TechPickerSheetState extends State<_TechPickerSheet> {
             const SizedBox(height: 8),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── Declined Item Row ────────────────────────────────────────────────────────
+// Shows a single declined line item in gray with strikethrough — not interactive.
+class _DeclinedItemRow extends StatelessWidget {
+  final EstimateLineItem item;
+  const _DeclinedItemRow({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = (item.type == 'labor' || item.type == 'other') &&
+            item.laborName != null
+        ? item.laborName!
+        : item.description;
+    final price = _money(item.quantity * item.unitPrice);
+
+    return Container(
+      color: CupertinoColors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          const Icon(CupertinoIcons.xmark_circle_fill,
+              size: 16, color: Color(0xFFFF3B30)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 15,
+                color: Color(0xFF8E8E93),
+                decoration: TextDecoration.lineThrough,
+                decorationColor: Color(0xFF8E8E93),
+              ),
+            ),
+          ),
+          Text(
+            price,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF8E8E93),
+              decoration: TextDecoration.lineThrough,
+              decorationColor: Color(0xFF8E8E93),
+            ),
+          ),
+        ],
       ),
     );
   }

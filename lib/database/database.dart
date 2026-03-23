@@ -49,6 +49,8 @@ class Estimates extends Table {
   TextColumn get status => text().withDefault(const Constant('draft'))();
   // Tax rate as a percentage, e.g. 8.5 means 8.5%
   RealColumn get taxRate => real().withDefault(const Constant(0.0))();
+  // The date shown on the estimate (editable). Null = use createdAt for display.
+  DateTimeColumn get estimateDate => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -250,7 +252,7 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   // Drift runs this when it finds an older database on the device.
   @override
@@ -446,6 +448,15 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(repairOrders, repairOrders.comment);
         }
       }
+      if (from < 24) {
+        // Added in v24: estimateDate on estimates (editable display date).
+        final cols = await m.database.customSelect(
+          "SELECT name FROM pragma_table_info('estimates') WHERE name='estimate_date'",
+        ).get();
+        if (cols.isEmpty) {
+          await m.addColumn(estimates, estimates.estimateDate);
+        }
+      }
     },
   );
 
@@ -610,7 +621,7 @@ class AppDatabase extends _$AppDatabase {
       leftOuterJoin(customers, customers.id.equalsExp(repairOrders.customerId)),
       leftOuterJoin(vehicles, vehicles.id.equalsExp(repairOrders.vehicleId)),
     ]);
-    q.orderBy([OrderingTerm.desc(repairOrders.createdAt)]);
+    q.orderBy([OrderingTerm.desc(repairOrders.id)]);
     return q.watch().map((rows) => rows
         .map((row) => RepairOrderWithDetails(
               ro: row.readTable(repairOrders),

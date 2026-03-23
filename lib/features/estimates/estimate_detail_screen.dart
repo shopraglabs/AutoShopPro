@@ -217,6 +217,44 @@ class _EstimateDetailView extends ConsumerWidget {
     controller.dispose();
   }
 
+  void _pickEstimateDate(BuildContext context, WidgetRef ref) {
+    final initial = estimate.estimateDate ?? estimate.createdAt;
+    DateTime picked = initial;
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (ctx) => Container(
+        height: 300,
+        color: CupertinoColors.systemBackground,
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                CupertinoButton(
+                  onPressed: () async {
+                    await ref.read(dbProvider).updateEstimate(
+                          estimate.copyWith(estimateDate: Value(picked)),
+                        );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+            Expanded(
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: initial,
+                maximumDate: DateTime.now().add(const Duration(days: 365)),
+                onDateTimeChanged: (dt) => picked = dt,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _printEstimate(BuildContext context, WidgetRef ref, {Offset? position}) async {
     final db = ref.read(dbProvider);
     final results = await Future.wait([
@@ -290,6 +328,45 @@ class _EstimateDetailView extends ConsumerWidget {
             _CustomerVehicleHeader(estimate: estimate),
 
             const SizedBox(height: 16),
+
+            // ── Estimate date ──────────────────────────────────────────────
+            GestureDetector(
+              onTap: () => _pickEstimateDate(context, ref),
+              child: Container(
+                color: CupertinoColors.systemBackground,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 13),
+                child: Row(
+                  children: [
+                    const Icon(CupertinoIcons.calendar,
+                        size: 17, color: Color(0xFF8E8E93)),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Estimate Date',
+                      style: TextStyle(
+                          fontSize: 15,
+                          color: CupertinoColors.secondaryLabel),
+                    ),
+                    const Spacer(),
+                    Text(
+                      () {
+                        final d = estimate.estimateDate ?? estimate.createdAt;
+                        return '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}/${d.year}';
+                      }(),
+                      style: const TextStyle(
+                          fontSize: 15,
+                          color: Color(0xFF007AFF),
+                          fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(CupertinoIcons.chevron_right,
+                        size: 14, color: Color(0xFFC7C7CC)),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
 
             // ── Convert to RO / View RO banner ────────────────────────────
             _RoBanner(estimate: estimate),

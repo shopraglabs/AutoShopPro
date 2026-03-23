@@ -38,6 +38,7 @@ Future<Uint8List> buildInvoicePdf({
   required String? shopName,
   String? customerComplaint,
   String? comment,
+  List<EstimateLineItem> declinedItems = const [],
 }) async {
   final doc = pw.Document();
 
@@ -311,6 +312,44 @@ Future<Uint8List> buildInvoicePdf({
         ),
 
         pw.SizedBox(height: 40),
+
+        // ── Declined items ────────────────────────────────────────────────────
+        if (declinedItems.isNotEmpty) ...[
+          _sectionDivider('DECLINED — NOT BILLED', mid),
+          pw.SizedBox(height: 8),
+          ...declinedItems.map((d) {
+            final title = (d.type == 'labor' || d.type == 'other') &&
+                    d.laborName != null
+                ? d.laborName!
+                : d.description;
+            return pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 4),
+              child: pw.Row(
+                children: [
+                  pw.Expanded(
+                    child: pw.Text(
+                      title,
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        color: mid,
+                        decoration: pw.TextDecoration.lineThrough,
+                      ),
+                    ),
+                  ),
+                  pw.Text(
+                    _money(d.quantity * d.unitPrice),
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      color: mid,
+                      decoration: pw.TextDecoration.lineThrough,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          pw.SizedBox(height: 24),
+        ],
 
         // ── Invoice Comment ───────────────────────────────────────────────────
         if (comment != null && comment.isNotEmpty) ...[
@@ -587,6 +626,7 @@ Future<Uint8List> buildSimpleInvoicePdf({
   required String? shopName,
   String? customerComplaint,
   String? comment,
+  List<EstimateLineItem> declinedItems = const [],
 }) async {
   final doc = pw.Document();
 
@@ -871,6 +911,44 @@ Future<Uint8List> buildSimpleInvoicePdf({
 
         pw.SizedBox(height: 40),
 
+        // ── Declined items ────────────────────────────────────────────────────
+        if (declinedItems.isNotEmpty) ...[
+          _sectionDivider('DECLINED — NOT BILLED', mid),
+          pw.SizedBox(height: 8),
+          ...declinedItems.map((d) {
+            final title = (d.type == 'labor' || d.type == 'other') &&
+                    d.laborName != null
+                ? d.laborName!
+                : d.description;
+            return pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 4),
+              child: pw.Row(
+                children: [
+                  pw.Expanded(
+                    child: pw.Text(
+                      title,
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        color: mid,
+                        decoration: pw.TextDecoration.lineThrough,
+                      ),
+                    ),
+                  ),
+                  pw.Text(
+                    _money(d.quantity * d.unitPrice),
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      color: mid,
+                      decoration: pw.TextDecoration.lineThrough,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          pw.SizedBox(height: 24),
+        ],
+
         // ── Invoice Comment ───────────────────────────────────────────────────
         if (comment != null && comment.isNotEmpty) ...[
           pw.Divider(color: light, thickness: 0.5),
@@ -912,6 +990,7 @@ Future<void> showInvoiceActions({
   required String? shopName,
   String? customerComplaint,
   String? comment,
+  List<EstimateLineItem> declinedItems = const [],
   bool simple = false,
   Offset? position,
 }) async {
@@ -924,19 +1003,22 @@ Future<void> showInvoiceActions({
           label: 'Save as PDF',
           icon: CupertinoIcons.arrow_down_doc,
           onTap: () => _handleSave(context, ro, customer, vehicle, lineItems,
-              taxRate, shopName, customerComplaint, simple, comment: comment),
+              taxRate, shopName, customerComplaint, simple,
+              comment: comment, declinedItems: declinedItems),
         ),
         ContextMenuAction(
           label: 'Print',
           icon: CupertinoIcons.printer,
           onTap: () => _handlePrint(context, ro, customer, vehicle, lineItems,
-              taxRate, shopName, customerComplaint, simple, comment: comment),
+              taxRate, shopName, customerComplaint, simple,
+              comment: comment, declinedItems: declinedItems),
         ),
         ContextMenuAction(
           label: 'Email',
           icon: CupertinoIcons.mail,
           onTap: () => _handleEmail(context, ro, customer, vehicle, lineItems,
-              taxRate, shopName, customerComplaint, simple, comment: comment),
+              taxRate, shopName, customerComplaint, simple,
+              comment: comment, declinedItems: declinedItems),
         ),
       ],
     );
@@ -952,7 +1034,8 @@ Future<void> showInvoiceActions({
           onPressed: () async {
             Navigator.pop(sheetCtx);
             await _handleSave(context, ro, customer, vehicle, lineItems,
-                taxRate, shopName, customerComplaint, simple, comment: comment);
+                taxRate, shopName, customerComplaint, simple,
+                comment: comment, declinedItems: declinedItems);
           },
           child: const Text('Save as PDF'),
         ),
@@ -960,7 +1043,8 @@ Future<void> showInvoiceActions({
           onPressed: () async {
             Navigator.pop(sheetCtx);
             await _handlePrint(context, ro, customer, vehicle, lineItems,
-                taxRate, shopName, customerComplaint, simple, comment: comment);
+                taxRate, shopName, customerComplaint, simple,
+                comment: comment, declinedItems: declinedItems);
           },
           child: const Text('Print'),
         ),
@@ -968,7 +1052,8 @@ Future<void> showInvoiceActions({
           onPressed: () async {
             Navigator.pop(sheetCtx);
             await _handleEmail(context, ro, customer, vehicle, lineItems,
-                taxRate, shopName, customerComplaint, simple, comment: comment);
+                taxRate, shopName, customerComplaint, simple,
+                comment: comment, declinedItems: declinedItems);
           },
           child: const Text('Email'),
         ),
@@ -992,6 +1077,7 @@ Future<Uint8List> _buildBytes(
   String? customerComplaint,
   bool simple, {
   String? comment,
+  List<EstimateLineItem> declinedItems = const [],
 }) =>
     simple
         ? buildSimpleInvoicePdf(
@@ -1003,6 +1089,7 @@ Future<Uint8List> _buildBytes(
             shopName: shopName,
             customerComplaint: customerComplaint,
             comment: comment,
+            declinedItems: declinedItems,
           )
         : buildInvoicePdf(
             ro: ro,
@@ -1013,6 +1100,7 @@ Future<Uint8List> _buildBytes(
             shopName: shopName,
             customerComplaint: customerComplaint,
             comment: comment,
+            declinedItems: declinedItems,
           );
 
 Future<void> _handleSave(
@@ -1026,11 +1114,12 @@ Future<void> _handleSave(
   String? customerComplaint,
   bool simple, {
   String? comment,
+  List<EstimateLineItem> declinedItems = const [],
 }) async {
   try {
     final bytes = await _buildBytes(
         ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple,
-        comment: comment);
+        comment: comment, declinedItems: declinedItems);
     final path = await saveInvoiceToDownloads(bytes, ro.id);
     final fileName = path.split('/').last;
     if (context.mounted) {
@@ -1072,11 +1161,12 @@ Future<void> _handlePrint(
   String? customerComplaint,
   bool simple, {
   String? comment,
+  List<EstimateLineItem> declinedItems = const [],
 }) async {
   try {
     final bytes = await _buildBytes(
         ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple,
-        comment: comment);
+        comment: comment, declinedItems: declinedItems);
     final path = await saveInvoiceToTemp(bytes, ro.id);
     await openInPreview(path);
     if (context.mounted) {
@@ -1111,11 +1201,12 @@ Future<void> _handleEmail(
   String? customerComplaint,
   bool simple, {
   String? comment,
+  List<EstimateLineItem> declinedItems = const [],
 }) async {
   try {
     final bytes = await _buildBytes(
         ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple,
-        comment: comment);
+        comment: comment, declinedItems: declinedItems);
     final path = await saveInvoiceToTemp(bytes, ro.id);
     await openInMailWithAttachment(
       filePath: path,

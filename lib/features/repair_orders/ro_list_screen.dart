@@ -228,6 +228,9 @@ class _RoRow extends StatelessWidget {
 
     final color = _statusColor(ro.status);
     final label = _statusLabel(ro.status);
+    final date = ro.serviceDate ?? ro.createdAt;
+    final dateLabel =
+        '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}';
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -281,6 +284,13 @@ class _RoRow extends StatelessWidget {
                             color: Color(0xFF8E8E93),
                           ),
                         ),
+                      Text(
+                        dateLabel,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF8E8E93),
+                        ),
+                      ),
                     ],
                   ),
                 ),

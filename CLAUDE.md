@@ -53,7 +53,12 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **Other line items** — third line item type (alongside labor and parts); fields: name, description, cost, list price; displayed in OTHER section on estimates and ROs
 - **Vehicle history** — vehicle detail page shows all estimates and ROs for that vehicle, chronological, deduplicated
 - **Customer concern editing** — Add/Edit link next to "CUSTOMER CONCERN" section title on estimate detail; opens dialog to set or change the complaint text
-- **Database** — Drift/SQLite, schema v23, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts
+- **Estimate date** — editable date field on estimate detail (blue tappable row); stored as `estimateDate` nullable column; shows `createdAt` when null
+- **RO service date** — read-only on RO detail screen; editable only via Edit Repair Order form (date picker)
+- **RO list dates** — each RO row shows the service date (or createdAt); list sorted by id descending for consistent order
+- **Declined items on RO** — DECLINED section below TOTALS on RO detail; red X icon, gray strikethrough text; not counted in totals
+- **Declined items on invoices** — "DECLINED — NOT BILLED" section in both Itemized and Simple Invoice PDFs after totals; gray strikethrough; not included in any totals or tax
+- **Database** — Drift/SQLite, schema v24, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
