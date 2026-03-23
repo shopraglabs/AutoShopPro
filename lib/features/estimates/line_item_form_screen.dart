@@ -7,6 +7,7 @@ import '../../database/database.dart';
 import 'estimates_provider.dart';
 import '../vendors/vendors_provider.dart' show vendorsProvider;
 import '../inventory/inventory_provider.dart';
+import '../service_templates/service_templates_provider.dart';
 import '../settings/markup_rules_provider.dart';
 
 // The form for adding a labor or parts line to an estimate.
@@ -33,8 +34,10 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
   late final TextEditingController _description;
   late final TextEditingController _quantity;
 
-  // Labor-only field
+  // Labor-only fields
+  late final TextEditingController _laborName;
   late final TextEditingController _laborRate;
+  late final TextEditingController _laborTotal;
 
   // Parts-only fields
   late final TextEditingController _unitCost;
@@ -49,9 +52,12 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
   String? _parentLaborDesc;
   int? _catalogPartId;
   String? _catalogPartName;
+  String? _catalogTemplateName;
 
   // Guard flag: prevents markup sync from triggering infinite listener loops
   bool _syncingMarkup = false;
+  // Guard flag: prevents labor total sync from triggering infinite loops
+  bool _syncingLabor = false;
 
   bool get _isLabor => widget.type == 'labor';
   bool get _isEditing => widget.lineItem != null;
@@ -68,15 +74,26 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     _description = TextEditingController(text: li?.description ?? '');
     _quantity = TextEditingController(
         text: li != null ? _qtyStr(li.quantity) : '1');
+    _laborName = TextEditingController(
+        text: li?.laborName ?? '');
     _laborRate = TextEditingController();
+    _laborTotal = TextEditingController();
     _unitCost = TextEditingController();
     _markupPercent = TextEditingController();
     _markupDollar = TextEditingController();
     _unitList = TextEditingController();
 
     if (_isLabor) {
+      _quantity.addListener(_onLaborHoursOrRateChanged);
+      _laborRate.addListener(_onLaborHoursOrRateChanged);
+      _laborTotal.addListener(_onLaborTotalChanged);
       if (li != null) {
         _laborRate.text = li.unitPrice.toStringAsFixed(2);
+        // Pre-fill total from existing hours × rate
+        final tot = li.quantity * li.unitPrice;
+        _laborTotal.text = tot % 1 == 0
+            ? tot.toInt().toString()
+            : tot.toStringAsFixed(2);
       } else {
         _loadDefaultLaborRate();
       }
@@ -138,6 +155,40 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     final item = await ref.read(dbProvider).getLineItem(laborId);
     if (mounted && item != null) {
       setState(() => _parentLaborDesc = item.description);
+    }
+  }
+
+  // ── Labor total sync logic ───────────────────────────────────────────────
+
+  // Hours or Rate changed → recalculate Total.
+  void _onLaborHoursOrRateChanged() {
+    if (_syncingLabor) return;
+    final hrs = double.tryParse(_quantity.text);
+    final rate = double.tryParse(_laborRate.text);
+    if (hrs == null || rate == null || hrs <= 0) return;
+    final tot = hrs * rate;
+    final totStr = tot % 1 == 0
+        ? tot.toInt().toString()
+        : tot.toStringAsFixed(2);
+    if (_laborTotal.text != totStr) {
+      _syncingLabor = true;
+      _laborTotal.text = totStr;
+      _syncingLabor = false;
+    }
+  }
+
+  // Total changed → back-calculate Rate (hours stay fixed).
+  void _onLaborTotalChanged() {
+    if (_syncingLabor) return;
+    final hrs = double.tryParse(_quantity.text);
+    final tot = double.tryParse(_laborTotal.text);
+    if (hrs == null || tot == null || hrs <= 0) return;
+    final rate = tot / hrs;
+    final rateStr = rate.toStringAsFixed(2);
+    if (_laborRate.text != rateStr) {
+      _syncingLabor = true;
+      _laborRate.text = rateStr;
+      _syncingLabor = false;
     }
   }
 
@@ -323,6 +374,37 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     });
   }
 
+  Future<void> _pickFromLaborCatalog() async {
+    final templates = ref.read(serviceTemplatesProvider).value ?? [];
+    final picked = await showCupertinoModalPopup<ServiceTemplate>(
+      context: context,
+      builder: (_) => _LaborCatalogPickerSheet(
+        templates: templates,
+        onAddNew: () => context.push('/settings/service-templates/new'),
+      ),
+    );
+    if (picked != null) {
+      // Auto-fill name, description, hours, and rate from the template
+      _laborName.text = picked.name;
+      _description.text = picked.laborDescription;
+      _quantity.text = picked.defaultHours % 1 == 0
+          ? picked.defaultHours.toInt().toString()
+          : picked.defaultHours.toStringAsFixed(1);
+      if (picked.defaultRate != null) {
+        _laborRate.text = picked.defaultRate!.toStringAsFixed(2);
+      }
+      setState(() {
+        _catalogTemplateName = picked.name;
+      });
+    }
+  }
+
+  void _clearLaborCatalogLink() {
+    setState(() {
+      _catalogTemplateName = null;
+    });
+  }
+
   // ── Save ─────────────────────────────────────────────────────────────────
 
   Future<void> _save() async {
@@ -361,6 +443,8 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     setState(() => _saving = true);
     final db = ref.read(dbProvider);
 
+    final laborNameVal = _laborName.text.trim();
+
     if (_isEditing) {
       final existing = widget.lineItem!;
       await db.updateLineItem(existing.copyWith(
@@ -371,6 +455,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         vendorId: Value(_vendorId),
         parentLaborId: Value(_parentLaborId),
         inventoryPartId: Value(_catalogPartId ?? existing.inventoryPartId),
+        laborName: Value(laborNameVal.isEmpty ? null : laborNameVal),
       ));
     } else {
       await db.insertLineItem(EstimateLineItemsCompanion.insert(
@@ -383,6 +468,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         vendorId: Value(_vendorId),
         parentLaborId: Value(_parentLaborId),
         inventoryPartId: Value(_catalogPartId),
+        laborName: Value(laborNameVal.isEmpty ? null : laborNameVal),
         approvalStatus: const Value('approved'),
       ));
     }
@@ -410,7 +496,9 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
   void dispose() {
     _description.dispose();
     _quantity.dispose();
+    _laborName.dispose();
     _laborRate.dispose();
+    _laborTotal.dispose();
     _unitCost.dispose();
     _markupPercent.dispose();
     _markupDollar.dispose();
@@ -479,11 +567,44 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                   _divider(),
 
                   if (_isLabor) ...[
+                    // ── Labor: Name ──────────────────────────────────
+                    _Field(
+                      label: 'Labor Name',
+                      controller: _laborName,
+                      placeholder: 'e.g. Oil Change',
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    _divider(),
+                    // ── Labor: From Catalog picker ───────────────────
+                    _CatalogPickerRow(
+                      label: 'Operation',
+                      placeholder: 'Pick from service templates',
+                      selectedName: _catalogTemplateName,
+                      onTap: () => _pickFromLaborCatalog(),
+                      onClear: _catalogTemplateName != null
+                          ? _clearLaborCatalogLink
+                          : null,
+                    ),
+                    _divider(),
                     // ── Labor: Rate/hr ───────────────────────────────
                     _Field(
                       label: 'Rate/hr',
                       controller: _laborRate,
-                      placeholder: '120.00',
+                      placeholder: '120',
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                    ),
+                    _divider(),
+                    // ── Labor: Total ─────────────────────────────────
+                    _Field(
+                      label: 'Total',
+                      controller: _laborTotal,
+                      placeholder: '—',
+                      prefix: '\$',
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
@@ -494,6 +615,8 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                   ] else ...[
                     // ── Parts: From Catalog picker ───────────────────
                     _CatalogPickerRow(
+                      label: 'Catalog',
+                      placeholder: 'Pick from inventory',
                       selectedName: _catalogPartName,
                       onTap: () => _pickFromCatalog(),
                       onClear: _catalogPartName != null
@@ -505,7 +628,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                     _Field(
                       label: 'Unit Cost',
                       controller: _unitCost,
-                      placeholder: '10.00',
+                      placeholder: '10',
                       prefix: '\$',
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
@@ -525,7 +648,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                     _Field(
                       label: 'Unit List',
                       controller: _unitList,
-                      placeholder: '13.00',
+                      placeholder: '13',
                       prefix: '\$',
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
@@ -690,6 +813,10 @@ class _MarkupRow extends StatelessWidget {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
+              onTap: () => percentController.selection = TextSelection(
+                baseOffset: 0,
+                extentOffset: percentController.text.length,
+              ),
               contextMenuBuilder: (context, editableTextState) {
                 return CupertinoAdaptiveTextSelectionToolbar.editableText(
                   editableTextState: editableTextState,
@@ -716,12 +843,16 @@ class _MarkupRow extends StatelessWidget {
           Expanded(
             child: CupertinoTextField.borderless(
               controller: dollarController,
-              placeholder: '3.00',
+              placeholder: '3',
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
+              onTap: () => dollarController.selection = TextSelection(
+                baseOffset: 0,
+                extentOffset: dollarController.text.length,
+              ),
               contextMenuBuilder: (context, editableTextState) {
                 return CupertinoAdaptiveTextSelectionToolbar.editableText(
                   editableTextState: editableTextState,
@@ -1211,11 +1342,15 @@ class _CatalogPickerRow extends StatelessWidget {
   final String? selectedName;
   final VoidCallback onTap;
   final VoidCallback? onClear;
+  final String label;
+  final String placeholder;
 
   const _CatalogPickerRow({
     required this.selectedName,
     required this.onTap,
     this.onClear,
+    this.label = 'Catalog',
+    this.placeholder = 'Pick from inventory',
   });
 
   @override
@@ -1227,14 +1362,14 @@ class _CatalogPickerRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         child: Row(
           children: [
-            const SizedBox(
+            SizedBox(
               width: 96,
-              child: Text('Catalog',
-                  style: TextStyle(fontSize: 16, color: Color(0xFF1C1C1E))),
+              child: Text(label,
+                  style: const TextStyle(fontSize: 16, color: Color(0xFF1C1C1E))),
             ),
             Expanded(
               child: Text(
-                selectedName ?? 'Pick from inventory',
+                selectedName ?? placeholder,
                 style: TextStyle(
                   fontSize: 16,
                   color: selectedName != null
@@ -1403,6 +1538,166 @@ class _CatalogPickerSheetState extends State<_CatalogPickerSheet> {
                             '\$${part.sellPrice.toStringAsFixed(2)}',
                             style: const TextStyle(
                                 fontSize: 15, color: Color(0xFF8E8E93)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Labor Catalog Picker Sheet ───────────────────────────────────────────────
+// Lets the user pick a service template to auto-fill the labor form.
+class _LaborCatalogPickerSheet extends StatefulWidget {
+  final List<ServiceTemplate> templates;
+  final VoidCallback? onAddNew;
+  const _LaborCatalogPickerSheet({required this.templates, this.onAddNew});
+
+  @override
+  State<_LaborCatalogPickerSheet> createState() =>
+      _LaborCatalogPickerSheetState();
+}
+
+class _LaborCatalogPickerSheetState extends State<_LaborCatalogPickerSheet> {
+  String _search = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _search.isEmpty
+        ? widget.templates
+        : widget.templates
+            .where((t) =>
+                t.name.toLowerCase().contains(_search.toLowerCase()) ||
+                t.laborDescription.toLowerCase().contains(_search.toLowerCase()))
+            .toList();
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: CupertinoColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.6,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text('Pick Operation',
+                      style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1C1C1E))),
+                ),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: CupertinoSearchTextField(
+              placeholder: 'Search templates…',
+              onChanged: (v) => setState(() => _search = v),
+            ),
+          ),
+          Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+          if (widget.onAddNew != null) ...[
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                widget.onAddNew!();
+              },
+              child: Container(
+                color: CupertinoColors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: const Row(
+                  children: [
+                    Icon(CupertinoIcons.plus_circle_fill,
+                        size: 18, color: Color(0xFF007AFF)),
+                    SizedBox(width: 10),
+                    Text('New Service Template',
+                        style:
+                            TextStyle(fontSize: 16, color: Color(0xFF007AFF))),
+                  ],
+                ),
+              ),
+            ),
+            if (filtered.isNotEmpty)
+              Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E5EA),
+                  margin: const EdgeInsets.only(left: 16)),
+          ],
+          if (filtered.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                _search.isEmpty
+                    ? 'No service templates yet.'
+                    : 'No templates match "$_search".',
+                style: const TextStyle(
+                    fontSize: 15, color: CupertinoColors.secondaryLabel),
+              ),
+            )
+          else
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: filtered.length,
+                separatorBuilder: (_, __) => Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E5EA),
+                  margin: const EdgeInsets.only(left: 16),
+                ),
+                itemBuilder: (context, i) {
+                  final t = filtered[i];
+                  return GestureDetector(
+                    onTap: () => Navigator.pop(context, t),
+                    child: Container(
+                      color: CupertinoColors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(t.name,
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF1C1C1E))),
+                          const SizedBox(height: 2),
+                          Text(t.laborDescription,
+                              style: const TextStyle(
+                                  fontSize: 13, color: Color(0xFF8E8E93))),
+                          const SizedBox(height: 2),
+                          Text(
+                            () {
+                              final hrs = t.defaultHours % 1 == 0
+                                  ? '${t.defaultHours.toInt()}'
+                                  : t.defaultHours.toStringAsFixed(1);
+                              if (t.defaultRate != null) {
+                                final total = t.defaultHours * t.defaultRate!;
+                                return '$hrs hr  ·  \$${t.defaultRate!.toStringAsFixed(2)}/hr  =  \$${total.toStringAsFixed(2)}';
+                              }
+                              return '$hrs hr';
+                            }(),
+                            style: const TextStyle(
+                                fontSize: 13, color: Color(0xFF8E8E93)),
                           ),
                         ],
                       ),

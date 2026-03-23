@@ -75,6 +75,9 @@ class EstimateLineItems extends Table {
   TextColumn get approvalStatus => text().nullable()();
   // Which inventory part this line item was sourced from (null = not from catalog)
   IntColumn get inventoryPartId => integer().nullable()();
+  // Short name for a labor line (e.g. "Oil Change"). Separate from description
+  // which holds the detailed operation text. Null on old rows and parts.
+  TextColumn get laborName => text().nullable()();
 }
 
 class Vendors extends Table {
@@ -113,6 +116,8 @@ class InventoryParts extends Table {
   TextColumn get partNumber => text().nullable()();
   // Human-readable description, e.g. "Front Brake Pads"
   TextColumn get description => text()();
+  // Category: "Part", "Fluid", "Filter", "Chemical" — null treated as "Part"
+  TextColumn get category => text().nullable()();
   // What the shop paid for this part
   RealColumn get cost => real().withDefault(const Constant(0.0))();
   // What the shop charges the customer for this part
@@ -122,6 +127,18 @@ class InventoryParts extends Table {
   // Quantity at or below which we show a "Low Stock" warning (default 2)
   IntColumn get lowStockThreshold => integer().withDefault(const Constant(2))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+// Parts (from inventory) linked to a service template.
+// When a template is applied to an estimate, these are auto-added as part lines.
+class ServiceTemplateParts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // The template this part belongs to
+  IntColumn get templateId => integer()();
+  // The inventory part being linked
+  IntColumn get inventoryPartId => integer()();
+  // How many of this part are needed for the job (default 1)
+  RealColumn get quantity => real().withDefault(const Constant(1.0))();
 }
 
 // A technician who works at the shop. ROs can be assigned to a technician.
@@ -218,6 +235,7 @@ class RepairOrderWithDetails {
   InventoryParts,
   MarkupRules,
   ServiceTemplates,
+  ServiceTemplateParts,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -225,7 +243,7 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 20;
 
   // Drift runs this when it finds an older database on the device.
   @override
@@ -374,6 +392,25 @@ class AppDatabase extends _$AppDatabase {
       if (from < 18) {
         // Added in v18: service_templates table for premade service presets.
         await m.createTable(serviceTemplates);
+      }
+      if (from < 19) {
+        // Added in v19: laborName on estimate_line_items for labor job title.
+        final cols = await m.database.customSelect(
+          "SELECT name FROM pragma_table_info('estimate_line_items') WHERE name='labor_name'",
+        ).get();
+        if (cols.isEmpty) {
+          await m.addColumn(estimateLineItems, estimateLineItems.laborName);
+        }
+      }
+      if (from < 20) {
+        // Added in v20: category on inventory_parts + service_template_parts table.
+        final catCol = await m.database.customSelect(
+          "SELECT name FROM pragma_table_info('inventory_parts') WHERE name='category'",
+        ).get();
+        if (catCol.isEmpty) {
+          await m.addColumn(inventoryParts, inventoryParts.category);
+        }
+        await m.createTable(serviceTemplateParts);
       }
     },
   );
@@ -649,6 +686,31 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> deleteServiceTemplate(int id) =>
       (delete(serviceTemplates)..where((t) => t.id.equals(id))).go();
+
+  // ─── Service Template Part Queries ────────────────────────────────────────
+
+  // Live stream of all parts linked to a given template.
+  Stream<List<ServiceTemplatePart>> watchTemplatePartsForTemplate(int templateId) =>
+      (select(serviceTemplateParts)
+            ..where((p) => p.templateId.equals(templateId)))
+          .watch();
+
+  // One-shot fetch — used when applying a template to an estimate.
+  Future<List<ServiceTemplatePart>> getTemplatePartsForTemplate(int templateId) =>
+      (select(serviceTemplateParts)
+            ..where((p) => p.templateId.equals(templateId)))
+          .get();
+
+  Future<int> insertTemplatePart(ServiceTemplatePartsCompanion entry) =>
+      into(serviceTemplateParts).insert(entry);
+
+  Future<int> deleteTemplatePart(int id) =>
+      (delete(serviceTemplateParts)..where((p) => p.id.equals(id))).go();
+
+  Future<int> deleteAllTemplatePartsForTemplate(int templateId) =>
+      (delete(serviceTemplateParts)
+            ..where((p) => p.templateId.equals(templateId)))
+          .go();
 
   // ─── Global Search ────────────────────────────────────────────────────────
   // Each method searches its table for a query string.

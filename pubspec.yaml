@@ -44,6 +44,9 @@ dependencies:
   # Navigation
   go_router: ^14.6.3
 
+  # PDF generation
+  pdf: ^3.11.1
+
   # Local database
   drift: ^2.22.1
   sqlite3_flutter_libs: ^0.5.24

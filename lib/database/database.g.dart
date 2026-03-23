@@ -1594,6 +1594,17 @@ class $EstimateLineItemsTable extends EstimateLineItems
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _laborNameMeta = const VerificationMeta(
+    'laborName',
+  );
+  @override
+  late final GeneratedColumn<String> laborName = GeneratedColumn<String>(
+    'labor_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1608,6 +1619,7 @@ class $EstimateLineItemsTable extends EstimateLineItems
     isDone,
     approvalStatus,
     inventoryPartId,
+    laborName,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1710,6 +1722,12 @@ class $EstimateLineItemsTable extends EstimateLineItems
         ),
       );
     }
+    if (data.containsKey('labor_name')) {
+      context.handle(
+        _laborNameMeta,
+        laborName.isAcceptableOrUnknown(data['labor_name']!, _laborNameMeta),
+      );
+    }
     return context;
   }
 
@@ -1767,6 +1785,10 @@ class $EstimateLineItemsTable extends EstimateLineItems
         DriftSqlType.int,
         data['${effectivePrefix}inventory_part_id'],
       ),
+      laborName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}labor_name'],
+      ),
     );
   }
 
@@ -1790,6 +1812,7 @@ class EstimateLineItem extends DataClass
   final bool? isDone;
   final String? approvalStatus;
   final int? inventoryPartId;
+  final String? laborName;
   const EstimateLineItem({
     required this.id,
     required this.estimateId,
@@ -1803,6 +1826,7 @@ class EstimateLineItem extends DataClass
     this.isDone,
     this.approvalStatus,
     this.inventoryPartId,
+    this.laborName,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1830,6 +1854,9 @@ class EstimateLineItem extends DataClass
     }
     if (!nullToAbsent || inventoryPartId != null) {
       map['inventory_part_id'] = Variable<int>(inventoryPartId);
+    }
+    if (!nullToAbsent || laborName != null) {
+      map['labor_name'] = Variable<String>(laborName);
     }
     return map;
   }
@@ -1860,6 +1887,9 @@ class EstimateLineItem extends DataClass
       inventoryPartId: inventoryPartId == null && nullToAbsent
           ? const Value.absent()
           : Value(inventoryPartId),
+      laborName: laborName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(laborName),
     );
   }
 
@@ -1881,6 +1911,7 @@ class EstimateLineItem extends DataClass
       isDone: serializer.fromJson<bool?>(json['isDone']),
       approvalStatus: serializer.fromJson<String?>(json['approvalStatus']),
       inventoryPartId: serializer.fromJson<int?>(json['inventoryPartId']),
+      laborName: serializer.fromJson<String?>(json['laborName']),
     );
   }
   @override
@@ -1899,6 +1930,7 @@ class EstimateLineItem extends DataClass
       'isDone': serializer.toJson<bool?>(isDone),
       'approvalStatus': serializer.toJson<String?>(approvalStatus),
       'inventoryPartId': serializer.toJson<int?>(inventoryPartId),
+      'laborName': serializer.toJson<String?>(laborName),
     };
   }
 
@@ -1915,6 +1947,7 @@ class EstimateLineItem extends DataClass
     Value<bool?> isDone = const Value.absent(),
     Value<String?> approvalStatus = const Value.absent(),
     Value<int?> inventoryPartId = const Value.absent(),
+    Value<String?> laborName = const Value.absent(),
   }) => EstimateLineItem(
     id: id ?? this.id,
     estimateId: estimateId ?? this.estimateId,
@@ -1934,6 +1967,7 @@ class EstimateLineItem extends DataClass
     inventoryPartId: inventoryPartId.present
         ? inventoryPartId.value
         : this.inventoryPartId,
+    laborName: laborName.present ? laborName.value : this.laborName,
   );
   EstimateLineItem copyWithCompanion(EstimateLineItemsCompanion data) {
     return EstimateLineItem(
@@ -1959,6 +1993,7 @@ class EstimateLineItem extends DataClass
       inventoryPartId: data.inventoryPartId.present
           ? data.inventoryPartId.value
           : this.inventoryPartId,
+      laborName: data.laborName.present ? data.laborName.value : this.laborName,
     );
   }
 
@@ -1976,7 +2011,8 @@ class EstimateLineItem extends DataClass
           ..write('parentLaborId: $parentLaborId, ')
           ..write('isDone: $isDone, ')
           ..write('approvalStatus: $approvalStatus, ')
-          ..write('inventoryPartId: $inventoryPartId')
+          ..write('inventoryPartId: $inventoryPartId, ')
+          ..write('laborName: $laborName')
           ..write(')'))
         .toString();
   }
@@ -1995,6 +2031,7 @@ class EstimateLineItem extends DataClass
     isDone,
     approvalStatus,
     inventoryPartId,
+    laborName,
   );
   @override
   bool operator ==(Object other) =>
@@ -2011,7 +2048,8 @@ class EstimateLineItem extends DataClass
           other.parentLaborId == this.parentLaborId &&
           other.isDone == this.isDone &&
           other.approvalStatus == this.approvalStatus &&
-          other.inventoryPartId == this.inventoryPartId);
+          other.inventoryPartId == this.inventoryPartId &&
+          other.laborName == this.laborName);
 }
 
 class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
@@ -2027,6 +2065,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
   final Value<bool?> isDone;
   final Value<String?> approvalStatus;
   final Value<int?> inventoryPartId;
+  final Value<String?> laborName;
   const EstimateLineItemsCompanion({
     this.id = const Value.absent(),
     this.estimateId = const Value.absent(),
@@ -2040,6 +2079,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     this.isDone = const Value.absent(),
     this.approvalStatus = const Value.absent(),
     this.inventoryPartId = const Value.absent(),
+    this.laborName = const Value.absent(),
   });
   EstimateLineItemsCompanion.insert({
     this.id = const Value.absent(),
@@ -2054,6 +2094,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     this.isDone = const Value.absent(),
     this.approvalStatus = const Value.absent(),
     this.inventoryPartId = const Value.absent(),
+    this.laborName = const Value.absent(),
   }) : estimateId = Value(estimateId),
        type = Value(type),
        description = Value(description),
@@ -2071,6 +2112,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     Expression<bool>? isDone,
     Expression<String>? approvalStatus,
     Expression<int>? inventoryPartId,
+    Expression<String>? laborName,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2085,6 +2127,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
       if (isDone != null) 'is_done': isDone,
       if (approvalStatus != null) 'approval_status': approvalStatus,
       if (inventoryPartId != null) 'inventory_part_id': inventoryPartId,
+      if (laborName != null) 'labor_name': laborName,
     });
   }
 
@@ -2101,6 +2144,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     Value<bool?>? isDone,
     Value<String?>? approvalStatus,
     Value<int?>? inventoryPartId,
+    Value<String?>? laborName,
   }) {
     return EstimateLineItemsCompanion(
       id: id ?? this.id,
@@ -2115,6 +2159,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
       isDone: isDone ?? this.isDone,
       approvalStatus: approvalStatus ?? this.approvalStatus,
       inventoryPartId: inventoryPartId ?? this.inventoryPartId,
+      laborName: laborName ?? this.laborName,
     );
   }
 
@@ -2157,6 +2202,9 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     if (inventoryPartId.present) {
       map['inventory_part_id'] = Variable<int>(inventoryPartId.value);
     }
+    if (laborName.present) {
+      map['labor_name'] = Variable<String>(laborName.value);
+    }
     return map;
   }
 
@@ -2174,7 +2222,8 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
           ..write('parentLaborId: $parentLaborId, ')
           ..write('isDone: $isDone, ')
           ..write('approvalStatus: $approvalStatus, ')
-          ..write('inventoryPartId: $inventoryPartId')
+          ..write('inventoryPartId: $inventoryPartId, ')
+          ..write('laborName: $laborName')
           ..write(')'))
         .toString();
   }
@@ -3848,6 +3897,17 @@ class $InventoryPartsTable extends InventoryParts
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _costMeta = const VerificationMeta('cost');
   @override
   late final GeneratedColumn<double> cost = GeneratedColumn<double>(
@@ -3911,6 +3971,7 @@ class $InventoryPartsTable extends InventoryParts
     id,
     partNumber,
     description,
+    category,
     cost,
     sellPrice,
     stockQty,
@@ -3948,6 +4009,12 @@ class $InventoryPartsTable extends InventoryParts
       );
     } else if (isInserting) {
       context.missing(_descriptionMeta);
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
     }
     if (data.containsKey('cost')) {
       context.handle(
@@ -4003,6 +4070,10 @@ class $InventoryPartsTable extends InventoryParts
         DriftSqlType.string,
         data['${effectivePrefix}description'],
       )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      ),
       cost: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}cost'],
@@ -4036,6 +4107,7 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
   final int id;
   final String? partNumber;
   final String description;
+  final String? category;
   final double cost;
   final double sellPrice;
   final int stockQty;
@@ -4045,6 +4117,7 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
     required this.id,
     this.partNumber,
     required this.description,
+    this.category,
     required this.cost,
     required this.sellPrice,
     required this.stockQty,
@@ -4059,6 +4132,9 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
       map['part_number'] = Variable<String>(partNumber);
     }
     map['description'] = Variable<String>(description);
+    if (!nullToAbsent || category != null) {
+      map['category'] = Variable<String>(category);
+    }
     map['cost'] = Variable<double>(cost);
     map['sell_price'] = Variable<double>(sellPrice);
     map['stock_qty'] = Variable<int>(stockQty);
@@ -4074,6 +4150,9 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
           ? const Value.absent()
           : Value(partNumber),
       description: Value(description),
+      category: category == null && nullToAbsent
+          ? const Value.absent()
+          : Value(category),
       cost: Value(cost),
       sellPrice: Value(sellPrice),
       stockQty: Value(stockQty),
@@ -4091,6 +4170,7 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
       id: serializer.fromJson<int>(json['id']),
       partNumber: serializer.fromJson<String?>(json['partNumber']),
       description: serializer.fromJson<String>(json['description']),
+      category: serializer.fromJson<String?>(json['category']),
       cost: serializer.fromJson<double>(json['cost']),
       sellPrice: serializer.fromJson<double>(json['sellPrice']),
       stockQty: serializer.fromJson<int>(json['stockQty']),
@@ -4105,6 +4185,7 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
       'id': serializer.toJson<int>(id),
       'partNumber': serializer.toJson<String?>(partNumber),
       'description': serializer.toJson<String>(description),
+      'category': serializer.toJson<String?>(category),
       'cost': serializer.toJson<double>(cost),
       'sellPrice': serializer.toJson<double>(sellPrice),
       'stockQty': serializer.toJson<int>(stockQty),
@@ -4117,6 +4198,7 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
     int? id,
     Value<String?> partNumber = const Value.absent(),
     String? description,
+    Value<String?> category = const Value.absent(),
     double? cost,
     double? sellPrice,
     int? stockQty,
@@ -4126,6 +4208,7 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
     id: id ?? this.id,
     partNumber: partNumber.present ? partNumber.value : this.partNumber,
     description: description ?? this.description,
+    category: category.present ? category.value : this.category,
     cost: cost ?? this.cost,
     sellPrice: sellPrice ?? this.sellPrice,
     stockQty: stockQty ?? this.stockQty,
@@ -4141,6 +4224,7 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
       description: data.description.present
           ? data.description.value
           : this.description,
+      category: data.category.present ? data.category.value : this.category,
       cost: data.cost.present ? data.cost.value : this.cost,
       sellPrice: data.sellPrice.present ? data.sellPrice.value : this.sellPrice,
       stockQty: data.stockQty.present ? data.stockQty.value : this.stockQty,
@@ -4157,6 +4241,7 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
           ..write('id: $id, ')
           ..write('partNumber: $partNumber, ')
           ..write('description: $description, ')
+          ..write('category: $category, ')
           ..write('cost: $cost, ')
           ..write('sellPrice: $sellPrice, ')
           ..write('stockQty: $stockQty, ')
@@ -4171,6 +4256,7 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
     id,
     partNumber,
     description,
+    category,
     cost,
     sellPrice,
     stockQty,
@@ -4184,6 +4270,7 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
           other.id == this.id &&
           other.partNumber == this.partNumber &&
           other.description == this.description &&
+          other.category == this.category &&
           other.cost == this.cost &&
           other.sellPrice == this.sellPrice &&
           other.stockQty == this.stockQty &&
@@ -4195,6 +4282,7 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
   final Value<int> id;
   final Value<String?> partNumber;
   final Value<String> description;
+  final Value<String?> category;
   final Value<double> cost;
   final Value<double> sellPrice;
   final Value<int> stockQty;
@@ -4204,6 +4292,7 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
     this.id = const Value.absent(),
     this.partNumber = const Value.absent(),
     this.description = const Value.absent(),
+    this.category = const Value.absent(),
     this.cost = const Value.absent(),
     this.sellPrice = const Value.absent(),
     this.stockQty = const Value.absent(),
@@ -4214,6 +4303,7 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
     this.id = const Value.absent(),
     this.partNumber = const Value.absent(),
     required String description,
+    this.category = const Value.absent(),
     this.cost = const Value.absent(),
     this.sellPrice = const Value.absent(),
     this.stockQty = const Value.absent(),
@@ -4224,6 +4314,7 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
     Expression<int>? id,
     Expression<String>? partNumber,
     Expression<String>? description,
+    Expression<String>? category,
     Expression<double>? cost,
     Expression<double>? sellPrice,
     Expression<int>? stockQty,
@@ -4234,6 +4325,7 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
       if (id != null) 'id': id,
       if (partNumber != null) 'part_number': partNumber,
       if (description != null) 'description': description,
+      if (category != null) 'category': category,
       if (cost != null) 'cost': cost,
       if (sellPrice != null) 'sell_price': sellPrice,
       if (stockQty != null) 'stock_qty': stockQty,
@@ -4246,6 +4338,7 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
     Value<int>? id,
     Value<String?>? partNumber,
     Value<String>? description,
+    Value<String?>? category,
     Value<double>? cost,
     Value<double>? sellPrice,
     Value<int>? stockQty,
@@ -4256,6 +4349,7 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
       id: id ?? this.id,
       partNumber: partNumber ?? this.partNumber,
       description: description ?? this.description,
+      category: category ?? this.category,
       cost: cost ?? this.cost,
       sellPrice: sellPrice ?? this.sellPrice,
       stockQty: stockQty ?? this.stockQty,
@@ -4275,6 +4369,9 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
     }
     if (description.present) {
       map['description'] = Variable<String>(description.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
     }
     if (cost.present) {
       map['cost'] = Variable<double>(cost.value);
@@ -4300,6 +4397,7 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
           ..write('id: $id, ')
           ..write('partNumber: $partNumber, ')
           ..write('description: $description, ')
+          ..write('category: $category, ')
           ..write('cost: $cost, ')
           ..write('sellPrice: $sellPrice, ')
           ..write('stockQty: $stockQty, ')
@@ -5032,6 +5130,318 @@ class ServiceTemplatesCompanion extends UpdateCompanion<ServiceTemplate> {
   }
 }
 
+class $ServiceTemplatePartsTable extends ServiceTemplateParts
+    with TableInfo<$ServiceTemplatePartsTable, ServiceTemplatePart> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ServiceTemplatePartsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _templateIdMeta = const VerificationMeta(
+    'templateId',
+  );
+  @override
+  late final GeneratedColumn<int> templateId = GeneratedColumn<int>(
+    'template_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _inventoryPartIdMeta = const VerificationMeta(
+    'inventoryPartId',
+  );
+  @override
+  late final GeneratedColumn<int> inventoryPartId = GeneratedColumn<int>(
+    'inventory_part_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<double> quantity = GeneratedColumn<double>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1.0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    templateId,
+    inventoryPartId,
+    quantity,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'service_template_parts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ServiceTemplatePart> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('template_id')) {
+      context.handle(
+        _templateIdMeta,
+        templateId.isAcceptableOrUnknown(data['template_id']!, _templateIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_templateIdMeta);
+    }
+    if (data.containsKey('inventory_part_id')) {
+      context.handle(
+        _inventoryPartIdMeta,
+        inventoryPartId.isAcceptableOrUnknown(
+          data['inventory_part_id']!,
+          _inventoryPartIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_inventoryPartIdMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ServiceTemplatePart map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ServiceTemplatePart(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      templateId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}template_id'],
+      )!,
+      inventoryPartId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}inventory_part_id'],
+      )!,
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}quantity'],
+      )!,
+    );
+  }
+
+  @override
+  $ServiceTemplatePartsTable createAlias(String alias) {
+    return $ServiceTemplatePartsTable(attachedDatabase, alias);
+  }
+}
+
+class ServiceTemplatePart extends DataClass
+    implements Insertable<ServiceTemplatePart> {
+  final int id;
+  final int templateId;
+  final int inventoryPartId;
+  final double quantity;
+  const ServiceTemplatePart({
+    required this.id,
+    required this.templateId,
+    required this.inventoryPartId,
+    required this.quantity,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['template_id'] = Variable<int>(templateId);
+    map['inventory_part_id'] = Variable<int>(inventoryPartId);
+    map['quantity'] = Variable<double>(quantity);
+    return map;
+  }
+
+  ServiceTemplatePartsCompanion toCompanion(bool nullToAbsent) {
+    return ServiceTemplatePartsCompanion(
+      id: Value(id),
+      templateId: Value(templateId),
+      inventoryPartId: Value(inventoryPartId),
+      quantity: Value(quantity),
+    );
+  }
+
+  factory ServiceTemplatePart.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ServiceTemplatePart(
+      id: serializer.fromJson<int>(json['id']),
+      templateId: serializer.fromJson<int>(json['templateId']),
+      inventoryPartId: serializer.fromJson<int>(json['inventoryPartId']),
+      quantity: serializer.fromJson<double>(json['quantity']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'templateId': serializer.toJson<int>(templateId),
+      'inventoryPartId': serializer.toJson<int>(inventoryPartId),
+      'quantity': serializer.toJson<double>(quantity),
+    };
+  }
+
+  ServiceTemplatePart copyWith({
+    int? id,
+    int? templateId,
+    int? inventoryPartId,
+    double? quantity,
+  }) => ServiceTemplatePart(
+    id: id ?? this.id,
+    templateId: templateId ?? this.templateId,
+    inventoryPartId: inventoryPartId ?? this.inventoryPartId,
+    quantity: quantity ?? this.quantity,
+  );
+  ServiceTemplatePart copyWithCompanion(ServiceTemplatePartsCompanion data) {
+    return ServiceTemplatePart(
+      id: data.id.present ? data.id.value : this.id,
+      templateId: data.templateId.present
+          ? data.templateId.value
+          : this.templateId,
+      inventoryPartId: data.inventoryPartId.present
+          ? data.inventoryPartId.value
+          : this.inventoryPartId,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ServiceTemplatePart(')
+          ..write('id: $id, ')
+          ..write('templateId: $templateId, ')
+          ..write('inventoryPartId: $inventoryPartId, ')
+          ..write('quantity: $quantity')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, templateId, inventoryPartId, quantity);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ServiceTemplatePart &&
+          other.id == this.id &&
+          other.templateId == this.templateId &&
+          other.inventoryPartId == this.inventoryPartId &&
+          other.quantity == this.quantity);
+}
+
+class ServiceTemplatePartsCompanion
+    extends UpdateCompanion<ServiceTemplatePart> {
+  final Value<int> id;
+  final Value<int> templateId;
+  final Value<int> inventoryPartId;
+  final Value<double> quantity;
+  const ServiceTemplatePartsCompanion({
+    this.id = const Value.absent(),
+    this.templateId = const Value.absent(),
+    this.inventoryPartId = const Value.absent(),
+    this.quantity = const Value.absent(),
+  });
+  ServiceTemplatePartsCompanion.insert({
+    this.id = const Value.absent(),
+    required int templateId,
+    required int inventoryPartId,
+    this.quantity = const Value.absent(),
+  }) : templateId = Value(templateId),
+       inventoryPartId = Value(inventoryPartId);
+  static Insertable<ServiceTemplatePart> custom({
+    Expression<int>? id,
+    Expression<int>? templateId,
+    Expression<int>? inventoryPartId,
+    Expression<double>? quantity,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (templateId != null) 'template_id': templateId,
+      if (inventoryPartId != null) 'inventory_part_id': inventoryPartId,
+      if (quantity != null) 'quantity': quantity,
+    });
+  }
+
+  ServiceTemplatePartsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? templateId,
+    Value<int>? inventoryPartId,
+    Value<double>? quantity,
+  }) {
+    return ServiceTemplatePartsCompanion(
+      id: id ?? this.id,
+      templateId: templateId ?? this.templateId,
+      inventoryPartId: inventoryPartId ?? this.inventoryPartId,
+      quantity: quantity ?? this.quantity,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (templateId.present) {
+      map['template_id'] = Variable<int>(templateId.value);
+    }
+    if (inventoryPartId.present) {
+      map['inventory_part_id'] = Variable<int>(inventoryPartId.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<double>(quantity.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ServiceTemplatePartsCompanion(')
+          ..write('id: $id, ')
+          ..write('templateId: $templateId, ')
+          ..write('inventoryPartId: $inventoryPartId, ')
+          ..write('quantity: $quantity')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5049,6 +5459,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ServiceTemplatesTable serviceTemplates = $ServiceTemplatesTable(
     this,
   );
+  late final $ServiceTemplatePartsTable serviceTemplateParts =
+      $ServiceTemplatePartsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5065,6 +5477,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     inventoryParts,
     markupRules,
     serviceTemplates,
+    serviceTemplateParts,
   ];
 }
 
@@ -5808,6 +6221,7 @@ typedef $$EstimateLineItemsTableCreateCompanionBuilder =
       Value<bool?> isDone,
       Value<String?> approvalStatus,
       Value<int?> inventoryPartId,
+      Value<String?> laborName,
     });
 typedef $$EstimateLineItemsTableUpdateCompanionBuilder =
     EstimateLineItemsCompanion Function({
@@ -5823,6 +6237,7 @@ typedef $$EstimateLineItemsTableUpdateCompanionBuilder =
       Value<bool?> isDone,
       Value<String?> approvalStatus,
       Value<int?> inventoryPartId,
+      Value<String?> laborName,
     });
 
 class $$EstimateLineItemsTableFilterComposer
@@ -5891,6 +6306,11 @@ class $$EstimateLineItemsTableFilterComposer
 
   ColumnFilters<int> get inventoryPartId => $composableBuilder(
     column: $table.inventoryPartId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get laborName => $composableBuilder(
+    column: $table.laborName,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5963,6 +6383,11 @@ class $$EstimateLineItemsTableOrderingComposer
     column: $table.inventoryPartId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get laborName => $composableBuilder(
+    column: $table.laborName,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$EstimateLineItemsTableAnnotationComposer
@@ -6019,6 +6444,9 @@ class $$EstimateLineItemsTableAnnotationComposer
     column: $table.inventoryPartId,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get laborName =>
+      $composableBuilder(column: $table.laborName, builder: (column) => column);
 }
 
 class $$EstimateLineItemsTableTableManager
@@ -6073,6 +6501,7 @@ class $$EstimateLineItemsTableTableManager
                 Value<bool?> isDone = const Value.absent(),
                 Value<String?> approvalStatus = const Value.absent(),
                 Value<int?> inventoryPartId = const Value.absent(),
+                Value<String?> laborName = const Value.absent(),
               }) => EstimateLineItemsCompanion(
                 id: id,
                 estimateId: estimateId,
@@ -6086,6 +6515,7 @@ class $$EstimateLineItemsTableTableManager
                 isDone: isDone,
                 approvalStatus: approvalStatus,
                 inventoryPartId: inventoryPartId,
+                laborName: laborName,
               ),
           createCompanionCallback:
               ({
@@ -6101,6 +6531,7 @@ class $$EstimateLineItemsTableTableManager
                 Value<bool?> isDone = const Value.absent(),
                 Value<String?> approvalStatus = const Value.absent(),
                 Value<int?> inventoryPartId = const Value.absent(),
+                Value<String?> laborName = const Value.absent(),
               }) => EstimateLineItemsCompanion.insert(
                 id: id,
                 estimateId: estimateId,
@@ -6114,6 +6545,7 @@ class $$EstimateLineItemsTableTableManager
                 isDone: isDone,
                 approvalStatus: approvalStatus,
                 inventoryPartId: inventoryPartId,
+                laborName: laborName,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -7011,6 +7443,7 @@ typedef $$InventoryPartsTableCreateCompanionBuilder =
       Value<int> id,
       Value<String?> partNumber,
       required String description,
+      Value<String?> category,
       Value<double> cost,
       Value<double> sellPrice,
       Value<int> stockQty,
@@ -7022,6 +7455,7 @@ typedef $$InventoryPartsTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String?> partNumber,
       Value<String> description,
+      Value<String?> category,
       Value<double> cost,
       Value<double> sellPrice,
       Value<int> stockQty,
@@ -7050,6 +7484,11 @@ class $$InventoryPartsTableFilterComposer
 
   ColumnFilters<String> get description => $composableBuilder(
     column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7103,6 +7542,11 @@ class $$InventoryPartsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get cost => $composableBuilder(
     column: $table.cost,
     builder: (column) => ColumnOrderings(column),
@@ -7150,6 +7594,9 @@ class $$InventoryPartsTableAnnotationComposer
     column: $table.description,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
 
   GeneratedColumn<double> get cost =>
       $composableBuilder(column: $table.cost, builder: (column) => column);
@@ -7205,6 +7652,7 @@ class $$InventoryPartsTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String?> partNumber = const Value.absent(),
                 Value<String> description = const Value.absent(),
+                Value<String?> category = const Value.absent(),
                 Value<double> cost = const Value.absent(),
                 Value<double> sellPrice = const Value.absent(),
                 Value<int> stockQty = const Value.absent(),
@@ -7214,6 +7662,7 @@ class $$InventoryPartsTableTableManager
                 id: id,
                 partNumber: partNumber,
                 description: description,
+                category: category,
                 cost: cost,
                 sellPrice: sellPrice,
                 stockQty: stockQty,
@@ -7225,6 +7674,7 @@ class $$InventoryPartsTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String?> partNumber = const Value.absent(),
                 required String description,
+                Value<String?> category = const Value.absent(),
                 Value<double> cost = const Value.absent(),
                 Value<double> sellPrice = const Value.absent(),
                 Value<int> stockQty = const Value.absent(),
@@ -7234,6 +7684,7 @@ class $$InventoryPartsTableTableManager
                 id: id,
                 partNumber: partNumber,
                 description: description,
+                category: category,
                 cost: cost,
                 sellPrice: sellPrice,
                 stockQty: stockQty,
@@ -7667,6 +8118,201 @@ typedef $$ServiceTemplatesTableProcessedTableManager =
       ServiceTemplate,
       PrefetchHooks Function()
     >;
+typedef $$ServiceTemplatePartsTableCreateCompanionBuilder =
+    ServiceTemplatePartsCompanion Function({
+      Value<int> id,
+      required int templateId,
+      required int inventoryPartId,
+      Value<double> quantity,
+    });
+typedef $$ServiceTemplatePartsTableUpdateCompanionBuilder =
+    ServiceTemplatePartsCompanion Function({
+      Value<int> id,
+      Value<int> templateId,
+      Value<int> inventoryPartId,
+      Value<double> quantity,
+    });
+
+class $$ServiceTemplatePartsTableFilterComposer
+    extends Composer<_$AppDatabase, $ServiceTemplatePartsTable> {
+  $$ServiceTemplatePartsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get inventoryPartId => $composableBuilder(
+    column: $table.inventoryPartId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ServiceTemplatePartsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ServiceTemplatePartsTable> {
+  $$ServiceTemplatePartsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get inventoryPartId => $composableBuilder(
+    column: $table.inventoryPartId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ServiceTemplatePartsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ServiceTemplatePartsTable> {
+  $$ServiceTemplatePartsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get templateId => $composableBuilder(
+    column: $table.templateId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get inventoryPartId => $composableBuilder(
+    column: $table.inventoryPartId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+}
+
+class $$ServiceTemplatePartsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ServiceTemplatePartsTable,
+          ServiceTemplatePart,
+          $$ServiceTemplatePartsTableFilterComposer,
+          $$ServiceTemplatePartsTableOrderingComposer,
+          $$ServiceTemplatePartsTableAnnotationComposer,
+          $$ServiceTemplatePartsTableCreateCompanionBuilder,
+          $$ServiceTemplatePartsTableUpdateCompanionBuilder,
+          (
+            ServiceTemplatePart,
+            BaseReferences<
+              _$AppDatabase,
+              $ServiceTemplatePartsTable,
+              ServiceTemplatePart
+            >,
+          ),
+          ServiceTemplatePart,
+          PrefetchHooks Function()
+        > {
+  $$ServiceTemplatePartsTableTableManager(
+    _$AppDatabase db,
+    $ServiceTemplatePartsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ServiceTemplatePartsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ServiceTemplatePartsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ServiceTemplatePartsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> templateId = const Value.absent(),
+                Value<int> inventoryPartId = const Value.absent(),
+                Value<double> quantity = const Value.absent(),
+              }) => ServiceTemplatePartsCompanion(
+                id: id,
+                templateId: templateId,
+                inventoryPartId: inventoryPartId,
+                quantity: quantity,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int templateId,
+                required int inventoryPartId,
+                Value<double> quantity = const Value.absent(),
+              }) => ServiceTemplatePartsCompanion.insert(
+                id: id,
+                templateId: templateId,
+                inventoryPartId: inventoryPartId,
+                quantity: quantity,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ServiceTemplatePartsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ServiceTemplatePartsTable,
+      ServiceTemplatePart,
+      $$ServiceTemplatePartsTableFilterComposer,
+      $$ServiceTemplatePartsTableOrderingComposer,
+      $$ServiceTemplatePartsTableAnnotationComposer,
+      $$ServiceTemplatePartsTableCreateCompanionBuilder,
+      $$ServiceTemplatePartsTableUpdateCompanionBuilder,
+      (
+        ServiceTemplatePart,
+        BaseReferences<
+          _$AppDatabase,
+          $ServiceTemplatePartsTable,
+          ServiceTemplatePart
+        >,
+      ),
+      ServiceTemplatePart,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7693,4 +8339,6 @@ class $AppDatabaseManager {
       $$MarkupRulesTableTableManager(_db, _db.markupRules);
   $$ServiceTemplatesTableTableManager get serviceTemplates =>
       $$ServiceTemplatesTableTableManager(_db, _db.serviceTemplates);
+  $$ServiceTemplatePartsTableTableManager get serviceTemplateParts =>
+      $$ServiceTemplatePartsTableTableManager(_db, _db.serviceTemplateParts);
 }

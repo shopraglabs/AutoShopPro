@@ -45,11 +45,11 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **Stock tracking** — deducts when RO line item is checked off, restores when unchecked
 - **Settings screen** — at `/settings`, sidebar gear icon + ⌘,; sections: shop info, default labor rate, default tax rate, parts markup rules, service templates
 - **Markup rules** — tiered matrix (cost range → markup %), add/edit/delete tiers
-- **Service Templates** — premade services (e.g. "Oil Change"); name, labor description, default hours, optional rate; managed at Settings → Service Templates; Apply Template action on estimates adds a pre-filled approved labor line in one tap
+- **Service Templates** — premade services (e.g. "Oil Change"); name, labor description, default hours, optional rate; managed at Settings → Service Templates; Apply Template action on estimates adds a pre-filled approved labor line in one tap, plus any linked inventory parts as part line items grouped under it; template name shown as bold title on labor lines, description as subtitle
 - **Global search** — Search screen in sidebar + ⌘F; searches customers, vehicles, estimates, and ROs simultaneously; results grouped by section with direct navigation
 - **Inline search in pickers** — all picker/dropdown sheets (customer, vehicle, vendor, labor, technician, template) autofocus a search field; list filters as you type
 - **Default approve** — new line items save as approved automatically
-- **Database** — Drift/SQLite, schema v18, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates
+- **Database** — Drift/SQLite, schema v20, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
@@ -214,4 +214,4 @@ contextMenuBuilder: (context, editableTextState) =>
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.7.1 Smooth Operator
+v0.8.0 Linked Up

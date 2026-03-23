@@ -97,7 +97,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 controller: minCtrl,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                placeholder: '0.00',
+                placeholder: '0',
+                onTap: () => minCtrl.selection = TextSelection(
+                  baseOffset: 0, extentOffset: minCtrl.text.length),
                 contextMenuBuilder: (ctx, s) =>
                     CupertinoAdaptiveTextSelectionToolbar.editableText(
                         editableTextState: s),
@@ -113,12 +115,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 placeholder: 'No limit',
+                onTap: () => maxCtrl.selection = TextSelection(
+                  baseOffset: 0, extentOffset: maxCtrl.text.length),
                 contextMenuBuilder: (ctx, s) =>
                     CupertinoAdaptiveTextSelectionToolbar.editableText(
                         editableTextState: s),
               ),
               const SizedBox(height: 12),
-              const Text('Markup %',
+              const Text('Markup % above cost  (e.g. enter 10 to sell at 110% of cost)',
                   style: TextStyle(
                       fontSize: 12, color: Color(0xFF8E8E93),
                       fontWeight: FontWeight.w500)),
@@ -128,6 +132,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 placeholder: '30.0',
+                onTap: () => pctCtrl.selection = TextSelection(
+                  baseOffset: 0, extentOffset: pctCtrl.text.length),
                 contextMenuBuilder: (ctx, s) =>
                     CupertinoAdaptiveTextSelectionToolbar.editableText(
                         editableTextState: s),
@@ -301,7 +307,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       label: 'Default Labor Rate',
                       controller: _laborRateCtrl,
                       prefix: '\$',
-                      placeholder: '120.00',
+                      placeholder: '120',
                     ),
                   ),
 

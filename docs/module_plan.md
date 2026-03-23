@@ -87,15 +87,20 @@ The heart of the app. Everything else depends on this.
 - ✅ Stock level display (in stock / low stock / out of stock)
 - ✅ Catalog picker on Add Part form — pick from inventory, auto-fills description/cost/sell price
 - ✅ Stock deduction when RO line item is checked off; restore when unchecked
+- ✅ Part category field (Part / Fluid / Filter / Chemical) — picker on form, badge on list
+- ✅ Markup on inventory part form — Cost | Markup % | Sell Price row with auto-rules and bidirectional sync
 
 ### Cost & Markup Rules
 - ✅ Markup rule model (tiered matrix by cost range)
 - ✅ Apply markup tier automatically when cost is typed on Add Part form
 - ✅ Markup rules settings screen (add, edit, delete tiers)
+- ✅ Markup tier auto-applies on inventory part form when cost is entered
 
 ### Supplier Integrations
 - ⬜ PartsTech API integration
-- ⬜ Epicor API integration
+- ⬜ Epicor/OEConnection API integration
+- ⬜ NexPart API integration
+- ⬜ RepairLink API integration
 - ⬜ Search parts from supplier catalog
 - ⬜ Order parts from within the app
 - ⬜ Track order status
@@ -279,6 +284,16 @@ The heart of the app. Everything else depends on this.
 - ✅ Service Templates — new table (schema v18), list/add/edit/delete, Settings → Service Templates
 - ✅ Apply Template action on estimates — searchable picker adds pre-filled labor line in one tap
 - ✅ Global search screen — Search sidebar item + ⌘F; searches customers, vehicles, estimates, ROs
+
+### Linked Parts, Markup & Polish (v0.8.0 Linked Up)
+- ✅ Labor name (short title) shown as bold header on labor lines in estimate/RO detail and invoice PDFs; description shown as subtitle
+- ✅ Hours × rate = total live calc on service template form and line item form — all three fields editable with bidirectional sync
+- ✅ Select-all on tap for all number text fields across the app
+- ✅ Smart money formatting — UI omits .00 cents (e.g. $90 not $90.00), real cents always shown (e.g. $13.50); invoice PDFs always use 2 decimal places
+- ✅ Part category field (Part / Fluid / Filter / Chemical) — action sheet picker on form, blue badge on list
+- ✅ Markup on inventory part form — Cost | Markup % | Sell Price inline row; markup tier auto-applies from rules when cost is typed; bidirectional sync
+- ✅ Service Template linked parts — add inventory parts to a template with qty; Apply Template inserts part line items grouped under the labor line
+- ✅ ServiceTemplateParts table (schema v20) with getTemplatePartsForTemplate DB method
 
 ---
 

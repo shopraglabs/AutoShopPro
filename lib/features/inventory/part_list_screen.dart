@@ -134,7 +134,12 @@ class _PartListScreenState extends ConsumerState<PartListScreen> {
                                               if (part.partNumber != null &&
                                                   part.partNumber!.isNotEmpty)
                                                 part.partNumber!,
-                                              '\$${part.sellPrice.toStringAsFixed(2)}',
+                                              () {
+                                                final p = part.sellPrice;
+                                                return p % 1 == 0
+                                                    ? '\$${p.toInt()}'
+                                                    : '\$${p.toStringAsFixed(2)}';
+                                              }(),
                                               '${part.stockQty} in stock',
                                             ].join(' · '),
                                             style: const TextStyle(
@@ -146,7 +151,30 @@ class _PartListScreenState extends ConsumerState<PartListScreen> {
                                         ],
                                       ),
                                     ),
-                                    // Status badge
+                                    // Category badge (only when not "Part")
+                                    if (part.category != null &&
+                                        part.category != 'Part') ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF007AFF)
+                                              .withValues(alpha: 0.10),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          part.category!,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF007AFF),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                    ],
+                                    // Stock status badge
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8, vertical: 3),

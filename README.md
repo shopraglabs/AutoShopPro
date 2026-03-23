@@ -6,6 +6,8 @@ A cross-platform automotive shop management app built with Flutter. One codebase
 
 ## Project Status
 
+**v0.8.0 — Linked Up** — Templates now link to inventory parts; applying a template drops in the labor line plus all linked parts in one tap. Parts inventory has categories (Part/Fluid/Filter/Chemical) and a full markup calculator with auto-tier rules. Labor names show as bold titles throughout estimates, ROs, and invoice PDFs.
+
 **v0.7.1 — Smooth Operator** — UX polish session. New line items default to approved, inline search in every picker sheet, right-click context menus on line items, service templates for common jobs, and a global search screen accessible from the sidebar or ⌘F.
 
 **v0.6.0 — Full Bay** — Module 1 complete. RO list status filters, edit RO note, technician management (add/edit/delete), and assign technician to repair orders with bottom sheet picker.

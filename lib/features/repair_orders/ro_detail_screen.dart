@@ -4,18 +4,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
 import '../estimates/estimates_provider.dart';
+import '../invoices/invoice_service.dart';
 import '../technicians/technicians_provider.dart';
 import 'repair_orders_provider.dart';
 
 String _roNumber(int id) => 'RO-${id.toString().padLeft(4, '0')}';
 
+// Formats a double as a dollar amount. Omits cents when zero:
+// 1234.0 → "$1,234"  |  1234.5 → "$1,234.50"
 String _money(double amount) {
-  final parts = amount.toStringAsFixed(2).split('.');
+  final hasCents = amount % 1 != 0;
+  final str = hasCents ? amount.toStringAsFixed(2) : amount.toInt().toString();
+  final parts = str.split('.');
   final dollars = parts[0].replaceAllMapped(
     RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
     (m) => '${m[1]},',
   );
-  return '\$$dollars.${parts[1]}';
+  return hasCents ? '\$$dollars.${parts[1]}' : '\$$dollars';
 }
 
 String _qty(double q) =>
@@ -152,6 +157,46 @@ class _RoDetailView extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _generateInvoice(BuildContext context, WidgetRef ref,
+      {bool simple = false}) async {
+    final db = ref.read(dbProvider);
+    final results = await Future.wait([
+      db.getCustomer(ro.customerId),
+      if (ro.vehicleId != null) db.getVehicle(ro.vehicleId!),
+      if (ro.estimateId != null) db.getEstimate(ro.estimateId!),
+      db.getOrCreateSettings(),
+    ]);
+
+    // Parse results in order — vehicle and estimate are only present when their IDs are set
+    int idx = 0;
+    final customer = results[idx++] as Customer?;
+    if (customer == null) return;
+
+    Vehicle? vehicle;
+    if (ro.vehicleId != null) vehicle = results[idx++] as Vehicle?;
+
+    Estimate? estimate;
+    if (ro.estimateId != null) estimate = results[idx++] as Estimate?;
+
+    final settings = results[idx] as ShopSetting;
+
+    final lineItems = (lineItemsAsync.value ?? [])
+        .where((l) => l.approvalStatus != 'declined')
+        .toList();
+
+    if (!context.mounted) return;
+    await showInvoiceActions(
+      context: context,
+      ro: ro,
+      customer: customer,
+      vehicle: vehicle,
+      lineItems: lineItems,
+      taxRate: estimate?.taxRate ?? 0.0,
+      shopName: settings.shopName,
+      simple: simple,
     );
   }
 
@@ -458,19 +503,68 @@ class _RoDetailView extends ConsumerWidget {
               ),
             ],
 
-            if (ro.status == 'closed')
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                child: Center(
-                  child: Text(
-                    'This repair order is closed.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF8E8E93),
+            if (ro.status == 'closed') ...[
+              _sectionHeader('ACTIONS'),
+              Container(
+                color: CupertinoColors.white,
+                child: Column(
+                  children: [
+                    // Itemized Invoice
+                    GestureDetector(
+                      onTap: () => _generateInvoice(context, ref, simple: false),
+                      child: Container(
+                        color: CupertinoColors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        child: const Row(
+                          children: [
+                            Icon(CupertinoIcons.doc_richtext,
+                                size: 18, color: Color(0xFF007AFF)),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text('Itemized Invoice',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF007AFF))),
+                            ),
+                            Icon(CupertinoIcons.chevron_right,
+                                size: 16, color: Color(0xFFC7C7CC)),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                    Container(
+                        height: 0.5,
+                        color: const Color(0xFFE5E5EA),
+                        margin: const EdgeInsets.only(left: 46)),
+                    // Simple Invoice
+                    GestureDetector(
+                      onTap: () => _generateInvoice(context, ref, simple: true),
+                      child: Container(
+                        color: CupertinoColors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        child: const Row(
+                          children: [
+                            Icon(CupertinoIcons.doc_plaintext,
+                                size: 18, color: Color(0xFF007AFF)),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text('Simple Invoice',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF007AFF))),
+                            ),
+                            Icon(CupertinoIcons.chevron_right,
+                                size: 16, color: Color(0xFFC7C7CC)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+            ],
 
             const SizedBox(height: 32),
           ],
@@ -951,32 +1045,37 @@ class _LineItemSection extends ConsumerWidget {
                 ],
               ),
             ),
-          _buildGroup(context, ref, groups[g].parts),
+          _buildGroup(context, ref, groups[g].parts,
+              indented: groups[g].label != null),
         ],
       ],
     );
   }
 
   Widget _buildGroup(
-      BuildContext context, WidgetRef ref, List<EstimateLineItem> groupItems) {
-    return Container(
-      color: CupertinoColors.white,
-      child: Column(
-        children: [
-          for (int i = 0; i < groupItems.length; i++) ...[
-            _LineItemRow(
-                item: groupItems[i],
-                laborLines: laborLines,
-                canMark: canMark,
-                ref: ref),
-            if (i < groupItems.length - 1)
-              Container(
-                height: 0.5,
-                color: const Color(0xFFE5E5EA),
-                margin: const EdgeInsets.only(left: 16),
-              ),
+      BuildContext context, WidgetRef ref, List<EstimateLineItem> groupItems,
+      {bool indented = false}) {
+    return Padding(
+      padding: EdgeInsets.only(left: indented ? 20.0 : 0.0),
+      child: Container(
+        color: CupertinoColors.white,
+        child: Column(
+          children: [
+            for (int i = 0; i < groupItems.length; i++) ...[
+              _LineItemRow(
+                  item: groupItems[i],
+                  laborLines: laborLines,
+                  canMark: canMark,
+                  ref: ref),
+              if (i < groupItems.length - 1)
+                Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E5EA),
+                  margin: const EdgeInsets.only(left: 16),
+                ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -1056,7 +1155,9 @@ class _LineItemRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.description,
+                    item.type == 'labor' && item.laborName != null
+                        ? item.laborName!
+                        : item.description,
                     style: TextStyle(
                         fontSize: 15,
                         color: textColor,
@@ -1098,13 +1199,21 @@ class _LineItemRow extends StatelessWidget {
                             decoration: decoration,
                             decorationColor: subColor),
                       ),
-                  ] else
+                  ] else ...[
+                    if (item.laborName != null)
+                      Text(item.description,
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: subColor,
+                              decoration: decoration,
+                              decorationColor: subColor)),
                     Text(qtyLabel,
                         style: TextStyle(
                             fontSize: 13,
                             color: subColor,
                             decoration: decoration,
                             decorationColor: subColor)),
+                  ],
                 ],
               ),
             ),

@@ -362,6 +362,13 @@ class _FormField extends StatelessWidget {
               textCapitalization: textCapitalization,
               inputFormatters: inputFormatters,
               autofocus: autofocus,
+              onTap: () => controller.selection = TextSelection(
+                baseOffset: 0,
+                extentOffset: controller.text.length,
+              ),
+              contextMenuBuilder: (context, editableTextState) =>
+                  CupertinoAdaptiveTextSelectionToolbar.editableText(
+                      editableTextState: editableTextState),
               style: const TextStyle(fontSize: 16, color: Color(0xFF1C1C1E)),
               placeholderStyle: const TextStyle(
                 fontSize: 16,

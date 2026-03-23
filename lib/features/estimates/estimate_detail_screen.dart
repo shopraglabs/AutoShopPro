@@ -8,14 +8,17 @@ import 'estimates_provider.dart';
 import '../repair_orders/repair_orders_provider.dart';
 import '../service_templates/service_templates_provider.dart';
 
-// Formats a double as a dollar amount: 1234.5 → "$1,234.50"
+// Formats a double as a dollar amount. Omits cents when zero:
+// 1234.0 → "$1,234"  |  1234.5 → "$1,234.50"
 String _money(double amount) {
-  final parts = amount.toStringAsFixed(2).split('.');
+  final hasCents = amount % 1 != 0;
+  final str = hasCents ? amount.toStringAsFixed(2) : amount.toInt().toString();
+  final parts = str.split('.');
   final dollars = parts[0].replaceAllMapped(
     RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
     (m) => '${m[1]},',
   );
-  return '\$$dollars.${parts[1]}';
+  return hasCents ? '\$$dollars.${parts[1]}' : '\$$dollars';
 }
 
 String _estimateNumber(int id) => 'EST-${id.toString().padLeft(4, '0')}';
@@ -93,14 +96,33 @@ class _EstimateDetailView extends ConsumerWidget {
     final db = ref.read(dbProvider);
     double rate = picked.defaultRate ??
         (await db.getOrCreateSettings()).defaultLaborRate;
-    await db.insertLineItem(EstimateLineItemsCompanion.insert(
+    // Insert the labor line and capture its new id so parts can link to it.
+    final laborId = await db.insertLineItem(EstimateLineItemsCompanion.insert(
       estimateId: estimate.id,
       type: 'labor',
+      laborName: Value(picked.name),
       description: picked.laborDescription,
       quantity: Value(picked.defaultHours),
       unitPrice: rate,
       approvalStatus: const Value('approved'),
     ));
+    // Insert any inventory parts linked to this template as part line items.
+    final linkedParts = await db.getTemplatePartsForTemplate(picked.id);
+    for (final link in linkedParts) {
+      final part = await db.getPart(link.inventoryPartId);
+      if (part == null) continue;
+      await db.insertLineItem(EstimateLineItemsCompanion.insert(
+        estimateId: estimate.id,
+        type: 'part',
+        description: part.description,
+        quantity: Value(link.quantity),
+        unitPrice: part.sellPrice,
+        unitCost: Value(part.cost),
+        inventoryPartId: Value(part.id),
+        parentLaborId: Value(laborId),
+        approvalStatus: const Value('approved'),
+      ));
+    }
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
@@ -484,7 +506,7 @@ class _LineItemSection extends StatelessWidget {
                   Text(
                     groups[g].label!,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 14,
                       color: Color(0xFF8E8E93),
                       fontWeight: FontWeight.w500,
                     ),
@@ -492,15 +514,19 @@ class _LineItemSection extends StatelessWidget {
                 ],
               ),
             ),
-          _buildGroup(groups[g].parts),
+          _buildGroup(groups[g].parts,
+              indented: groups[g].label != null),
         ],
       ],
     );
   }
 
   // Renders a flat white card of rows with dividers between them.
-  Widget _buildGroup(List<EstimateLineItem> groupItems) {
-    return Container(
+  // [indented] adds left padding to show these parts belong to a labor line.
+  Widget _buildGroup(List<EstimateLineItem> groupItems, {bool indented = false}) {
+    return Padding(
+      padding: EdgeInsets.only(left: indented ? 20.0 : 0.0),
+      child: Container(
       color: CupertinoColors.white,
       child: Column(
         children: [
@@ -517,6 +543,7 @@ class _LineItemSection extends StatelessWidget {
               ),
           ],
         ],
+      ),
       ),
     );
   }
@@ -669,7 +696,9 @@ class _LineItemRow extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.description,
+                      item.type == 'labor' && item.laborName != null
+                          ? item.laborName!
+                          : item.description,
                       style: TextStyle(
                         fontSize: 15,
                         color: textColor,
@@ -705,11 +734,17 @@ class _LineItemRow extends ConsumerWidget {
                                   ? const Color(0xFFD1D1D6)
                                   : const Color(0xFFAAAAAA)),
                         ),
-                    ] else
+                    ] else ...[
+                      if (item.laborName != null)
+                        Text(
+                          item.description,
+                          style: TextStyle(fontSize: 13, color: subColor),
+                        ),
                       Text(
                         qtyLabel,
                         style: TextStyle(fontSize: 13, color: subColor),
                       ),
+                    ],
                   ],
                 ),
               ),
