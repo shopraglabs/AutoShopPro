@@ -10,11 +10,13 @@ A cross-platform automotive shop management app built with Flutter. One codebase
 
 **v0.7.1 — Smooth Operator** — UX polish session. New line items default to approved, inline search in every picker sheet, right-click context menus on line items, service templates for common jobs, and a global search screen accessible from the sidebar or ⌘F.
 
+**v0.7.0 — Parts Counter** — Module 2 Phase 1: parts inventory (list, add/edit/delete, stock badges), catalog picker on Add Part form, stock deduction on RO mark-done, tiered markup rules, and a full Settings screen.
+
 **v0.6.0 — Full Bay** — Module 1 complete. RO list status filters, edit RO note, technician management (add/edit/delete), and assign technician to repair orders with bottom sheet picker.
 
 **v0.5.0 — Sign-Off** — Full write-up workflow: customer complaints, parts with cost/markup pricing, parts linked to labor lines, individual item approval/decline on estimates, declined items excluded from repair orders.
 
-**v0.4.0 — Open Bay** — Module 1 complete. Full repair order engine working: create estimate, convert to RO, track job status (Open → In Progress → Completed → Closed).
+**v0.4.0 — Open Bay** — Full repair order engine working: create estimate, convert to RO, track job status (Open → In Progress → Completed → Closed), mark items done, and close the RO.
 
 **v0.3.0 — Write-Up** — Customers, vehicles, VIN decode, estimates (labor + parts + totals), vendors, shop settings, and Apple-style macOS menu bar all working.
 
