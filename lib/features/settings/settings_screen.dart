@@ -405,6 +405,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                   const SizedBox(height: 20),
 
+                  // ── People ────────────────────────────────────────────────
+                  _sectionHeader('PEOPLE'),
+                  Container(
+                    color: CupertinoColors.systemBackground,
+                    child: GestureDetector(
+                      onTap: () =>
+                          context.push('/repair-orders/technicians'),
+                      child: Container(
+                        color: CupertinoColors.systemBackground,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        child: const Row(
+                          children: [
+                            Icon(CupertinoIcons.person_2_square_stack_fill,
+                                size: 18, color: Color(0xFF007AFF)),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text('Technicians',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF007AFF))),
+                            ),
+                            Icon(CupertinoIcons.chevron_right,
+                                size: 16, color: Color(0xFFC7C7CC)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
                   // ── Service Templates ──────────────────────────────────────
                   _sectionHeader('SERVICE TEMPLATES'),
                   Container(

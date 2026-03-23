@@ -6,7 +6,7 @@ import '../../database/database.dart';
 import '../customers/customers_provider.dart';
 import '../settings/markup_rules_provider.dart';
 
-const _kCategories = ['Part', 'Fluid', 'Filter', 'Chemical'];
+const _kCategories = ['Part', 'Fluid', 'Filter', 'Chemical', 'Other'];
 
 class PartFormScreen extends ConsumerStatefulWidget {
   // If provided, we are editing an existing part. If null, we are creating one.
@@ -279,10 +279,12 @@ class _PartFormScreenState extends ConsumerState<PartFormScreen> {
             keyboardType: keyboardType,
             autofocus: autofocus,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            onTap: () => controller.selection = TextSelection(
-              baseOffset: 0,
-              extentOffset: controller.text.length,
-            ),
+            onTap: keyboardType != TextInputType.text
+                ? () => controller.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: controller.text.length,
+                    )
+                : null,
             contextMenuBuilder: (context, editableTextState) =>
                 CupertinoAdaptiveTextSelectionToolbar.editableText(
                   editableTextState: editableTextState,

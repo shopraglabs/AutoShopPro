@@ -4,6 +4,31 @@ import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
 import 'customers_provider.dart';
 
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+String _estimateNum(int id) => 'EST-${id.toString().padLeft(4, '0')}';
+String _roNum(int id) => 'RO-${id.toString().padLeft(4, '0')}';
+
+String _money(double amount) {
+  final hasCents = amount % 1 != 0;
+  final str = hasCents ? amount.toStringAsFixed(2) : amount.toInt().toString();
+  final parts = str.split('.');
+  final dollars = parts[0].replaceAllMapped(
+    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+    (m) => '${m[1]},',
+  );
+  return hasCents ? '\$$dollars.${parts[1]}' : '\$$dollars';
+}
+
+String _vehicleLabel(Vehicle? v) {
+  if (v == null) return '';
+  return [
+    if (v.year != null) v.year.toString(),
+    if (v.make != null) v.make!,
+    if (v.model != null) v.model!,
+  ].join(' ');
+}
+
 // Helper: builds "2018 Toyota Camry" from a Vehicle object
 String vehicleLabel(Vehicle v) {
   final parts = [
@@ -138,6 +163,11 @@ class _CustomerDetail extends ConsumerWidget {
 
             // Vehicles section — live list from the database
             _VehiclesSection(customer: customer),
+
+            const SizedBox(height: 20),
+
+            // History section — all estimates and ROs for this customer
+            _HistorySection(customer: customer),
 
             const SizedBox(height: 36),
 
@@ -336,6 +366,248 @@ class _VehicleTile extends StatelessWidget {
                 ],
               ),
             ),
+            const Icon(
+              CupertinoIcons.chevron_right,
+              size: 16,
+              color: Color(0xFFC7C7CC),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── History Section ───────────────────────────────────────────────────────────
+// Shows all estimates and ROs for this customer, sorted newest first.
+class _HistorySection extends ConsumerWidget {
+  final Customer customer;
+  const _HistorySection({required this.customer});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(dbProvider);
+    return StreamBuilder<List<EstimateWithDetails>>(
+      stream: db.watchEstimatesForCustomer(customer.id),
+      builder: (context, estSnap) {
+        return StreamBuilder<List<RepairOrderWithDetails>>(
+          stream: db.watchRepairOrdersForCustomer(customer.id),
+          builder: (context, roSnap) {
+            final estimates = estSnap.data ?? [];
+            final ros = roSnap.data ?? [];
+
+            // Build a combined flat list sorted newest first
+            // Each entry: (date, widget)
+            final items = <({DateTime date, Widget row})>[];
+
+            for (final e in estimates) {
+              final est = e.estimate;
+              items.add((
+                date: est.createdAt,
+                row: _HistoryRow(
+                  dot: _statusDot(est.status),
+                  number: _estimateNum(est.id),
+                  vehicle: _vehicleLabel(e.vehicle),
+                  trailing: null,
+                  statusLabel: _estimateStatusLabel(est.status),
+                  onTap: () => context
+                      .push('/repair-orders/estimates/${est.id}'),
+                ),
+              ));
+            }
+
+            for (final r in ros) {
+              final ro = r.ro;
+              items.add((
+                date: ro.createdAt,
+                row: _HistoryRow(
+                  dot: _roDot(ro.status),
+                  number: _roNum(ro.id),
+                  vehicle: _vehicleLabel(r.vehicle),
+                  trailing: null,
+                  statusLabel: _roStatusLabel(ro.status),
+                  onTap: () => context
+                      .push('/repair-orders/ro/${ro.id}'),
+                ),
+              ));
+            }
+
+            items.sort((a, b) => b.date.compareTo(a.date));
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: const Text(
+                    'HISTORY',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF8E8E93),
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                if (items.isEmpty)
+                  Container(
+                    color: CupertinoColors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    child: const Text(
+                      'No estimates or repair orders yet',
+                      style: TextStyle(
+                          fontSize: 16, color: Color(0xFF8E8E93)),
+                    ),
+                  )
+                else
+                  Container(
+                    color: CupertinoColors.white,
+                    child: Column(
+                      children: [
+                        for (int i = 0; i < items.length; i++) ...[
+                          items[i].row,
+                          if (i < items.length - 1)
+                            Container(
+                              height: 0.5,
+                              color: const Color(0xFFE5E5EA),
+                              margin: const EdgeInsets.only(left: 16),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Color _statusDot(String status) {
+    switch (status) {
+      case 'approved':
+        return const Color(0xFF34C759); // green
+      case 'declined':
+        return const Color(0xFFFF3B30); // red
+      default:
+        return const Color(0xFF8E8E93); // gray (draft)
+    }
+  }
+
+  Color _roDot(String status) {
+    switch (status) {
+      case 'open':
+        return const Color(0xFF007AFF); // blue
+      case 'in_progress':
+        return const Color(0xFFFF9500); // orange
+      case 'completed':
+        return const Color(0xFF34C759); // green
+      case 'closed':
+        return const Color(0xFF8E8E93); // gray
+      default:
+        return const Color(0xFF8E8E93);
+    }
+  }
+
+  String _estimateStatusLabel(String status) {
+    switch (status) {
+      case 'approved':
+        return 'Approved';
+      case 'declined':
+        return 'Declined';
+      default:
+        return 'Estimate';
+    }
+  }
+
+  String _roStatusLabel(String status) {
+    switch (status) {
+      case 'open':
+        return 'Open';
+      case 'in_progress':
+        return 'In Progress';
+      case 'completed':
+        return 'Completed';
+      case 'closed':
+        return 'Closed';
+      default:
+        return status;
+    }
+  }
+}
+
+class _HistoryRow extends StatelessWidget {
+  final Color dot;
+  final String number;
+  final String vehicle;
+  final String? trailing;
+  final String statusLabel;
+  final VoidCallback onTap;
+
+  const _HistoryRow({
+    required this.dot,
+    required this.number,
+    required this.vehicle,
+    required this.trailing,
+    required this.statusLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        color: CupertinoColors.white,
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: dot,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    number,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF1C1C1E),
+                    ),
+                  ),
+                  if (vehicle.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        vehicle,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF8E8E93),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Text(
+              statusLabel,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF8E8E93),
+              ),
+            ),
+            const SizedBox(width: 6),
             const Icon(
               CupertinoIcons.chevron_right,
               size: 16,

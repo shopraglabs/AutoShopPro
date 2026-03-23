@@ -30,8 +30,9 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **App shell** — sidebar nav (desktop), tab bar (mobile), all 5 module placeholders
 - **Customers** — list (searchable), detail, add/edit/delete, phone/name formatting, internal note field
 - **Vehicles** — list per customer, detail, add/edit/delete, VIN decode (NHTSA API), all formatters, "NO PLATE" auto-stored when plate is blank and shown as-is in all displays
-- **Estimates** — list, create (customer + vehicle picker with "+ New" options), detail (labor + parts + totals), customer complaint field, delete
-- **Line items** — add labor (hrs × rate, default rate from settings), add parts (unit cost + markup % / $ / list, vendor picker, link to labor line), swipe to delete, live total preview, edit existing items
+- **Estimates** — list, create (customer + vehicle picker with "+ New" options), detail (labor + parts + totals), customer complaint field, delete; new estimate from vehicle page opens form with customer+vehicle pre-filled
+- **Customer concerns** — multiple complaints per estimate; displayed as bullet list on estimate detail, included in PDFs
+- **Line items** — add labor (hrs × rate, default rate from settings), add parts (unit cost + markup % / $ / list, part number, vendor picker, link to labor line), swipe to delete, live total preview, edit existing items; Add Part button under each labor row pre-links the part
 - **Parts display** — grouped under their linked labor line sub-header in estimate and RO detail
 - **Estimate approval** — tap circle badge on any line item to approve or decline; declined items show strikethrough/gray and are excluded from totals; "X items declined" footnote in totals section
 - **Repair Orders** — convert estimate → RO (declined items excluded), RO list (color-coded status, status filter pills), RO detail, status flow (Open → In Progress → Completed → Closed), mark items done per line item, Edit Estimate link on non-closed ROs, edit RO note, assign technician from bottom sheet picker
@@ -45,11 +46,11 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **Stock tracking** — deducts when RO line item is checked off, restores when unchecked
 - **Settings screen** — at `/settings`, sidebar gear icon + ⌘,; sections: shop info, default labor rate, default tax rate, parts markup rules, service templates
 - **Markup rules** — tiered matrix (cost range → markup %), add/edit/delete tiers
-- **Service Templates** — premade services (e.g. "Oil Change"); name, labor description, default hours, optional rate; managed at Settings → Service Templates; Apply Template action on estimates adds a pre-filled approved labor line in one tap, plus any linked inventory parts as part line items grouped under it; template name shown as bold title on labor lines, description as subtitle
+- **Service Templates** — premade services (e.g. "Oil Change"); name, labor description, default hours, optional rate; managed at Settings → Service Templates; Apply Template action on estimates shows a collapsible picker for linked parts (user sets qty); when adding labor via Operation picker, linked parts appear in a collapsible dropdown with qty fields and are inserted on save; template name shown as bold title on labor lines, description as subtitle
 - **Global search** — Search screen in sidebar + ⌘F; searches customers, vehicles, estimates, and ROs simultaneously; results grouped by section with direct navigation
 - **Inline search in pickers** — all picker/dropdown sheets (customer, vehicle, vendor, labor, technician, template) autofocus a search field; list filters as you type
 - **Default approve** — new line items save as approved automatically
-- **Database** — Drift/SQLite, schema v20, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts
+- **Database** — Drift/SQLite, schema v21, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
@@ -205,6 +206,20 @@ contextMenuBuilder: (context, editableTextState) =>
     ),
 ```
 
+### Select-All on Numeric Fields
+- Every numeric `CupertinoTextField` (price, hours, qty, rate, markup) must select all text when tapped so the user can immediately type a replacement value.
+- Text fields (description, name, notes, part numbers) must NOT select all.
+- For shared helper widgets with a `keyboardType` parameter, make it conditional:
+  - Nullable keyboardType (defaults to null for text): `onTap: keyboardType != null ? () => ... : null`
+  - Non-nullable keyboardType (defaults to `TextInputType.text`): `onTap: keyboardType != TextInputType.text ? () => ... : null`
+  - Explicit `selectAllOnTap: bool = false` parameter: pass `true` only for numeric fields
+```dart
+onTap: () => controller.selection = TextSelection(
+  baseOffset: 0,
+  extentOffset: controller.text.length,
+),
+```
+
 ### Build Log
 - To read: `python3 docs/update_build_log.py read`
 - To write: fill in the SESSION dict in `docs/update_build_log.py`, then run `python3 docs/update_build_log.py`
@@ -214,4 +229,4 @@ contextMenuBuilder: (context, editableTextState) =>
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.8.0 Linked Up
+v0.9.0 Dialed In

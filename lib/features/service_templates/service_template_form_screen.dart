@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
 import '../customers/customers_provider.dart' show dbProvider;
 
@@ -17,7 +18,8 @@ class ServiceTemplateFormScreen extends ConsumerStatefulWidget {
 }
 
 // A linked part row — held in local state until Save is tapped.
-typedef _LinkedPart = ({int inventoryPartId, String description, String? category, double quantity});
+// Quantity is set at estimate time, not here.
+typedef _LinkedPart = ({int inventoryPartId, String description, String? partNumber, String? category});
 
 class _ServiceTemplateFormScreenState
     extends ConsumerState<ServiceTemplateFormScreen> {
@@ -80,8 +82,8 @@ class _ServiceTemplateFormScreenState
         rows.add((
           inventoryPartId: link.inventoryPartId,
           description: part.description,
+          partNumber: part.partNumber,
           category: part.category,
-          quantity: link.quantity,
         ));
       }
     }
@@ -129,7 +131,7 @@ class _ServiceTemplateFormScreenState
     }
   }
 
-  // Shows inventory picker, then asks for quantity, then adds to list.
+  // Shows inventory picker, then adds the chosen part to the linked list.
   Future<void> _addLinkedPart() async {
     final db = ref.read(dbProvider);
     final allParts = await db.watchAllParts().first;
@@ -140,55 +142,17 @@ class _ServiceTemplateFormScreenState
       builder: (_) => _PartPickerSheet(
         parts: allParts,
         alreadyLinked: _linkedParts.map((l) => l.inventoryPartId).toSet(),
+        onCreateNew: () => context.push('/parts/new'),
       ),
     );
     if (picked == null || !mounted) return;
 
-    // Ask for quantity.
-    final qtyCtrl = TextEditingController(text: '1');
-    final confirmed = await showCupertinoDialog<bool>(
-      context: context,
-      builder: (dialogCtx) => CupertinoAlertDialog(
-        title: Text(picked.description),
-        content: Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Column(
-            children: [
-              const Text('Quantity needed for this job:'),
-              const SizedBox(height: 8),
-              CupertinoTextField(
-                controller: qtyCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                autofocus: true,
-                textAlign: TextAlign.center,
-                onTap: () => qtyCtrl.selection = TextSelection(
-                  baseOffset: 0, extentOffset: qtyCtrl.text.length),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.pop(dialogCtx, false),
-            child: const Text('Cancel'),
-          ),
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            onPressed: () => Navigator.pop(dialogCtx, true),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !mounted) return;
-    final qty = double.tryParse(qtyCtrl.text) ?? 1.0;
     setState(() {
       _linkedParts.add((
         inventoryPartId: picked.id,
         description: picked.description,
+        partNumber: picked.partNumber,
         category: picked.category,
-        quantity: qty,
       ));
     });
   }
@@ -226,12 +190,12 @@ class _ServiceTemplateFormScreenState
       ));
     }
 
-    // Write linked parts.
+    // Write linked parts — quantity is set at estimate time, not here.
     for (final p in _linkedParts) {
       await db.insertTemplatePart(ServiceTemplatePartsCompanion(
         templateId: Value(templateId),
         inventoryPartId: Value(p.inventoryPartId),
-        quantity: Value(p.quantity),
+        quantity: const Value(1.0),
       ));
     }
 
@@ -375,7 +339,7 @@ class _ServiceTemplateFormScreenState
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
               child: const Text(
-                'Linked parts are auto-added when this template is applied to an estimate.',
+                'Linked parts appear as options when this template is applied to an estimate. Quantities are set at that time.',
                 style: TextStyle(fontSize: 13, color: Color(0xFF8E8E93)),
               ),
             ),
@@ -430,10 +394,12 @@ class _ServiceTemplateFormScreenState
               placeholder: placeholder,
               keyboardType: keyboardType,
               inputFormatters: inputFormatters,
-              onTap: () => controller.selection = TextSelection(
-                baseOffset: 0,
-                extentOffset: controller.text.length,
-              ),
+              onTap: keyboardType != null
+                  ? () => controller.selection = TextSelection(
+                        baseOffset: 0,
+                        extentOffset: controller.text.length,
+                      )
+                  : null,
               contextMenuBuilder: (context, editableTextState) =>
                   CupertinoAdaptiveTextSelectionToolbar.editableText(
                       editableTextState: editableTextState),
@@ -458,9 +424,6 @@ class _LinkedPartRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final qtyStr = part.quantity % 1 == 0
-        ? part.quantity.toInt().toString()
-        : part.quantity.toStringAsFixed(1);
     return Container(
       color: CupertinoColors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -473,16 +436,20 @@ class _LinkedPartRow extends StatelessWidget {
                 Text(part.description,
                     style: const TextStyle(
                         fontSize: 15, color: Color(0xFF1C1C1E))),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    'Qty $qtyStr',
-                    if (part.category != null && part.category != 'Part')
-                      part.category!,
-                  ].join(' · '),
-                  style: const TextStyle(
-                      fontSize: 13, color: Color(0xFF8E8E93)),
-                ),
+                if (part.partNumber?.isNotEmpty == true ||
+                    part.category != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    [
+                      if (part.partNumber?.isNotEmpty == true)
+                        part.partNumber!,
+                      if (part.category != null)
+                        part.category!,
+                    ].join(' · '),
+                    style: const TextStyle(
+                        fontSize: 13, color: Color(0xFF8E8E93)),
+                  ),
+                ],
               ],
             ),
           ),
@@ -502,8 +469,13 @@ class _LinkedPartRow extends StatelessWidget {
 class _PartPickerSheet extends StatefulWidget {
   final List<InventoryPart> parts;
   final Set<int> alreadyLinked;
+  final VoidCallback? onCreateNew;
 
-  const _PartPickerSheet({required this.parts, required this.alreadyLinked});
+  const _PartPickerSheet({
+    required this.parts,
+    required this.alreadyLinked,
+    this.onCreateNew,
+  });
 
   @override
   State<_PartPickerSheet> createState() => _PartPickerSheetState();
@@ -560,19 +532,44 @@ class _PartPickerSheetState extends State<_PartPickerSheet> {
             ),
           ),
           Expanded(
-            child: filtered.isEmpty
-                ? const Center(
-                    child: Text('No parts found',
-                        style: TextStyle(color: Color(0xFF8E8E93))))
-                : ListView.separated(
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) => Container(
-                      height: 0.5,
-                      color: const Color(0xFFE5E5EA),
-                      margin: const EdgeInsets.only(left: 16),
+            child: ListView.separated(
+              itemCount: filtered.isEmpty ? 1 : filtered.length + 1,
+              separatorBuilder: (_, __) => Container(
+                height: 0.5,
+                color: const Color(0xFFE5E5EA),
+                margin: const EdgeInsets.only(left: 16),
+              ),
+              itemBuilder: (_, i) {
+                // First row: create new part
+                if (i == 0) {
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onCreateNew?.call();
+                    },
+                    child: Container(
+                      color: CupertinoColors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 13),
+                      child: const Row(
+                        children: [
+                          Icon(CupertinoIcons.plus_circle_fill,
+                              size: 18, color: Color(0xFF007AFF)),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text('New Part or Fluid',
+                                style: TextStyle(
+                                    fontSize: 16, color: Color(0xFF007AFF))),
+                          ),
+                          Icon(CupertinoIcons.chevron_right,
+                              size: 16, color: Color(0xFFC7C7CC)),
+                        ],
+                      ),
                     ),
-                    itemBuilder: (_, i) {
-                      final p = filtered[i];
+                  );
+                }
+                if (filtered.isEmpty) return const SizedBox.shrink();
+                final p = filtered[i - 1];
                       final cat = p.category;
                       return GestureDetector(
                         onTap: () => Navigator.pop(context, p),

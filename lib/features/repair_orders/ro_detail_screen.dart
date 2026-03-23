@@ -196,6 +196,7 @@ class _RoDetailView extends ConsumerWidget {
       lineItems: lineItems,
       taxRate: estimate?.taxRate ?? 0.0,
       shopName: settings.shopName,
+      customerComplaint: estimate?.customerComplaint,
       simple: simple,
     );
   }

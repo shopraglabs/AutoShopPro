@@ -35,6 +35,7 @@ Future<Uint8List> buildInvoicePdf({
   required List<EstimateLineItem> lineItems,
   required double taxRate,
   required String? shopName,
+  String? customerComplaint,
 }) async {
   final doc = pw.Document();
 
@@ -204,6 +205,29 @@ Future<Uint8List> buildInvoicePdf({
               ),
           ],
         ),
+
+        // ── Customer Complaints ───────────────────────────────────────────────
+        if (customerComplaint != null && customerComplaint.isNotEmpty) ...[
+          pw.SizedBox(height: 16),
+          _sectionDivider('CUSTOMER CONCERN', accent),
+          pw.SizedBox(height: 8),
+          ...customerComplaint.split('\n').where((s) => s.isNotEmpty).map(
+                (c) => pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 4),
+                  child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('• ',
+                          style: pw.TextStyle(fontSize: 11, color: dark)),
+                      pw.Expanded(
+                        child: pw.Text(c,
+                            style: pw.TextStyle(fontSize: 11, color: dark)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+        ],
 
         pw.SizedBox(height: 24),
 
@@ -548,6 +572,7 @@ Future<Uint8List> buildSimpleInvoicePdf({
   required List<EstimateLineItem> lineItems,
   required double taxRate,
   required String? shopName,
+  String? customerComplaint,
 }) async {
   final doc = pw.Document();
 
@@ -694,6 +719,29 @@ Future<Uint8List> buildSimpleInvoicePdf({
           ],
         ),
 
+        // ── Customer Complaints ───────────────────────────────────────────────
+        if (customerComplaint != null && customerComplaint.isNotEmpty) ...[
+          pw.SizedBox(height: 16),
+          _sectionDivider('CUSTOMER CONCERN', accent),
+          pw.SizedBox(height: 8),
+          ...customerComplaint.split('\n').where((s) => s.isNotEmpty).map(
+                (c) => pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 4),
+                  child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('• ',
+                          style: pw.TextStyle(fontSize: 11, color: dark)),
+                      pw.Expanded(
+                        child: pw.Text(c,
+                            style: pw.TextStyle(fontSize: 11, color: dark)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+        ],
+
         pw.SizedBox(height: 24),
 
         // ── Services table ───────────────────────────────────────────────────
@@ -837,6 +885,7 @@ Future<void> showInvoiceActions({
   required List<EstimateLineItem> lineItems,
   required double taxRate,
   required String? shopName,
+  String? customerComplaint,
   bool simple = false,
 }) async {
   await showCupertinoModalPopup<void>(
@@ -849,7 +898,7 @@ Future<void> showInvoiceActions({
           onPressed: () async {
             Navigator.pop(sheetCtx);
             await _handleSave(context, ro, customer, vehicle, lineItems,
-                taxRate, shopName, simple);
+                taxRate, shopName, customerComplaint, simple);
           },
           child: const Text('Save as PDF'),
         ),
@@ -857,7 +906,7 @@ Future<void> showInvoiceActions({
           onPressed: () async {
             Navigator.pop(sheetCtx);
             await _handlePrint(context, ro, customer, vehicle, lineItems,
-                taxRate, shopName, simple);
+                taxRate, shopName, customerComplaint, simple);
           },
           child: const Text('Print'),
         ),
@@ -865,7 +914,7 @@ Future<void> showInvoiceActions({
           onPressed: () async {
             Navigator.pop(sheetCtx);
             await _handleEmail(context, ro, customer, vehicle, lineItems,
-                taxRate, shopName, simple);
+                taxRate, shopName, customerComplaint, simple);
           },
           child: const Text('Email'),
         ),
@@ -886,6 +935,7 @@ Future<Uint8List> _buildBytes(
   List<EstimateLineItem> lineItems,
   double taxRate,
   String? shopName,
+  String? customerComplaint,
   bool simple,
 ) =>
     simple
@@ -896,6 +946,7 @@ Future<Uint8List> _buildBytes(
             lineItems: lineItems,
             taxRate: taxRate,
             shopName: shopName,
+            customerComplaint: customerComplaint,
           )
         : buildInvoicePdf(
             ro: ro,
@@ -904,6 +955,7 @@ Future<Uint8List> _buildBytes(
             lineItems: lineItems,
             taxRate: taxRate,
             shopName: shopName,
+            customerComplaint: customerComplaint,
           );
 
 Future<void> _handleSave(
@@ -914,11 +966,12 @@ Future<void> _handleSave(
   List<EstimateLineItem> lineItems,
   double taxRate,
   String? shopName,
+  String? customerComplaint,
   bool simple,
 ) async {
   try {
     final bytes = await _buildBytes(
-        ro, customer, vehicle, lineItems, taxRate, shopName, simple);
+        ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple);
     final path = await saveInvoiceToDownloads(bytes, ro.id);
     final fileName = path.split('/').last;
     if (context.mounted) {
@@ -957,11 +1010,12 @@ Future<void> _handlePrint(
   List<EstimateLineItem> lineItems,
   double taxRate,
   String? shopName,
+  String? customerComplaint,
   bool simple,
 ) async {
   try {
     final bytes = await _buildBytes(
-        ro, customer, vehicle, lineItems, taxRate, shopName, simple);
+        ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple);
     final path = await saveInvoiceToTemp(bytes, ro.id);
     await openInPreview(path);
     if (context.mounted) {
@@ -993,11 +1047,12 @@ Future<void> _handleEmail(
   List<EstimateLineItem> lineItems,
   double taxRate,
   String? shopName,
+  String? customerComplaint,
   bool simple,
 ) async {
   try {
     final bytes = await _buildBytes(
-        ro, customer, vehicle, lineItems, taxRate, shopName, simple);
+        ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple);
     final path = await saveInvoiceToTemp(bytes, ro.id);
     await openInMailWithAttachment(
       filePath: path,
@@ -1025,4 +1080,442 @@ void _showError(BuildContext context, Object e) {
       ],
     ),
   );
+}
+
+// ─── Estimate PDF builder ─────────────────────────────────────────────────────
+
+String _estimateNumber(int id) => 'EST-${id.toString().padLeft(4, '0')}';
+
+/// Builds an estimate PDF — same layout as the invoice but labelled "ESTIMATE".
+Future<Uint8List> buildEstimatePdf({
+  required Estimate estimate,
+  required Customer customer,
+  required Vehicle? vehicle,
+  required List<EstimateLineItem> lineItems,
+  required String? shopName,
+}) async {
+  final doc = pw.Document();
+
+  final labor = lineItems.where((l) => l.type == 'labor').toList();
+  final parts = lineItems.where((l) => l.type == 'part').toList();
+
+  final activeItems =
+      lineItems.where((l) => l.approvalStatus != 'declined').toList();
+  final declinedItems =
+      lineItems.where((l) => l.approvalStatus == 'declined').toList();
+  final subtotal =
+      activeItems.fold(0.0, (s, l) => s + l.quantity * l.unitPrice);
+  final taxAmount = subtotal * (estimate.taxRate / 100);
+  final total = subtotal + taxAmount;
+  final declinedTotal =
+      declinedItems.fold(0.0, (s, l) => s + l.quantity * l.unitPrice);
+
+  const accent = PdfColor.fromInt(0xFF007AFF);
+  const dark = PdfColor.fromInt(0xFF1C1C1E);
+  const mid = PdfColor.fromInt(0xFF8E8E93);
+  const light = PdfColor.fromInt(0xFFE5E5EA);
+  const red = PdfColor.fromInt(0xFFFF3B30);
+
+  final d = estimate.createdAt;
+  final dateStr =
+      '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}/${d.year}';
+
+  final vehicleLabel = vehicle != null
+      ? [vehicle.year?.toString(), vehicle.make, vehicle.model]
+          .whereType<String>()
+          .join(' ')
+      : null;
+  final vin = vehicle?.vin;
+  final plate = vehicle?.licensePlate;
+
+  doc.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.letter,
+      margin: const pw.EdgeInsets.all(40),
+      build: (pw.Context context) => [
+        // ── Header ──────────────────────────────────────────────────────────
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: pw.Text(
+                shopName?.isNotEmpty == true ? shopName! : 'AutoShopPro',
+                style: pw.TextStyle(
+                    fontSize: 22,
+                    fontWeight: pw.FontWeight.bold,
+                    color: dark),
+              ),
+            ),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Text('ESTIMATE',
+                    style: pw.TextStyle(
+                        fontSize: 28,
+                        fontWeight: pw.FontWeight.bold,
+                        color: accent)),
+                pw.SizedBox(height: 4),
+                pw.Text(_estimateNumber(estimate.id),
+                    style: pw.TextStyle(fontSize: 13, color: mid)),
+                pw.Text(dateStr,
+                    style: pw.TextStyle(fontSize: 13, color: mid)),
+              ],
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 4),
+        pw.Divider(color: accent, thickness: 1.5),
+        pw.SizedBox(height: 16),
+
+        // ── Bill To / Vehicle ────────────────────────────────────────────────
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('BILL TO',
+                      style: pw.TextStyle(
+                          fontSize: 9,
+                          fontWeight: pw.FontWeight.bold,
+                          color: mid,
+                          letterSpacing: 1.0)),
+                  pw.SizedBox(height: 6),
+                  pw.Text(customer.name,
+                      style: pw.TextStyle(
+                          fontSize: 13,
+                          fontWeight: pw.FontWeight.bold,
+                          color: dark)),
+                  if (customer.phone?.isNotEmpty == true)
+                    pw.Text(customer.phone!,
+                        style: pw.TextStyle(fontSize: 12, color: dark)),
+                  if (customer.email?.isNotEmpty == true)
+                    pw.Text(customer.email!,
+                        style: pw.TextStyle(fontSize: 12, color: dark)),
+                ],
+              ),
+            ),
+            if (vehicle != null)
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('VEHICLE',
+                        style: pw.TextStyle(
+                            fontSize: 9,
+                            fontWeight: pw.FontWeight.bold,
+                            color: mid,
+                            letterSpacing: 1.0)),
+                    pw.SizedBox(height: 6),
+                    if (vehicleLabel != null)
+                      pw.Text(vehicleLabel,
+                          style: pw.TextStyle(
+                              fontSize: 13,
+                              fontWeight: pw.FontWeight.bold,
+                              color: dark)),
+                    if (vin?.isNotEmpty == true)
+                      pw.Text('VIN: $vin',
+                          style: pw.TextStyle(fontSize: 12, color: dark)),
+                    if (plate?.isNotEmpty == true && plate != 'NO PLATE')
+                      pw.Text('Plate: $plate',
+                          style: pw.TextStyle(fontSize: 12, color: dark)),
+                  ],
+                ),
+              ),
+          ],
+        ),
+
+        if (estimate.customerComplaint?.isNotEmpty == true) ...[
+          pw.SizedBox(height: 16),
+          _sectionDivider('CUSTOMER CONCERN', accent),
+          pw.SizedBox(height: 8),
+          ...estimate.customerComplaint!
+              .split('\n')
+              .where((s) => s.isNotEmpty)
+              .map(
+                (c) => pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 4),
+                  child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('• ',
+                          style: pw.TextStyle(fontSize: 11, color: dark)),
+                      pw.Expanded(
+                        child: pw.Text(c,
+                            style: pw.TextStyle(fontSize: 11, color: dark)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+        ],
+
+        pw.SizedBox(height: 24),
+
+        // ── Line items ───────────────────────────────────────────────────────
+        if (labor.isNotEmpty || parts.isNotEmpty) ...[
+          _sectionDivider('LABOR', accent),
+          pw.SizedBox(height: 8),
+          _tableHeaderWithType(light, mid),
+          ...labor.expand((l) {
+            if (l.approvalStatus == 'declined') return const <pw.Widget>[];
+            final linkedParts =
+                parts.where((p) => p.parentLaborId == l.id).toList();
+            return [
+              _lineRow(
+                typeLabel: 'Labor',
+                description: l.laborName ?? l.description,
+                subtitle: l.laborName != null ? l.description : null,
+                qty: '${_qty(l.quantity)} hr',
+                unit: _money(l.unitPrice),
+                total: _money(l.quantity * l.unitPrice),
+                isLabor: true,
+                dark: dark,
+                mid: mid,
+                light: light,
+              ),
+              ...linkedParts
+                  .where((p) => p.approvalStatus != 'declined')
+                  .map((p) => _lineRow(
+                        typeLabel: 'Part',
+                        description: p.description,
+                        qty: _qty(p.quantity),
+                        unit: _money(p.unitPrice),
+                        total: _money(p.quantity * p.unitPrice),
+                        isLabor: false,
+                        dark: dark,
+                        mid: mid,
+                        light: light,
+                      )),
+            ];
+          }),
+          ...parts
+              .where((p) =>
+                  p.parentLaborId == null && p.approvalStatus != 'declined')
+              .map((p) => _lineRow(
+                    typeLabel: 'Part',
+                    description: p.description,
+                    qty: _qty(p.quantity),
+                    unit: _money(p.unitPrice),
+                    total: _money(p.quantity * p.unitPrice),
+                    isLabor: false,
+                    dark: dark,
+                    mid: mid,
+                    light: light,
+                  )),
+          pw.SizedBox(height: 16),
+        ],
+
+        // ── Totals ────────────────────────────────────────────────────────────
+        pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Container(
+            width: 240,
+            child: pw.Column(
+              children: [
+                pw.Divider(color: light, thickness: 0.5),
+                _totalRow('Subtotal', _money(subtotal), dark, mid, false),
+                if (estimate.taxRate > 0) ...[
+                  pw.Divider(color: light, thickness: 0.5),
+                  _totalRow(
+                    'Tax (${estimate.taxRate.toStringAsFixed(estimate.taxRate % 1 == 0 ? 0 : 1)}%)',
+                    _money(taxAmount),
+                    dark,
+                    mid,
+                    false,
+                  ),
+                ],
+                if (declinedItems.isNotEmpty) ...[
+                  pw.Divider(color: light, thickness: 0.5),
+                  _totalRow(
+                    '${declinedItems.length} item${declinedItems.length == 1 ? '' : 's'} declined',
+                    '−${_money(declinedTotal)}',
+                    red,
+                    red,
+                    false,
+                  ),
+                ],
+                pw.Divider(color: accent, thickness: 1),
+                _totalRow('Total', _money(total), dark, accent, true),
+              ],
+            ),
+          ),
+        ),
+
+        pw.SizedBox(height: 40),
+
+        pw.Center(
+          child: pw.Text(
+            'This is an estimate — final charges may vary.',
+            style: pw.TextStyle(
+                fontSize: 12, color: mid, fontStyle: pw.FontStyle.italic),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  return doc.save();
+}
+
+/// Shows the Save / Print / Email action sheet for an estimate.
+Future<void> showEstimateActions({
+  required BuildContext context,
+  required Estimate estimate,
+  required Customer customer,
+  required Vehicle? vehicle,
+  required List<EstimateLineItem> lineItems,
+  required String? shopName,
+}) async {
+  await showCupertinoModalPopup<void>(
+    context: context,
+    builder: (sheetCtx) => CupertinoActionSheet(
+      title: const Text('Estimate PDF'),
+      message: Text('${_estimateNumber(estimate.id)} — ${customer.name}'),
+      actions: [
+        CupertinoActionSheetAction(
+          onPressed: () async {
+            Navigator.pop(sheetCtx);
+            await _handleEstimateSave(
+                context, estimate, customer, vehicle, lineItems, shopName);
+          },
+          child: const Text('Save as PDF'),
+        ),
+        CupertinoActionSheetAction(
+          onPressed: () async {
+            Navigator.pop(sheetCtx);
+            await _handleEstimatePrint(
+                context, estimate, customer, vehicle, lineItems, shopName);
+          },
+          child: const Text('Print'),
+        ),
+        CupertinoActionSheetAction(
+          onPressed: () async {
+            Navigator.pop(sheetCtx);
+            await _handleEstimateEmail(
+                context, estimate, customer, vehicle, lineItems, shopName);
+          },
+          child: const Text('Email'),
+        ),
+      ],
+      cancelButton: CupertinoActionSheetAction(
+        onPressed: () => Navigator.pop(sheetCtx),
+        child: const Text('Cancel'),
+      ),
+    ),
+  );
+}
+
+Future<void> _handleEstimateSave(
+  BuildContext context,
+  Estimate estimate,
+  Customer customer,
+  Vehicle? vehicle,
+  List<EstimateLineItem> lineItems,
+  String? shopName,
+) async {
+  try {
+    final bytes = await buildEstimatePdf(
+        estimate: estimate,
+        customer: customer,
+        vehicle: vehicle,
+        lineItems: lineItems,
+        shopName: shopName);
+    final dir = await getDownloadsDirectory();
+    final folder = dir ?? await getTemporaryDirectory();
+    final fileName = 'Estimate-${_estimateNumber(estimate.id)}.pdf';
+    final file = File('${folder.path}/$fileName');
+    await file.writeAsBytes(bytes);
+    if (context.mounted) {
+      showCupertinoDialog(
+        context: context,
+        builder: (dialogCtx) => CupertinoAlertDialog(
+          title: const Text('Saved to Downloads'),
+          content: Text(fileName),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                Process.run('open', ['-R', file.path]);
+              },
+              child: const Text('Show in Finder'),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) _showError(context, e);
+  }
+}
+
+Future<void> _handleEstimatePrint(
+  BuildContext context,
+  Estimate estimate,
+  Customer customer,
+  Vehicle? vehicle,
+  List<EstimateLineItem> lineItems,
+  String? shopName,
+) async {
+  try {
+    final bytes = await buildEstimatePdf(
+        estimate: estimate,
+        customer: customer,
+        vehicle: vehicle,
+        lineItems: lineItems,
+        shopName: shopName);
+    final path = await saveInvoiceToTemp(bytes, estimate.id);
+    await openInPreview(path);
+    if (context.mounted) {
+      showCupertinoDialog(
+        context: context,
+        builder: (dialogCtx) => CupertinoAlertDialog(
+          title: const Text('Opened in Preview'),
+          content: const Text('Press ⌘P in Preview to print.'),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) _showError(context, e);
+  }
+}
+
+Future<void> _handleEstimateEmail(
+  BuildContext context,
+  Estimate estimate,
+  Customer customer,
+  Vehicle? vehicle,
+  List<EstimateLineItem> lineItems,
+  String? shopName,
+) async {
+  try {
+    final bytes = await buildEstimatePdf(
+        estimate: estimate,
+        customer: customer,
+        vehicle: vehicle,
+        lineItems: lineItems,
+        shopName: shopName);
+    final path = await saveInvoiceToTemp(bytes, estimate.id);
+    await openInMailWithAttachment(
+      filePath: path,
+      roNumber: _estimateNumber(estimate.id),
+      customerName: customer.name,
+      customerEmail: customer.email,
+    );
+  } catch (e) {
+    if (context.mounted) _showError(context, e);
+  }
 }

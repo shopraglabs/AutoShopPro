@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
+import '../../widgets/context_menu.dart';
+import '../customers/customers_provider.dart' show dbProvider;
 import 'inventory_provider.dart';
 
 class PartListScreen extends ConsumerStatefulWidget {
@@ -13,6 +15,32 @@ class PartListScreen extends ConsumerStatefulWidget {
 
 class _PartListScreenState extends ConsumerState<PartListScreen> {
   String _search = '';
+
+  void _confirmDelete(BuildContext context, InventoryPart part) {
+    showCupertinoDialog(
+      context: context,
+      builder: (dialogCtx) => CupertinoAlertDialog(
+        title: const Text('Delete Part?'),
+        content: Text(
+            'Delete "${part.description}"? This cannot be undone.'),
+        actions: [
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              await ref.read(dbProvider).deletePart(part.id);
+            },
+            child: const Text('Delete'),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
 
   // Returns a stock status label and color for a given part.
   ({String label, Color color}) _stockStatus(InventoryPart part) {
@@ -91,7 +119,27 @@ class _PartListScreenState extends ConsumerState<PartListScreen> {
                       final status = _stockStatus(part);
                       final isLast = index == filtered.length - 1;
 
-                      return Container(
+                      return GestureDetector(
+                        onSecondaryTapUp: (details) => showContextMenu(
+                          context: context,
+                          position: details.globalPosition,
+                          items: [
+                            ContextMenuAction(
+                              label: 'Edit',
+                              icon: CupertinoIcons.pencil,
+                              onTap: () =>
+                                  context.push('/parts/${part.id}/edit'),
+                            ),
+                            contextMenuDivider,
+                            ContextMenuAction(
+                              label: 'Delete',
+                              icon: CupertinoIcons.trash,
+                              isDestructive: true,
+                              onTap: () => _confirmDelete(context, part),
+                            ),
+                          ],
+                        ),
+                        child: Container(
                         color: CupertinoColors.systemBackground,
                         child: Column(
                           children: [
@@ -209,6 +257,7 @@ class _PartListScreenState extends ConsumerState<PartListScreen> {
                                     color: const Color(0xFFE5E5EA)),
                               ),
                           ],
+                        ),
                         ),
                       );
                     },

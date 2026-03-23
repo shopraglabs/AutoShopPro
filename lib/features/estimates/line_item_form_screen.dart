@@ -16,12 +16,14 @@ class LineItemFormScreen extends ConsumerStatefulWidget {
   final int estimateId;
   final String type; // 'labor' or 'part'
   final EstimateLineItem? lineItem; // non-null = editing existing
+  final int? parentLaborId; // pre-links this part to a labor line
 
   const LineItemFormScreen({
     super.key,
     required this.estimateId,
     required this.type,
     this.lineItem,
+    this.parentLaborId,
   });
 
   @override
@@ -40,6 +42,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
   late final TextEditingController _laborTotal;
 
   // Parts-only fields
+  late final TextEditingController _partNumber;
   late final TextEditingController _unitCost;
   late final TextEditingController _markupPercent;
   late final TextEditingController _markupDollar;
@@ -53,6 +56,13 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
   int? _catalogPartId;
   String? _catalogPartName;
   String? _catalogTemplateName;
+
+  // Linked parts loaded from the selected service template.
+  // Each entry has the inventory part and a qty controller (default 1).
+  List<({InventoryPart part, TextEditingController qtyController})>
+      _linkedTemplateParts = [];
+  // Whether the linked parts dropdown is expanded
+  bool _showLinkedParts = false;
 
   // Guard flag: prevents markup sync from triggering infinite listener loops
   bool _syncingMarkup = false;
@@ -78,6 +88,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         text: li?.laborName ?? '');
     _laborRate = TextEditingController();
     _laborTotal = TextEditingController();
+    _partNumber = TextEditingController(text: li?.partNumber ?? '');
     _unitCost = TextEditingController();
     _markupPercent = TextEditingController();
     _markupDollar = TextEditingController();
@@ -125,6 +136,11 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         if (li.parentLaborId != null) _loadLaborDesc(li.parentLaborId!);
       } else {
         _loadDefaultMarkup();
+        // Pre-link to a labor line when opened from "Add Part" under a labor row
+        if (widget.parentLaborId != null) {
+          _parentLaborId = widget.parentLaborId;
+          _loadLaborDesc(widget.parentLaborId!);
+        }
       }
     }
   }
@@ -345,6 +361,9 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
       _unitList.removeListener(_onListChanged);
 
       _description.text = picked.description;
+      if (picked.partNumber != null && picked.partNumber!.isNotEmpty) {
+        _partNumber.text = picked.partNumber!;
+      }
       _unitCost.text = picked.cost.toStringAsFixed(2);
       _unitList.text = picked.sellPrice.toStringAsFixed(2);
       // Derive markup from cost and sell price
@@ -393,15 +412,37 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
       if (picked.defaultRate != null) {
         _laborRate.text = picked.defaultRate!.toStringAsFixed(2);
       }
-      setState(() {
-        _catalogTemplateName = picked.name;
+      setState(() => _catalogTemplateName = picked.name);
+
+      // Load any parts linked to this template so they can be added with qtys
+      final db = ref.read(dbProvider);
+      final links = await db.getTemplatePartsForTemplate(picked.id);
+      // Dispose old qty controllers before replacing the list
+      for (final e in _linkedTemplateParts) e.qtyController.dispose();
+      final entries =
+          <({InventoryPart part, TextEditingController qtyController})>[];
+      for (final link in links) {
+        final part = await db.getPart(link.inventoryPartId);
+        if (part != null) {
+          entries.add((
+            part: part,
+            qtyController: TextEditingController(text: '1'),
+          ));
+        }
+      }
+      if (mounted) setState(() {
+        _linkedTemplateParts = entries;
+        _showLinkedParts = entries.isNotEmpty;
       });
     }
   }
 
   void _clearLaborCatalogLink() {
+    for (final e in _linkedTemplateParts) e.qtyController.dispose();
     setState(() {
       _catalogTemplateName = null;
+      _linkedTemplateParts = [];
+      _showLinkedParts = false;
     });
   }
 
@@ -444,6 +485,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     final db = ref.read(dbProvider);
 
     final laborNameVal = _laborName.text.trim();
+    final partNumberVal = _partNumber.text.trim();
 
     if (_isEditing) {
       final existing = widget.lineItem!;
@@ -456,9 +498,10 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         parentLaborId: Value(_parentLaborId),
         inventoryPartId: Value(_catalogPartId ?? existing.inventoryPartId),
         laborName: Value(laborNameVal.isEmpty ? null : laborNameVal),
+        partNumber: Value(partNumberVal.isEmpty ? null : partNumberVal),
       ));
     } else {
-      await db.insertLineItem(EstimateLineItemsCompanion.insert(
+      final newId = await db.insertLineItem(EstimateLineItemsCompanion.insert(
         estimateId: widget.estimateId,
         type: widget.type,
         description: desc,
@@ -469,8 +512,30 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         parentLaborId: Value(_parentLaborId),
         inventoryPartId: Value(_catalogPartId),
         laborName: Value(laborNameVal.isEmpty ? null : laborNameVal),
+        partNumber: Value(partNumberVal.isEmpty ? null : partNumberVal),
         approvalStatus: const Value('approved'),
       ));
+      // Insert linked template parts, each tied to the new labor line
+      if (_isLabor) {
+        for (final entry in _linkedTemplateParts) {
+          final q = double.tryParse(
+                  entry.qtyController.text.replaceAll(',', '')) ??
+              1.0;
+          if (q > 0) {
+            await db.insertLineItem(EstimateLineItemsCompanion.insert(
+              estimateId: widget.estimateId,
+              type: 'part',
+              description: entry.part.description,
+              quantity: Value(q),
+              unitPrice: entry.part.sellPrice,
+              unitCost: Value(entry.part.cost),
+              inventoryPartId: Value(entry.part.id),
+              parentLaborId: Value(newId),
+              approvalStatus: const Value('approved'),
+            ));
+          }
+        }
+      }
     }
     if (mounted) context.pop();
   }
@@ -499,10 +564,12 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     _laborName.dispose();
     _laborRate.dispose();
     _laborTotal.dispose();
+    _partNumber.dispose();
     _unitCost.dispose();
     _markupPercent.dispose();
     _markupDollar.dispose();
     _unitList.dispose();
+    for (final e in _linkedTemplateParts) e.qtyController.dispose();
     super.dispose();
   }
 
@@ -513,6 +580,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     ref.watch(vendorsProvider);
     ref.watch(inventoryPartsProvider);
     ref.watch(markupRulesProvider);
+    ref.watch(serviceTemplatesProvider);
 
     final title = _isEditing
         ? (_isLabor ? 'Edit Labor' : 'Edit Part')
@@ -563,6 +631,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                       FilteringTextInputFormatter.allow(
                           RegExp(r'^\d*\.?\d*')),
                     ],
+                    selectAllOnTap: true,
                   ),
                   _divider(),
 
@@ -597,6 +666,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                         FilteringTextInputFormatter.allow(
                             RegExp(r'^\d*\.?\d*')),
                       ],
+                      selectAllOnTap: true,
                     ),
                     _divider(),
                     // ── Labor: Total ─────────────────────────────────
@@ -611,8 +681,17 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                         FilteringTextInputFormatter.allow(
                             RegExp(r'^\d*\.?\d*')),
                       ],
+                      selectAllOnTap: true,
                     ),
                   ] else ...[
+                    // ── Parts: Part number ───────────────────────────
+                    _Field(
+                      label: 'Part #',
+                      controller: _partNumber,
+                      placeholder: 'e.g. ACDelco 41-993',
+                      textCapitalization: TextCapitalization.characters,
+                    ),
+                    _divider(),
                     // ── Parts: From Catalog picker ───────────────────
                     _CatalogPickerRow(
                       label: 'Catalog',
@@ -636,6 +715,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                         FilteringTextInputFormatter.allow(
                             RegExp(r'^\d*\.?\d*')),
                       ],
+                      selectAllOnTap: true,
                     ),
                     _divider(),
                     // ── Parts: Markup % and Markup $ (side-by-side) ──
@@ -656,6 +736,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                         FilteringTextInputFormatter.allow(
                             RegExp(r'^\d*\.?\d*')),
                       ],
+                      selectAllOnTap: true,
                     ),
                     _divider(),
                     // ── Parts: Vendor picker ─────────────────────────
@@ -676,12 +757,86 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                 ],
               ),
             ),
+            // ── Linked template parts dropdown (labor mode only) ──────────
+            if (_isLabor && _linkedTemplateParts.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _sectionHeader('LINKED PARTS'),
+              Container(
+                color: CupertinoColors.white,
+                child: Column(
+                  children: [
+                    // Tappable header row — tap to expand/collapse
+                    GestureDetector(
+                      onTap: () =>
+                          setState(() => _showLinkedParts = !_showLinkedParts),
+                      child: Container(
+                        color: CupertinoColors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        child: Row(
+                          children: [
+                            const Icon(CupertinoIcons.cube_box_fill,
+                                size: 18, color: Color(0xFF007AFF)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                '${_linkedTemplateParts.length} linked part${_linkedTemplateParts.length == 1 ? '' : 's'}',
+                                style: const TextStyle(
+                                    fontSize: 16, color: Color(0xFF007AFF)),
+                              ),
+                            ),
+                            AnimatedRotation(
+                              turns: _showLinkedParts ? 0.25 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              child: const Icon(CupertinoIcons.chevron_right,
+                                  size: 16, color: Color(0xFFC7C7CC)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Expandable part rows
+                    if (_showLinkedParts) ...[
+                      Container(
+                        height: 0.5,
+                        color: const Color(0xFFE5E5EA),
+                        margin: const EdgeInsets.only(left: 16),
+                      ),
+                      for (int i = 0;
+                          i < _linkedTemplateParts.length;
+                          i++) ...[
+                        _LinkedPartQtyRow(
+                          part: _linkedTemplateParts[i].part,
+                          qtyController:
+                              _linkedTemplateParts[i].qtyController,
+                        ),
+                        if (i < _linkedTemplateParts.length - 1)
+                          Container(
+                            height: 0.5,
+                            color: const Color(0xFFE5E5EA),
+                            margin: const EdgeInsets.only(left: 16),
+                          ),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 20),
             // Live preview of the line total
             _LinePreview(
               isLabor: _isLabor,
               quantityController: _quantity,
               priceController: _isLabor ? _laborRate : _unitList,
+              linkedParts: _isLabor
+                  ? _linkedTemplateParts
+                      .map((e) => (
+                            sellPrice: e.part.sellPrice,
+                            qtyController: e.qtyController,
+                          ))
+                      .toList()
+                  : null,
             ),
           ],
         ),
@@ -709,6 +864,77 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
       );
 }
 
+// ─── Linked Part Qty Row ──────────────────────────────────────────────────────
+// Shows a single template-linked part with its description and an editable qty.
+class _LinkedPartQtyRow extends StatelessWidget {
+  final InventoryPart part;
+  final TextEditingController qtyController;
+
+  const _LinkedPartQtyRow({
+    required this.part,
+    required this.qtyController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          const Icon(CupertinoIcons.cube_box,
+              size: 16, color: Color(0xFF8E8E93)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  part.description,
+                  style: const TextStyle(
+                      fontSize: 15, color: Color(0xFF1C1C1E)),
+                ),
+                if (part.partNumber != null && part.partNumber!.isNotEmpty)
+                  Text(
+                    part.partNumber!,
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF8E8E93)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 56,
+            child: CupertinoTextField.borderless(
+              controller: qtyController,
+              placeholder: '1',
+              textAlign: TextAlign.right,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              ],
+              style: const TextStyle(fontSize: 15, color: Color(0xFF1C1C1E)),
+              onTap: () => qtyController.selection = TextSelection(
+                baseOffset: 0,
+                extentOffset: qtyController.text.length,
+              ),
+              contextMenuBuilder: (context, editableTextState) =>
+                  CupertinoAdaptiveTextSelectionToolbar.editableText(
+                editableTextState: editableTextState,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Text('qty',
+              style:
+                  TextStyle(fontSize: 13, color: Color(0xFF8E8E93))),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── Field ────────────────────────────────────────────────────────────────────
 // A single labeled text field row.
 class _Field extends StatelessWidget {
@@ -720,6 +946,9 @@ class _Field extends StatelessWidget {
   final TextCapitalization textCapitalization;
   final List<TextInputFormatter>? inputFormatters;
   final bool autofocus;
+  /// When true, tapping the field selects all text (good for numeric fields
+  /// so the user can immediately type a replacement value).
+  final bool selectAllOnTap;
 
   const _Field({
     required this.label,
@@ -730,6 +959,7 @@ class _Field extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.inputFormatters,
     this.autofocus = false,
+    this.selectAllOnTap = false,
   });
 
   @override
@@ -758,10 +988,12 @@ class _Field extends StatelessWidget {
               textCapitalization: textCapitalization,
               inputFormatters: inputFormatters,
               autofocus: autofocus,
-              onTap: () => controller.selection = TextSelection(
-                baseOffset: 0,
-                extentOffset: controller.text.length,
-              ),
+              onTap: selectAllOnTap
+                  ? () => controller.selection = TextSelection(
+                        baseOffset: 0,
+                        extentOffset: controller.text.length,
+                      )
+                  : null,
               contextMenuBuilder: (context, editableTextState) {
                 return CupertinoAdaptiveTextSelectionToolbar.editableText(
                   editableTextState: editableTextState,
@@ -882,11 +1114,16 @@ class _LinePreview extends StatefulWidget {
   final bool isLabor;
   final TextEditingController quantityController;
   final TextEditingController priceController;
+  // Linked template parts (labor only). Each entry has a sell price and a
+  // qty controller so the preview updates live as the user edits qtys.
+  final List<({double sellPrice, TextEditingController qtyController})>?
+      linkedParts;
 
   const _LinePreview({
     required this.isLabor,
     required this.quantityController,
     required this.priceController,
+    this.linkedParts,
   });
 
   @override
@@ -899,13 +1136,35 @@ class _LinePreviewState extends State<_LinePreview> {
     super.initState();
     widget.quantityController.addListener(_rebuild);
     widget.priceController.addListener(_rebuild);
+    _addPartListeners(widget.linkedParts);
+  }
+
+  @override
+  void didUpdateWidget(_LinePreview old) {
+    super.didUpdateWidget(old);
+    // Re-wire listeners when the linked parts list changes
+    if (old.linkedParts != widget.linkedParts) {
+      _removePartListeners(old.linkedParts);
+      _addPartListeners(widget.linkedParts);
+    }
   }
 
   @override
   void dispose() {
     widget.quantityController.removeListener(_rebuild);
     widget.priceController.removeListener(_rebuild);
+    _removePartListeners(widget.linkedParts);
     super.dispose();
+  }
+
+  void _addPartListeners(
+      List<({double sellPrice, TextEditingController qtyController})>? parts) {
+    for (final p in parts ?? []) p.qtyController.addListener(_rebuild);
+  }
+
+  void _removePartListeners(
+      List<({double sellPrice, TextEditingController qtyController})>? parts) {
+    for (final p in parts ?? []) p.qtyController.removeListener(_rebuild);
   }
 
   void _rebuild() => setState(() {});
@@ -921,31 +1180,78 @@ class _LinePreviewState extends State<_LinePreview> {
       return const SizedBox.shrink();
     }
 
-    final lineTotal = qty * price;
+    final laborTotal = qty * price;
     final label = widget.isLabor
         ? '${qty.toStringAsFixed(qty % 1 == 0 ? 0 : 1)} hr × \$${price.toStringAsFixed(2)}/hr'
         : '${qty.toStringAsFixed(qty % 1 == 0 ? 0 : 1)} × \$${price.toStringAsFixed(2)} list';
 
+    // Calculate parts subtotal from linked template parts (if any)
+    final parts = widget.linkedParts ?? [];
+    double partsTotal = 0;
+    for (final p in parts) {
+      final q =
+          double.tryParse(p.qtyController.text.replaceAll(',', '')) ?? 1.0;
+      partsTotal += q * p.sellPrice;
+    }
+    final hasLinkedParts = parts.isNotEmpty && partsTotal > 0;
+
+    final subTextStyle =
+        const TextStyle(fontSize: 13, color: Color(0xFF8E8E93));
+    final totalStyle = const TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      color: Color(0xFF1C1C1E),
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-                fontSize: 14, color: Color(0xFF8E8E93)),
-          ),
-          Text(
-            '= \$${lineTotal.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1C1C1E),
+      child: hasLinkedParts
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Labor line
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(label, style: subTextStyle),
+                    Text('\$${laborTotal.toStringAsFixed(2)}',
+                        style: subTextStyle),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                // Parts line
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('parts', style: subTextStyle),
+                    Text('\$${partsTotal.toStringAsFixed(2)}',
+                        style: subTextStyle),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // Total line
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('total', style: subTextStyle),
+                    Text(
+                      '= \$${(laborTotal + partsTotal).toStringAsFixed(2)}',
+                      style: totalStyle,
+                    ),
+                  ],
+                ),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(label, style: subTextStyle),
+                Text(
+                  '= \$${laborTotal.toStringAsFixed(2)}',
+                  style: totalStyle,
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }

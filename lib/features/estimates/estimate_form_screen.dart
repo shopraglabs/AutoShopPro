@@ -10,7 +10,16 @@ import 'estimates_provider.dart' show dbProvider;
 // The user picks a customer, optionally picks a vehicle from that customer,
 // enters a customer complaint and an optional internal note, then saves.
 class EstimateFormScreen extends ConsumerStatefulWidget {
-  const EstimateFormScreen({super.key});
+  /// If set, the form opens with this customer already selected.
+  final int? preCustomerId;
+  /// If set, the form opens with this vehicle already selected.
+  final int? preVehicleId;
+
+  const EstimateFormScreen({
+    super.key,
+    this.preCustomerId,
+    this.preVehicleId,
+  });
 
   @override
   ConsumerState<EstimateFormScreen> createState() =>
@@ -20,15 +29,53 @@ class EstimateFormScreen extends ConsumerStatefulWidget {
 class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
   Customer? _customer;
   Vehicle? _vehicle;
-  final _complaint = TextEditingController();
+  final List<TextEditingController> _complaints = [TextEditingController()];
   final _note = TextEditingController();
   bool _saving = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Pre-fill customer and vehicle when opened from vehicle detail screen
+    if (widget.preCustomerId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final db = ref.read(dbProvider);
+        final customer = await db.getCustomer(widget.preCustomerId!);
+        if (customer != null && mounted) {
+          setState(() => _customer = customer);
+          if ((customer.internalNote ?? '').isNotEmpty &&
+              _note.text.trim().isEmpty) {
+            _note.text = customer.internalNote!;
+          }
+        }
+        if (widget.preVehicleId != null) {
+          final vehicle = await db.getVehicle(widget.preVehicleId!);
+          if (vehicle != null && mounted) {
+            setState(() => _vehicle = vehicle);
+          }
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
-    _complaint.dispose();
+    for (final c in _complaints) {
+      c.dispose();
+    }
     _note.dispose();
     super.dispose();
+  }
+
+  void _addComplaint() {
+    setState(() => _complaints.add(TextEditingController()));
+  }
+
+  void _removeComplaint(int index) {
+    setState(() {
+      _complaints[index].dispose();
+      _complaints.removeAt(index);
+    });
   }
 
   Future<void> _save() async {
@@ -55,8 +102,13 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
     final id = await db.insertEstimate(EstimatesCompanion.insert(
       customerId: _customer!.id,
       vehicleId: Value(_vehicle?.id),
-      customerComplaint: Value(
-          _complaint.text.trim().isEmpty ? null : _complaint.text.trim()),
+      customerComplaint: Value(() {
+        final joined = _complaints
+            .map((c) => c.text.trim())
+            .where((s) => s.isNotEmpty)
+            .join('\n');
+        return joined.isEmpty ? null : joined;
+      }()),
       note: Value(_note.text.trim().isEmpty ? null : _note.text.trim()),
       taxRate: Value(settings.defaultTaxRate),
     ));
@@ -267,28 +319,85 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
 
             const SizedBox(height: 20),
 
-            // ── Customer Complaint ─────────────────────────────────────────
-            _SectionHeader(label: 'CUSTOMER COMPLAINT'),
+            // ── Customer Complaints ────────────────────────────────────────
+            _SectionHeader(label: 'CUSTOMER COMPLAINTS'),
             Container(
               color: CupertinoColors.white,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-              child: CupertinoTextField.borderless(
-                controller: _complaint,
-                placeholder: 'e.g. Check engine light on, car shakes at highway speed',
-                maxLines: 3,
-                minLines: 3,
-                textCapitalization: TextCapitalization.sentences,
-                contextMenuBuilder: (context, editableTextState) {
-                  return CupertinoAdaptiveTextSelectionToolbar.editableText(
-                    editableTextState: editableTextState,
-                  );
-                },
-                style: const TextStyle(
-                    fontSize: 16, color: Color(0xFF1C1C1E)),
-                placeholderStyle: const TextStyle(
-                    fontSize: 16, color: Color(0xFFC7C7CC)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Column(
+                children: [
+                  for (int i = 0; i < _complaints.length; i++) ...[
+                    if (i > 0)
+                      Container(
+                        height: 0.5,
+                        color: const Color(0xFFE5E5EA),
+                        margin: const EdgeInsets.only(left: 16),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 2),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: CupertinoTextField.borderless(
+                              controller: _complaints[i],
+                              placeholder: 'e.g. Check engine light on',
+                              textCapitalization:
+                                  TextCapitalization.sentences,
+                              contextMenuBuilder:
+                                  (context, editableTextState) =>
+                                      CupertinoAdaptiveTextSelectionToolbar
+                                          .editableText(
+                                editableTextState: editableTextState,
+                              ),
+                              style: const TextStyle(
+                                  fontSize: 16, color: Color(0xFF1C1C1E)),
+                              placeholderStyle: const TextStyle(
+                                  fontSize: 16, color: Color(0xFFC7C7CC)),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                          if (_complaints.length > 1)
+                            CupertinoButton(
+                              padding: EdgeInsets.zero,
+                              minSize: 32,
+                              onPressed: () => _removeComplaint(i),
+                              child: const Icon(
+                                CupertinoIcons.minus_circle_fill,
+                                size: 20,
+                                color: CupertinoColors.destructiveRed,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  // Add Complaint row
+                  Container(
+                    height: 0.5,
+                    color: const Color(0xFFE5E5EA),
+                    margin: const EdgeInsets.only(left: 16),
+                  ),
+                  GestureDetector(
+                    onTap: _addComplaint,
+                    child: Container(
+                      color: CupertinoColors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 13),
+                      child: const Row(
+                        children: [
+                          Icon(CupertinoIcons.plus_circle_fill,
+                              size: 18, color: Color(0xFF007AFF)),
+                          SizedBox(width: 10),
+                          Text('Add Complaint',
+                              style: TextStyle(
+                                  fontSize: 16, color: Color(0xFF007AFF))),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 

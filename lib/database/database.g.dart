@@ -1605,6 +1605,17 @@ class $EstimateLineItemsTable extends EstimateLineItems
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _partNumberMeta = const VerificationMeta(
+    'partNumber',
+  );
+  @override
+  late final GeneratedColumn<String> partNumber = GeneratedColumn<String>(
+    'part_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1620,6 +1631,7 @@ class $EstimateLineItemsTable extends EstimateLineItems
     approvalStatus,
     inventoryPartId,
     laborName,
+    partNumber,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1728,6 +1740,12 @@ class $EstimateLineItemsTable extends EstimateLineItems
         laborName.isAcceptableOrUnknown(data['labor_name']!, _laborNameMeta),
       );
     }
+    if (data.containsKey('part_number')) {
+      context.handle(
+        _partNumberMeta,
+        partNumber.isAcceptableOrUnknown(data['part_number']!, _partNumberMeta),
+      );
+    }
     return context;
   }
 
@@ -1789,6 +1807,10 @@ class $EstimateLineItemsTable extends EstimateLineItems
         DriftSqlType.string,
         data['${effectivePrefix}labor_name'],
       ),
+      partNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}part_number'],
+      ),
     );
   }
 
@@ -1813,6 +1835,7 @@ class EstimateLineItem extends DataClass
   final String? approvalStatus;
   final int? inventoryPartId;
   final String? laborName;
+  final String? partNumber;
   const EstimateLineItem({
     required this.id,
     required this.estimateId,
@@ -1827,6 +1850,7 @@ class EstimateLineItem extends DataClass
     this.approvalStatus,
     this.inventoryPartId,
     this.laborName,
+    this.partNumber,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1857,6 +1881,9 @@ class EstimateLineItem extends DataClass
     }
     if (!nullToAbsent || laborName != null) {
       map['labor_name'] = Variable<String>(laborName);
+    }
+    if (!nullToAbsent || partNumber != null) {
+      map['part_number'] = Variable<String>(partNumber);
     }
     return map;
   }
@@ -1890,6 +1917,9 @@ class EstimateLineItem extends DataClass
       laborName: laborName == null && nullToAbsent
           ? const Value.absent()
           : Value(laborName),
+      partNumber: partNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(partNumber),
     );
   }
 
@@ -1912,6 +1942,7 @@ class EstimateLineItem extends DataClass
       approvalStatus: serializer.fromJson<String?>(json['approvalStatus']),
       inventoryPartId: serializer.fromJson<int?>(json['inventoryPartId']),
       laborName: serializer.fromJson<String?>(json['laborName']),
+      partNumber: serializer.fromJson<String?>(json['partNumber']),
     );
   }
   @override
@@ -1931,6 +1962,7 @@ class EstimateLineItem extends DataClass
       'approvalStatus': serializer.toJson<String?>(approvalStatus),
       'inventoryPartId': serializer.toJson<int?>(inventoryPartId),
       'laborName': serializer.toJson<String?>(laborName),
+      'partNumber': serializer.toJson<String?>(partNumber),
     };
   }
 
@@ -1948,6 +1980,7 @@ class EstimateLineItem extends DataClass
     Value<String?> approvalStatus = const Value.absent(),
     Value<int?> inventoryPartId = const Value.absent(),
     Value<String?> laborName = const Value.absent(),
+    Value<String?> partNumber = const Value.absent(),
   }) => EstimateLineItem(
     id: id ?? this.id,
     estimateId: estimateId ?? this.estimateId,
@@ -1968,6 +2001,7 @@ class EstimateLineItem extends DataClass
         ? inventoryPartId.value
         : this.inventoryPartId,
     laborName: laborName.present ? laborName.value : this.laborName,
+    partNumber: partNumber.present ? partNumber.value : this.partNumber,
   );
   EstimateLineItem copyWithCompanion(EstimateLineItemsCompanion data) {
     return EstimateLineItem(
@@ -1994,6 +2028,9 @@ class EstimateLineItem extends DataClass
           ? data.inventoryPartId.value
           : this.inventoryPartId,
       laborName: data.laborName.present ? data.laborName.value : this.laborName,
+      partNumber: data.partNumber.present
+          ? data.partNumber.value
+          : this.partNumber,
     );
   }
 
@@ -2012,7 +2049,8 @@ class EstimateLineItem extends DataClass
           ..write('isDone: $isDone, ')
           ..write('approvalStatus: $approvalStatus, ')
           ..write('inventoryPartId: $inventoryPartId, ')
-          ..write('laborName: $laborName')
+          ..write('laborName: $laborName, ')
+          ..write('partNumber: $partNumber')
           ..write(')'))
         .toString();
   }
@@ -2032,6 +2070,7 @@ class EstimateLineItem extends DataClass
     approvalStatus,
     inventoryPartId,
     laborName,
+    partNumber,
   );
   @override
   bool operator ==(Object other) =>
@@ -2049,7 +2088,8 @@ class EstimateLineItem extends DataClass
           other.isDone == this.isDone &&
           other.approvalStatus == this.approvalStatus &&
           other.inventoryPartId == this.inventoryPartId &&
-          other.laborName == this.laborName);
+          other.laborName == this.laborName &&
+          other.partNumber == this.partNumber);
 }
 
 class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
@@ -2066,6 +2106,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
   final Value<String?> approvalStatus;
   final Value<int?> inventoryPartId;
   final Value<String?> laborName;
+  final Value<String?> partNumber;
   const EstimateLineItemsCompanion({
     this.id = const Value.absent(),
     this.estimateId = const Value.absent(),
@@ -2080,6 +2121,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     this.approvalStatus = const Value.absent(),
     this.inventoryPartId = const Value.absent(),
     this.laborName = const Value.absent(),
+    this.partNumber = const Value.absent(),
   });
   EstimateLineItemsCompanion.insert({
     this.id = const Value.absent(),
@@ -2095,6 +2137,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     this.approvalStatus = const Value.absent(),
     this.inventoryPartId = const Value.absent(),
     this.laborName = const Value.absent(),
+    this.partNumber = const Value.absent(),
   }) : estimateId = Value(estimateId),
        type = Value(type),
        description = Value(description),
@@ -2113,6 +2156,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     Expression<String>? approvalStatus,
     Expression<int>? inventoryPartId,
     Expression<String>? laborName,
+    Expression<String>? partNumber,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2128,6 +2172,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
       if (approvalStatus != null) 'approval_status': approvalStatus,
       if (inventoryPartId != null) 'inventory_part_id': inventoryPartId,
       if (laborName != null) 'labor_name': laborName,
+      if (partNumber != null) 'part_number': partNumber,
     });
   }
 
@@ -2145,6 +2190,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     Value<String?>? approvalStatus,
     Value<int?>? inventoryPartId,
     Value<String?>? laborName,
+    Value<String?>? partNumber,
   }) {
     return EstimateLineItemsCompanion(
       id: id ?? this.id,
@@ -2160,6 +2206,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
       approvalStatus: approvalStatus ?? this.approvalStatus,
       inventoryPartId: inventoryPartId ?? this.inventoryPartId,
       laborName: laborName ?? this.laborName,
+      partNumber: partNumber ?? this.partNumber,
     );
   }
 
@@ -2205,6 +2252,9 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     if (laborName.present) {
       map['labor_name'] = Variable<String>(laborName.value);
     }
+    if (partNumber.present) {
+      map['part_number'] = Variable<String>(partNumber.value);
+    }
     return map;
   }
 
@@ -2223,7 +2273,8 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
           ..write('isDone: $isDone, ')
           ..write('approvalStatus: $approvalStatus, ')
           ..write('inventoryPartId: $inventoryPartId, ')
-          ..write('laborName: $laborName')
+          ..write('laborName: $laborName, ')
+          ..write('partNumber: $partNumber')
           ..write(')'))
         .toString();
   }
@@ -6222,6 +6273,7 @@ typedef $$EstimateLineItemsTableCreateCompanionBuilder =
       Value<String?> approvalStatus,
       Value<int?> inventoryPartId,
       Value<String?> laborName,
+      Value<String?> partNumber,
     });
 typedef $$EstimateLineItemsTableUpdateCompanionBuilder =
     EstimateLineItemsCompanion Function({
@@ -6238,6 +6290,7 @@ typedef $$EstimateLineItemsTableUpdateCompanionBuilder =
       Value<String?> approvalStatus,
       Value<int?> inventoryPartId,
       Value<String?> laborName,
+      Value<String?> partNumber,
     });
 
 class $$EstimateLineItemsTableFilterComposer
@@ -6311,6 +6364,11 @@ class $$EstimateLineItemsTableFilterComposer
 
   ColumnFilters<String> get laborName => $composableBuilder(
     column: $table.laborName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get partNumber => $composableBuilder(
+    column: $table.partNumber,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6388,6 +6446,11 @@ class $$EstimateLineItemsTableOrderingComposer
     column: $table.laborName,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get partNumber => $composableBuilder(
+    column: $table.partNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$EstimateLineItemsTableAnnotationComposer
@@ -6447,6 +6510,11 @@ class $$EstimateLineItemsTableAnnotationComposer
 
   GeneratedColumn<String> get laborName =>
       $composableBuilder(column: $table.laborName, builder: (column) => column);
+
+  GeneratedColumn<String> get partNumber => $composableBuilder(
+    column: $table.partNumber,
+    builder: (column) => column,
+  );
 }
 
 class $$EstimateLineItemsTableTableManager
@@ -6502,6 +6570,7 @@ class $$EstimateLineItemsTableTableManager
                 Value<String?> approvalStatus = const Value.absent(),
                 Value<int?> inventoryPartId = const Value.absent(),
                 Value<String?> laborName = const Value.absent(),
+                Value<String?> partNumber = const Value.absent(),
               }) => EstimateLineItemsCompanion(
                 id: id,
                 estimateId: estimateId,
@@ -6516,6 +6585,7 @@ class $$EstimateLineItemsTableTableManager
                 approvalStatus: approvalStatus,
                 inventoryPartId: inventoryPartId,
                 laborName: laborName,
+                partNumber: partNumber,
               ),
           createCompanionCallback:
               ({
@@ -6532,6 +6602,7 @@ class $$EstimateLineItemsTableTableManager
                 Value<String?> approvalStatus = const Value.absent(),
                 Value<int?> inventoryPartId = const Value.absent(),
                 Value<String?> laborName = const Value.absent(),
+                Value<String?> partNumber = const Value.absent(),
               }) => EstimateLineItemsCompanion.insert(
                 id: id,
                 estimateId: estimateId,
@@ -6546,6 +6617,7 @@ class $$EstimateLineItemsTableTableManager
                 approvalStatus: approvalStatus,
                 inventoryPartId: inventoryPartId,
                 laborName: laborName,
+                partNumber: partNumber,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

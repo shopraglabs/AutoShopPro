@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
 import '../../widgets/context_menu.dart';
 import 'estimates_provider.dart';
+import '../invoices/invoice_service.dart';
 import '../repair_orders/repair_orders_provider.dart';
 import '../service_templates/service_templates_provider.dart';
 
@@ -106,16 +107,36 @@ class _EstimateDetailView extends ConsumerWidget {
       unitPrice: rate,
       approvalStatus: const Value('approved'),
     ));
-    // Insert any inventory parts linked to this template as part line items.
+
+    // If the template has linked parts, show the parts picker sheet so the
+    // user can choose which ones to add and set quantities.
     final linkedParts = await db.getTemplatePartsForTemplate(picked.id);
+    if (linkedParts.isEmpty || !context.mounted) return;
+
+    // Fetch the InventoryPart for each link to get description + sell price.
+    final partOptions = <({InventoryPart part})>[];
     for (final link in linkedParts) {
       final part = await db.getPart(link.inventoryPartId);
-      if (part == null) continue;
+      if (part != null) partOptions.add((part: part));
+    }
+    if (partOptions.isEmpty || !context.mounted) return;
+
+    final selected = await showCupertinoModalPopup<List<({int partId, double qty})>>(
+      context: context,
+      builder: (_) => _TemplatePartsSheet(
+        templateName: picked.name,
+        parts: partOptions.map((o) => o.part).toList(),
+      ),
+    );
+
+    if (selected == null || !context.mounted) return;
+    for (final s in selected) {
+      final part = partOptions.firstWhere((o) => o.part.id == s.partId).part;
       await db.insertLineItem(EstimateLineItemsCompanion.insert(
         estimateId: estimate.id,
         type: 'part',
         description: part.description,
-        quantity: Value(link.quantity),
+        quantity: Value(s.qty),
         unitPrice: part.sellPrice,
         unitCost: Value(part.cost),
         inventoryPartId: Value(part.id),
@@ -151,8 +172,36 @@ class _EstimateDetailView extends ConsumerWidget {
     );
   }
 
+  Future<void> _printEstimate(BuildContext context, WidgetRef ref) async {
+    final db = ref.read(dbProvider);
+    final results = await Future.wait([
+      db.getCustomer(estimate.customerId),
+      if (estimate.vehicleId != null) db.getVehicle(estimate.vehicleId!),
+      db.getOrCreateSettings(),
+    ]);
+    int idx = 0;
+    final customer = results[idx++] as Customer?;
+    if (customer == null) return;
+    Vehicle? vehicle;
+    if (estimate.vehicleId != null) vehicle = results[idx++] as Vehicle?;
+    final settings = results[idx] as ShopSetting;
+    if (!context.mounted) return;
+    await showEstimateActions(
+      context: context,
+      estimate: estimate,
+      customer: customer,
+      vehicle: vehicle,
+      lineItems: lineItemsAsync.value ?? [],
+      shopName: settings.shopName,
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch here so the stream is active before the user taps Apply Template.
+    // Without this, ref.read() in _applyTemplate finds no data on first tap.
+    ref.watch(serviceTemplatesProvider);
+
     final lineItems = lineItemsAsync.value ?? [];
     final laborLines =
         lineItems.where((l) => l.type == 'labor').toList();
@@ -197,17 +246,73 @@ class _EstimateDetailView extends ConsumerWidget {
             // ── Convert to RO / View RO banner ────────────────────────────
             _RoBanner(estimate: estimate),
 
+            // ── Customer concern ──────────────────────────────────────────
+            if (estimate.customerComplaint != null &&
+                estimate.customerComplaint!.trim().isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _sectionHeader('CUSTOMER CONCERN'),
+              Container(
+                color: CupertinoColors.white,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final line in estimate.customerComplaint!
+                        .split('\n')
+                        .where((s) => s.trim().isNotEmpty))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('• ',
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    color: Color(0xFF1C1C1E))),
+                            Expanded(
+                              child: Text(
+                                line.trim(),
+                                style: const TextStyle(
+                                    fontSize: 15,
+                                    color: Color(0xFF1C1C1E)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 20),
 
             // ── Labor lines ───────────────────────────────────────────────
             if (laborLines.isNotEmpty) ...[
               _sectionHeader('LABOR'),
-              _LineItemSection(
-                items: laborLines,
-                laborLines: const [],
-                onDelete: (id) => ref.read(dbProvider).deleteLineItem(id),
-              ),
-              const SizedBox(height: 20),
+              for (final labor in laborLines) ...[
+                Container(
+                  color: CupertinoColors.white,
+                  child: _LineItemRow(
+                    item: labor,
+                    laborLines: const [],
+                    onDelete: (id) => ref.read(dbProvider).deleteLineItem(id),
+                  ),
+                ),
+                // Indented "Add Part" row — pre-links the new part to this labor line
+                Padding(
+                  padding: const EdgeInsets.only(left: 20.0),
+                  child: _ActionRow(
+                    icon: CupertinoIcons.cube_box_fill,
+                    label: 'Add Part',
+                    onTap: () => context.push(
+                      '/repair-orders/estimates/${estimate.id}/line-items/part?parentLaborId=${labor.id}',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+              ],
+              const SizedBox(height: 14),
             ],
 
             // ── Parts lines ───────────────────────────────────────────────
@@ -309,6 +414,18 @@ class _EstimateDetailView extends ConsumerWidget {
               ),
             ],
 
+            // ── Actions ───────────────────────────────────────────────────
+            const SizedBox(height: 20),
+            _sectionHeader('ACTIONS'),
+            Container(
+              color: CupertinoColors.white,
+              child: _ActionRow(
+                icon: CupertinoIcons.doc_text_fill,
+                label: 'Save / Print / Email',
+                onTap: () => _printEstimate(context, ref),
+              ),
+            ),
+
             const SizedBox(height: 32),
           ],
         ),
@@ -407,27 +524,33 @@ class _CustomerVehicleHeader extends ConsumerWidget {
                   ],
                 ),
               ],
-              // Customer complaint — shown prominently since it drives the job
+              // Customer complaints — each line is a separate complaint
               if (estimate.customerComplaint != null &&
                   estimate.customerComplaint!.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(CupertinoIcons.chat_bubble_text_fill,
-                        size: 14, color: Color(0xFF8E8E93)),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        estimate.customerComplaint!,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF1C1C1E),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                ...estimate.customerComplaint!
+                    .split('\n')
+                    .where((s) => s.isNotEmpty)
+                    .map((complaint) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(CupertinoIcons.chat_bubble_text_fill,
+                                  size: 14, color: Color(0xFF8E8E93)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  complaint,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF1C1C1E),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
               ],
               // Internal note — shown subtly below complaint
               if (estimate.note != null && estimate.note!.isNotEmpty) ...[
@@ -706,6 +829,13 @@ class _LineItemRow extends ConsumerWidget {
                         decorationColor: textColor,
                       ),
                     ),
+                    if (item.type == 'part' &&
+                        item.partNumber != null &&
+                        item.partNumber!.isNotEmpty)
+                      Text(
+                        item.partNumber!,
+                        style: TextStyle(fontSize: 12, color: subColor),
+                      ),
                     const SizedBox(height: 2),
                     if (item.type == 'part') ...[
                       if (item.vendorId != null)
@@ -1105,6 +1235,229 @@ class _TemplatePickerSheetState extends State<_TemplatePickerSheet> {
                 textAlign: TextAlign.center,
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Template Parts Sheet ─────────────────────────────────────────────────────
+// Shown after applying a service template. Lets the user pick which linked
+// parts to add and set the quantity for each before they land on the estimate.
+class _TemplatePartsSheet extends StatefulWidget {
+  final String templateName;
+  final List<InventoryPart> parts;
+
+  const _TemplatePartsSheet({
+    required this.templateName,
+    required this.parts,
+  });
+
+  @override
+  State<_TemplatePartsSheet> createState() => _TemplatePartsSheetState();
+}
+
+class _TemplatePartsSheetState extends State<_TemplatePartsSheet> {
+  late final List<bool> _included;
+  late final List<TextEditingController> _qtyCtrls;
+
+  @override
+  void initState() {
+    super.initState();
+    _included = List.filled(widget.parts.length, false);
+    _qtyCtrls = List.generate(
+      widget.parts.length,
+      (_) => TextEditingController(text: '1'),
+    );
+  }
+
+  @override
+  void dispose() {
+    for (final c in _qtyCtrls) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _confirm() {
+    final result = <({int partId, double qty})>[];
+    for (int i = 0; i < widget.parts.length; i++) {
+      if (!_included[i]) continue;
+      final qty = double.tryParse(_qtyCtrls[i].text) ?? 1.0;
+      result.add((partId: widget.parts[i].id, qty: qty));
+    }
+    Navigator.pop(context, result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedCount = _included.where((v) => v).length;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.65,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF2F2F7),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      child: Column(
+        children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFC7C7CC),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Add Parts',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1C1C1E),
+                        ),
+                      ),
+                      Text(
+                        widget.templateName,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF8E8E93),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () => Navigator.pop(
+                      context, <({int partId, double qty})>[]),
+                  child: const Text(
+                    'Skip',
+                    style: TextStyle(color: Color(0xFF8E8E93)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              'Select the parts to add and set quantities.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF8E8E93)),
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              itemCount: widget.parts.length,
+              separatorBuilder: (_, __) => Container(
+                height: 0.5,
+                color: const Color(0xFFE5E5EA),
+                margin: const EdgeInsets.only(left: 16),
+              ),
+              itemBuilder: (_, i) {
+                final part = widget.parts[i];
+                return Container(
+                  color: CupertinoColors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () =>
+                            setState(() => _included[i] = !_included[i]),
+                        child: Icon(
+                          _included[i]
+                              ? CupertinoIcons.checkmark_circle_fill
+                              : CupertinoIcons.circle,
+                          size: 24,
+                          color: _included[i]
+                              ? const Color(0xFF007AFF)
+                              : const Color(0xFFC7C7CC),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              part.description,
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: _included[i]
+                                    ? const Color(0xFF1C1C1E)
+                                    : const Color(0xFFAEAEB2),
+                              ),
+                            ),
+                            if (part.category != null &&
+                                part.category != 'Part')
+                              Text(
+                                part.category!,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF8E8E93),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (_included[i])
+                        SizedBox(
+                          width: 56,
+                          child: CupertinoTextField(
+                            controller: _qtyCtrls[i],
+                            keyboardType:
+                                const TextInputType.numberWithOptions(
+                                    decimal: true),
+                            textAlign: TextAlign.center,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 7),
+                            onTap: () => _qtyCtrls[i].selection =
+                                TextSelection(
+                              baseOffset: 0,
+                              extentOffset: _qtyCtrls[i].text.length,
+                            ),
+                            contextMenuBuilder:
+                                (context, editableTextState) =>
+                                    CupertinoAdaptiveTextSelectionToolbar
+                                        .editableText(
+                              editableTextState: editableTextState,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: SizedBox(
+                width: double.infinity,
+                child: CupertinoButton.filled(
+                  onPressed: selectedCount > 0 ? _confirm : null,
+                  child: Text(
+                    selectedCount > 0
+                        ? 'Add $selectedCount Part${selectedCount == 1 ? '' : 's'}'
+                        : 'No Parts Selected',
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

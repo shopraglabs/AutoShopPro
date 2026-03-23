@@ -198,17 +198,12 @@ class _VehicleDetail extends ConsumerWidget {
     );
   }
 
-  // Creates a new estimate pre-linked to this customer and vehicle,
-  // then navigates directly to the estimate detail screen.
-  Future<void> _newEstimate(BuildContext context, WidgetRef ref) async {
-    final db = ref.read(dbProvider);
-    final id = await db.insertEstimate(EstimatesCompanion.insert(
-      customerId: customerId,
-      vehicleId: Value(vehicle.id),
-    ));
-    if (context.mounted) {
-      context.push('/repair-orders/estimates/$id');
-    }
+  // Opens the New Estimate form with customer and vehicle pre-filled.
+  void _newEstimate(BuildContext context, WidgetRef ref) {
+    context.push(
+      '/repair-orders/estimates/new'
+      '?customerId=$customerId&vehicleId=${vehicle.id}',
+    );
   }
 
   // Formats 45000 → "45,000"

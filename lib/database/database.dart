@@ -78,6 +78,8 @@ class EstimateLineItems extends Table {
   // Short name for a labor line (e.g. "Oil Change"). Separate from description
   // which holds the detailed operation text. Null on old rows and parts.
   TextColumn get laborName => text().nullable()();
+  // Part number (parts only, optional). e.g. "ACDelco 41-993"
+  TextColumn get partNumber => text().nullable()();
 }
 
 class Vendors extends Table {
@@ -243,7 +245,7 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   // Drift runs this when it finds an older database on the device.
   @override
@@ -411,6 +413,15 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(inventoryParts, inventoryParts.category);
         }
         await m.createTable(serviceTemplateParts);
+      }
+      if (from < 21) {
+        // Added in v21: part_number on estimate_line_items.
+        final cols = await m.database.customSelect(
+          "SELECT name FROM pragma_table_info('estimate_line_items') WHERE name='part_number'",
+        ).get();
+        if (cols.isEmpty) {
+          await m.addColumn(estimateLineItems, estimateLineItems.partNumber);
+        }
       }
     },
   );
@@ -600,6 +611,41 @@ class AppDatabase extends _$AppDatabase {
   Stream<RepairOrder?> watchRoForEstimate(int estimateId) =>
       (select(repairOrders)..where((r) => r.estimateId.equals(estimateId)))
           .watchSingleOrNull();
+
+  // Returns a live stream of all estimates for one customer, newest first.
+  Stream<List<EstimateWithDetails>> watchEstimatesForCustomer(int customerId) {
+    final q = select(estimates).join([
+      leftOuterJoin(customers, customers.id.equalsExp(estimates.customerId)),
+      leftOuterJoin(vehicles, vehicles.id.equalsExp(estimates.vehicleId)),
+    ]);
+    q.where(estimates.customerId.equals(customerId));
+    q.orderBy([OrderingTerm.desc(estimates.createdAt)]);
+    return q.watch().map((rows) => rows
+        .map((row) => EstimateWithDetails(
+              estimate: row.readTable(estimates),
+              customer: row.readTableOrNull(customers),
+              vehicle: row.readTableOrNull(vehicles),
+            ))
+        .toList());
+  }
+
+  // Returns a live stream of all ROs for one customer, newest first.
+  Stream<List<RepairOrderWithDetails>> watchRepairOrdersForCustomer(
+      int customerId) {
+    final q = select(repairOrders).join([
+      leftOuterJoin(customers, customers.id.equalsExp(repairOrders.customerId)),
+      leftOuterJoin(vehicles, vehicles.id.equalsExp(repairOrders.vehicleId)),
+    ]);
+    q.where(repairOrders.customerId.equals(customerId));
+    q.orderBy([OrderingTerm.desc(repairOrders.createdAt)]);
+    return q.watch().map((rows) => rows
+        .map((row) => RepairOrderWithDetails(
+              ro: row.readTable(repairOrders),
+              customer: row.readTableOrNull(customers),
+              vehicle: row.readTableOrNull(vehicles),
+            ))
+        .toList());
+  }
 
   // Adds a new repair order and returns its new id.
   Future<int> insertRepairOrder(RepairOrdersCompanion entry) =>

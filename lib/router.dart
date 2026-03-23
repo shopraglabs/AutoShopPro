@@ -120,10 +120,20 @@ final appRouter = GoRouter(
               path: 'estimates',
               builder: (context, state) => const EstimateListScreen(),
               routes: [
-                // New estimate form
+                // New estimate form — optional ?customerId=X&vehicleId=Y pre-fill
                 GoRoute(
                   path: 'new',
-                  builder: (context, state) => const EstimateFormScreen(),
+                  builder: (context, state) {
+                    final params = state.uri.queryParameters;
+                    final customerId =
+                        int.tryParse(params['customerId'] ?? '');
+                    final vehicleId =
+                        int.tryParse(params['vehicleId'] ?? '');
+                    return EstimateFormScreen(
+                      preCustomerId: customerId,
+                      preVehicleId: vehicleId,
+                    );
+                  },
                 ),
                 // Estimate detail
                 GoRoute(
@@ -150,8 +160,12 @@ final appRouter = GoRouter(
                       builder: (context, state) {
                         final id = int.parse(
                             state.pathParameters['estimateId']!);
+                        final parentLaborId = int.tryParse(
+                            state.uri.queryParameters['parentLaborId'] ?? '');
                         return LineItemFormScreen(
-                            estimateId: id, type: 'part');
+                            estimateId: id,
+                            type: 'part',
+                            parentLaborId: parentLaborId);
                       },
                     ),
                     // Edit existing line item

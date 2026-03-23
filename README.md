@@ -6,6 +6,8 @@ A cross-platform automotive shop management app built with Flutter. One codebase
 
 ## Project Status
 
+**v0.9.0 — Dialed In** — UX polish: Add Part button under each labor row (auto-linked), customer complaints shown on estimate detail, template linked parts as opt-in dropdown with quantities, part number field on line items, new estimate from vehicle page goes through the form with customer/vehicle pre-filled, and number fields now select-all on tap throughout the app.
+
 **v0.8.0 — Linked Up** — Templates now link to inventory parts; applying a template drops in the labor line plus all linked parts in one tap. Parts inventory has categories (Part/Fluid/Filter/Chemical) and a full markup calculator with auto-tier rules. Labor names show as bold titles throughout estimates, ROs, and invoice PDFs.
 
 **v0.7.1 — Smooth Operator** — UX polish session. New line items default to approved, inline search in every picker sheet, right-click context menus on line items, service templates for common jobs, and a global search screen accessible from the sidebar or ⌘F.
@@ -18,7 +20,7 @@ A cross-platform automotive shop management app built with Flutter. One codebase
 
 **v0.4.0 — Open Bay** — Full repair order engine working: create estimate, convert to RO, track job status (Open → In Progress → Completed → Closed), mark items done, and close the RO.
 
-**v0.3.0 — Write-Up** — Customers, vehicles, VIN decode, estimates (labor + parts + totals), vendors, shop settings, and Apple-style macOS menu bar all working.
+**v0.3.0 — Write-Up** — Customers, vehicles, VIN decode, estimates (labor + parts + totals), vendors, shop settings, and menu bar all working.
 
 **v0.2.0 — Intake** — Customer & Vehicle records fully working. Add, edit, delete, and search customers. Add vehicles to customers with year, make, model, VIN, mileage, and plate. Smart input formatting throughout (phone, mileage, plate, capitalization). All data saved locally to SQLite via Drift.
 
