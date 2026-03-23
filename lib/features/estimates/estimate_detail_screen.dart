@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -172,7 +173,51 @@ class _EstimateDetailView extends ConsumerWidget {
     );
   }
 
-  Future<void> _printEstimate(BuildContext context, WidgetRef ref) async {
+  Future<void> _editComplaint(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController(
+        text: estimate.customerComplaint ?? '');
+    await showCupertinoDialog<void>(
+      context: context,
+      builder: (dialogCtx) => CupertinoAlertDialog(
+        title: const Text('Customer Concern'),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: CupertinoTextField(
+            controller: controller,
+            placeholder: 'Enter customer concern…',
+            minLines: 3,
+            maxLines: 6,
+            textCapitalization: TextCapitalization.sentences,
+            autofocus: true,
+            contextMenuBuilder: (ctx, state) =>
+                CupertinoAdaptiveTextSelectionToolbar.editableText(
+                    editableTextState: state),
+          ),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () async {
+              final text = controller.text.trim();
+              Navigator.pop(dialogCtx);
+              await ref.read(dbProvider).updateEstimate(
+                    estimate.copyWith(
+                        customerComplaint: Value(text.isEmpty ? null : text)),
+                  );
+            },
+            child: const Text('Save'),
+          ),
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+  }
+
+  Future<void> _printEstimate(BuildContext context, WidgetRef ref, {Offset? position}) async {
     final db = ref.read(dbProvider);
     final results = await Future.wait([
       db.getCustomer(estimate.customerId),
@@ -193,6 +238,7 @@ class _EstimateDetailView extends ConsumerWidget {
       vehicle: vehicle,
       lineItems: lineItemsAsync.value ?? [],
       shopName: settings.shopName,
+      position: position,
     );
   }
 
@@ -207,6 +253,8 @@ class _EstimateDetailView extends ConsumerWidget {
         lineItems.where((l) => l.type == 'labor').toList();
     final partLines =
         lineItems.where((l) => l.type == 'part').toList();
+    final otherLines =
+        lineItems.where((l) => l.type == 'other').toList();
 
     // Declined items are excluded from the payable total
     final declinedItems =
@@ -247,43 +295,80 @@ class _EstimateDetailView extends ConsumerWidget {
             _RoBanner(estimate: estimate),
 
             // ── Customer concern ──────────────────────────────────────────
-            if (estimate.customerComplaint != null &&
-                estimate.customerComplaint!.trim().isNotEmpty) ...[
-              const SizedBox(height: 20),
-              _sectionHeader('CUSTOMER CONCERN'),
-              Container(
-                color: CupertinoColors.white,
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final line in estimate.customerComplaint!
-                        .split('\n')
-                        .where((s) => s.trim().isNotEmpty))
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('• ',
-                                style: TextStyle(
-                                    fontSize: 15,
-                                    color: Color(0xFF1C1C1E))),
-                            Expanded(
-                              child: Text(
-                                line.trim(),
-                                style: const TextStyle(
-                                    fontSize: 15,
-                                    color: Color(0xFF1C1C1E)),
-                              ),
-                            ),
-                          ],
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'CUSTOMER CONCERN',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF8E8E93),
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () => _editComplaint(context, ref),
+                      child: Text(
+                        estimate.customerComplaint == null ||
+                                estimate.customerComplaint!.trim().isEmpty
+                            ? 'Add'
+                            : 'Edit',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF007AFF),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
+            Container(
+              color: CupertinoColors.white,
+              padding: const EdgeInsets.all(16),
+              child: estimate.customerComplaint == null ||
+                      estimate.customerComplaint!.trim().isEmpty
+                  ? const Text(
+                      'No customer concern entered.',
+                      style: TextStyle(fontSize: 15, color: Color(0xFFAEAEB2)),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final line in estimate.customerComplaint!
+                            .split('\n')
+                            .where((s) => s.trim().isNotEmpty))
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('• ',
+                                    style: TextStyle(
+                                        fontSize: 15,
+                                        color: Color(0xFF1C1C1E))),
+                                Expanded(
+                                  child: Text(
+                                    line.trim(),
+                                    style: const TextStyle(
+                                        fontSize: 15,
+                                        color: Color(0xFF1C1C1E)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
 
             const SizedBox(height: 20),
 
@@ -326,13 +411,40 @@ class _EstimateDetailView extends ConsumerWidget {
               const SizedBox(height: 20),
             ],
 
+            // ── Other lines ───────────────────────────────────────────────
+            if (otherLines.isNotEmpty) ...[
+              _sectionHeader('OTHER'),
+              Container(
+                color: CupertinoColors.white,
+                child: Column(
+                  children: [
+                    for (int i = 0; i < otherLines.length; i++) ...[
+                      _LineItemRow(
+                        item: otherLines[i],
+                        laborLines: const [],
+                        onDelete: (id) =>
+                            ref.read(dbProvider).deleteLineItem(id),
+                      ),
+                      if (i < otherLines.length - 1)
+                        Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 16),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
             // ── Empty state ───────────────────────────────────────────────
             if (lineItems.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
                 child: Center(
                   child: Text(
-                    'No items yet.\nAdd labor or parts below.',
+                    'No items yet.\nAdd labor, parts, or other items below.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 15,
@@ -371,9 +483,10 @@ class _EstimateDetailView extends ConsumerWidget {
                     margin: const EdgeInsets.only(left: 46),
                   ),
                   _ActionRow(
-                    icon: CupertinoIcons.doc_text_fill,
-                    label: 'Apply Template',
-                    onTap: () => _applyTemplate(context, ref),
+                    icon: CupertinoIcons.ellipsis_circle_fill,
+                    label: 'Add Other',
+                    onTap: () => context.push(
+                        '/repair-orders/estimates/${estimate.id}/line-items/other'),
                   ),
                 ],
               ),
@@ -419,10 +532,15 @@ class _EstimateDetailView extends ConsumerWidget {
             _sectionHeader('ACTIONS'),
             Container(
               color: CupertinoColors.white,
-              child: _ActionRow(
-                icon: CupertinoIcons.doc_text_fill,
-                label: 'Save / Print / Email',
-                onTap: () => _printEstimate(context, ref),
+              child: Column(
+                children: [
+                  _ActionRow(
+                    icon: CupertinoIcons.doc_text_fill,
+                    label: 'Save / Print / Email',
+                    onTapUp: (pos) => _printEstimate(context, ref, position: pos),
+                  ),
+                  _ConvertRow(estimate: estimate),
+                ],
               ),
             ),
 
@@ -523,34 +641,6 @@ class _CustomerVehicleHeader extends ConsumerWidget {
                     ],
                   ],
                 ),
-              ],
-              // Customer complaints — each line is a separate complaint
-              if (estimate.customerComplaint != null &&
-                  estimate.customerComplaint!.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                ...estimate.customerComplaint!
-                    .split('\n')
-                    .where((s) => s.isNotEmpty)
-                    .map((complaint) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(CupertinoIcons.chat_bubble_text_fill,
-                                  size: 14, color: Color(0xFF8E8E93)),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  complaint,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF1C1C1E),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )),
               ],
               // Internal note — shown subtly below complaint
               if (estimate.note != null && estimate.note!.isNotEmpty) ...[
@@ -683,57 +773,86 @@ class _LineItemRow extends ConsumerWidget {
     required this.onDelete,
   });
 
-  // Opens the approval action sheet for this line item.
-  Future<void> _showApprovalSheet(BuildContext context, WidgetRef ref) async {
+  // Opens the approval picker for this line item.
+  // On desktop: shows an inline context menu at the tap position.
+  // On mobile: shows a bottom action sheet.
+  void _showApprovalSheet(BuildContext context, WidgetRef ref, Offset position) {
     final current = item.approvalStatus;
-    await showCupertinoModalPopup<void>(
-      context: context,
-      builder: (sheetCtx) => CupertinoActionSheet(
-        title: Text(item.description),
-        message: const Text('Set customer approval status for this item'),
-        actions: [
+    final db = ref.read(dbProvider);
+
+    if (Platform.isMacOS || Platform.isWindows) {
+      showContextMenu(
+        context: context,
+        position: position,
+        items: [
           if (current != 'approved')
-            CupertinoActionSheetAction(
-              onPressed: () async {
-                Navigator.pop(sheetCtx);
-                await ref.read(dbProvider).updateLineItem(
-                      item.copyWith(
-                          approvalStatus: const Value('approved')),
-                    );
-              },
-              child: const Text('Approve'),
+            ContextMenuAction(
+              label: 'Approve',
+              icon: CupertinoIcons.checkmark_circle,
+              onTap: () => db.updateLineItem(
+                  item.copyWith(approvalStatus: const Value('approved'))),
             ),
           if (current != 'declined')
-            CupertinoActionSheetAction(
-              isDestructiveAction: true,
-              onPressed: () async {
-                Navigator.pop(sheetCtx);
-                await ref.read(dbProvider).updateLineItem(
-                      item.copyWith(
-                          approvalStatus: const Value('declined')),
-                    );
-              },
-              child: const Text('Decline'),
+            ContextMenuAction(
+              label: 'Decline',
+              icon: CupertinoIcons.xmark_circle,
+              isDestructive: true,
+              onTap: () => db.updateLineItem(
+                  item.copyWith(approvalStatus: const Value('declined'))),
             ),
           if (current != null)
-            CupertinoActionSheetAction(
-              onPressed: () async {
-                Navigator.pop(sheetCtx);
-                await ref.read(dbProvider).updateLineItem(
-                      item.copyWith(
-                          approvalStatus: const Value(null)),
-                    );
-              },
-              child: const Text('Reset to Pending'),
+            ContextMenuAction(
+              label: 'Reset to Pending',
+              icon: CupertinoIcons.arrow_counterclockwise,
+              onTap: () => db.updateLineItem(
+                  item.copyWith(approvalStatus: const Value(null))),
             ),
         ],
-        cancelButton: CupertinoActionSheetAction(
-          isDefaultAction: true,
-          onPressed: () => Navigator.pop(sheetCtx),
-          child: const Text('Cancel'),
+      );
+    } else {
+      showCupertinoModalPopup<void>(
+        context: context,
+        builder: (sheetCtx) => CupertinoActionSheet(
+          title: Text(item.description),
+          message: const Text('Set customer approval status for this item'),
+          actions: [
+            if (current != 'approved')
+              CupertinoActionSheetAction(
+                onPressed: () async {
+                  Navigator.pop(sheetCtx);
+                  await db.updateLineItem(
+                      item.copyWith(approvalStatus: const Value('approved')));
+                },
+                child: const Text('Approve'),
+              ),
+            if (current != 'declined')
+              CupertinoActionSheetAction(
+                isDestructiveAction: true,
+                onPressed: () async {
+                  Navigator.pop(sheetCtx);
+                  await db.updateLineItem(
+                      item.copyWith(approvalStatus: const Value('declined')));
+                },
+                child: const Text('Decline'),
+              ),
+            if (current != null)
+              CupertinoActionSheetAction(
+                onPressed: () async {
+                  Navigator.pop(sheetCtx);
+                  await db.updateLineItem(
+                      item.copyWith(approvalStatus: const Value(null)));
+                },
+                child: const Text('Reset to Pending'),
+              ),
+          ],
+          cancelButton: CupertinoActionSheetAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(sheetCtx),
+            child: const Text('Cancel'),
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   @override
@@ -741,7 +860,9 @@ class _LineItemRow extends ConsumerWidget {
     final lineTotal = item.quantity * item.unitPrice;
     final qtyLabel = item.type == 'labor'
         ? '${_qty(item.quantity)} hr @ \$${item.unitPrice.toStringAsFixed(2)}/hr'
-        : '${_qty(item.quantity)} × \$${item.unitPrice.toStringAsFixed(2)}';
+        : item.type == 'other'
+            ? '\$${item.unitPrice.toStringAsFixed(2)}'
+            : '${_qty(item.quantity)} × \$${item.unitPrice.toStringAsFixed(2)}';
 
     final isDeclined = item.approvalStatus == 'declined';
     final isApproved = item.approvalStatus == 'approved';
@@ -807,7 +928,7 @@ class _LineItemRow extends ConsumerWidget {
               // ── Approval badge ──────────────────────────────────────────
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: () => _showApprovalSheet(context, ref),
+                onTapUp: (d) => _showApprovalSheet(context, ref, d.globalPosition),
                 child: Padding(
                   padding: const EdgeInsets.only(right: 12, top: 1),
                   child: Icon(approvalIcon, size: 20, color: approvalColor),
@@ -819,7 +940,8 @@ class _LineItemRow extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.type == 'labor' && item.laborName != null
+                      (item.type == 'labor' || item.type == 'other') &&
+                              item.laborName != null
                           ? item.laborName!
                           : item.description,
                       style: TextStyle(
@@ -905,25 +1027,11 @@ class _LineItemRow extends ConsumerWidget {
 }
 
 // ─── RO Banner ────────────────────────────────────────────────────────────────
-// Shows a "Convert to Repair Order" button when no RO exists for this estimate.
-// Shows a "View Repair Order" row when one already does.
+// Shows a "View Repair Order" row when an RO exists for this estimate.
+// When no RO exists, shows nothing (Convert button lives in the ACTIONS section).
 class _RoBanner extends ConsumerWidget {
   final Estimate estimate;
   const _RoBanner({required this.estimate});
-
-  Future<void> _convert(BuildContext context, WidgetRef ref) async {
-    final db = ref.read(dbProvider);
-    // Mark the estimate as approved
-    await db.updateEstimate(estimate.copyWith(status: 'approved'));
-    // Create the repair order, carrying over all the key details
-    final roId = await db.insertRepairOrder(RepairOrdersCompanion(
-      estimateId: Value(estimate.id),
-      customerId: Value(estimate.customerId),
-      vehicleId: Value(estimate.vehicleId),
-      note: Value(estimate.note),
-    ));
-    if (context.mounted) context.push('/repair-orders/ros/$roId');
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -933,20 +1041,7 @@ class _RoBanner extends ConsumerWidget {
       loading: () => const SizedBox.shrink(),
       error: (e, st) => const SizedBox.shrink(),
       data: (ro) {
-        if (ro == null) {
-          // No RO yet — show Convert as a standard action row
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _sectionHeaderStatic('ACTIONS'),
-              _ActionRow(
-                icon: CupertinoIcons.doc_text_fill,
-                label: 'Convert to Repair Order',
-                onTap: () => _convert(context, ref),
-              ),
-            ],
-          );
-        }
+        if (ro == null) return const SizedBox.shrink();
 
         // RO exists — show a "View RO" row in the same style
         final roNumber = 'RO-${ro.id.toString().padLeft(4, '0')}';
@@ -995,24 +1090,73 @@ class _RoBanner extends ConsumerWidget {
   }
 }
 
+// ─── Convert Row ──────────────────────────────────────────────────────────────
+// Shows "Convert to Repair Order" only when no RO exists for this estimate.
+// Placed inside the ACTIONS section at the bottom of the estimate detail page.
+class _ConvertRow extends ConsumerWidget {
+  final Estimate estimate;
+  const _ConvertRow({required this.estimate});
+
+  Future<void> _convert(BuildContext context, WidgetRef ref) async {
+    final db = ref.read(dbProvider);
+    await db.updateEstimate(estimate.copyWith(status: 'approved'));
+    final roId = await db.insertRepairOrder(RepairOrdersCompanion(
+      estimateId: Value(estimate.id),
+      customerId: Value(estimate.customerId),
+      vehicleId: Value(estimate.vehicleId),
+      note: Value(estimate.note),
+      serviceDate: Value(estimate.createdAt),
+    ));
+    if (context.mounted) context.push('/repair-orders/ros/$roId');
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final roAsync = ref.watch(roForEstimateProvider(estimate.id));
+    return roAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (ro) {
+        if (ro != null) return const SizedBox.shrink();
+        return Column(
+          children: [
+            Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+            Container(
+              color: CupertinoColors.white,
+              child: _ActionRow(
+                icon: CupertinoIcons.arrow_right_square_fill,
+                label: 'Convert to Repair Order',
+                onTap: () => _convert(context, ref),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 // ─── Action Row ───────────────────────────────────────────────────────────────
 // Standard action button style: blue icon + blue label + gray chevron.
 // Matches the "New Estimate" row on the vehicle detail screen.
 class _ActionRow extends StatelessWidget {
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final ValueChanged<Offset>? onTapUp;
 
   const _ActionRow({
     required this.icon,
     required this.label,
-    required this.onTap,
+    this.onTap,
+    this.onTapUp,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: onTapUp == null ? onTap : null,
+      onTapUp: onTapUp != null ? (d) => onTapUp!(d.globalPosition) : null,
       child: Container(
         color: CupertinoColors.white,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

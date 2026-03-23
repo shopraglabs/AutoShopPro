@@ -168,6 +168,16 @@ final appRouter = GoRouter(
                             parentLaborId: parentLaborId);
                       },
                     ),
+                    // Add other line item (fees, sublet, misc)
+                    GoRoute(
+                      path: 'line-items/other',
+                      builder: (context, state) {
+                        final id = int.parse(
+                            state.pathParameters['estimateId']!);
+                        return LineItemFormScreen(
+                            estimateId: id, type: 'other');
+                      },
+                    ),
                     // Edit existing line item
                     GoRoute(
                       path: 'line-items/:lineItemId/edit',

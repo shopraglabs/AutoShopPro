@@ -108,6 +108,11 @@ class RepairOrders extends Table {
   TextColumn get status => text().withDefault(const Constant('open'))();
   // Which technician is assigned to this RO (optional)
   IntColumn get technicianId => integer().nullable()();
+  // The actual date the work was performed — separate from createdAt (entry date).
+  // Null means not set; defaults to createdAt for display purposes.
+  DateTimeColumn get serviceDate => dateTime().nullable()();
+  // Optional comment printed on the invoice (e.g. warranty notes, terms).
+  TextColumn get comment => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -245,7 +250,7 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 23;
 
   // Drift runs this when it finds an older database on the device.
   @override
@@ -421,6 +426,24 @@ class AppDatabase extends _$AppDatabase {
         ).get();
         if (cols.isEmpty) {
           await m.addColumn(estimateLineItems, estimateLineItems.partNumber);
+        }
+      }
+      if (from < 22) {
+        // Added in v22: service_date on repair_orders (actual date work was done).
+        final cols = await m.database.customSelect(
+          "SELECT name FROM pragma_table_info('repair_orders') WHERE name='service_date'",
+        ).get();
+        if (cols.isEmpty) {
+          await m.addColumn(repairOrders, repairOrders.serviceDate);
+        }
+      }
+      if (from < 23) {
+        // Added in v23: comment on repair_orders (printed on invoice).
+        final cols = await m.database.customSelect(
+          "SELECT name FROM pragma_table_info('repair_orders') WHERE name='comment'",
+        ).get();
+        if (cols.isEmpty) {
+          await m.addColumn(repairOrders, repairOrders.comment);
         }
       }
     },
@@ -647,6 +670,41 @@ class AppDatabase extends _$AppDatabase {
         .toList());
   }
 
+  // Returns a live stream of all estimates for one vehicle, newest first.
+  Stream<List<EstimateWithDetails>> watchEstimatesForVehicle(int vehicleId) {
+    final q = select(estimates).join([
+      leftOuterJoin(customers, customers.id.equalsExp(estimates.customerId)),
+      leftOuterJoin(vehicles, vehicles.id.equalsExp(estimates.vehicleId)),
+    ]);
+    q.where(estimates.vehicleId.equals(vehicleId));
+    q.orderBy([OrderingTerm.desc(estimates.createdAt)]);
+    return q.watch().map((rows) => rows
+        .map((row) => EstimateWithDetails(
+              estimate: row.readTable(estimates),
+              customer: row.readTableOrNull(customers),
+              vehicle: row.readTableOrNull(vehicles),
+            ))
+        .toList());
+  }
+
+  // Returns a live stream of all ROs for one vehicle, newest first.
+  Stream<List<RepairOrderWithDetails>> watchRepairOrdersForVehicle(
+      int vehicleId) {
+    final q = select(repairOrders).join([
+      leftOuterJoin(customers, customers.id.equalsExp(repairOrders.customerId)),
+      leftOuterJoin(vehicles, vehicles.id.equalsExp(repairOrders.vehicleId)),
+    ]);
+    q.where(repairOrders.vehicleId.equals(vehicleId));
+    q.orderBy([OrderingTerm.desc(repairOrders.createdAt)]);
+    return q.watch().map((rows) => rows
+        .map((row) => RepairOrderWithDetails(
+              ro: row.readTable(repairOrders),
+              customer: row.readTableOrNull(customers),
+              vehicle: row.readTableOrNull(vehicles),
+            ))
+        .toList());
+  }
+
   // Adds a new repair order and returns its new id.
   Future<int> insertRepairOrder(RepairOrdersCompanion entry) =>
       into(repairOrders).insert(entry);
@@ -820,6 +878,70 @@ class AppDatabase extends _$AppDatabase {
               vehicle: row.readTableOrNull(vehicles),
             ))
         .toList());
+  }
+
+  // ─── Data Management ─────────────────────────────────────────────────────
+
+  /// Deletes all customer-facing records: customers, vehicles, estimates,
+  /// line items, and repair orders. Preserves shop config: settings,
+  /// vendors, technicians, inventory, templates, and markup rules.
+  Future<void> clearAllCustomerData() async {
+    await delete(estimateLineItems).go();
+    await delete(estimates).go();
+    await delete(repairOrders).go();
+    await delete(vehicles).go();
+    await delete(customers).go();
+  }
+
+  /// One-shot fetch of all ROs joined with customer + vehicle, for CSV export.
+  Future<List<RepairOrderWithDetails>> getAllRepairOrdersForExport() {
+    final q = select(repairOrders).join([
+      leftOuterJoin(customers, customers.id.equalsExp(repairOrders.customerId)),
+      leftOuterJoin(vehicles, vehicles.id.equalsExp(repairOrders.vehicleId)),
+    ]);
+    q.orderBy([OrderingTerm.desc(repairOrders.serviceDate),
+               OrderingTerm.desc(repairOrders.createdAt)]);
+    return q.get().then((rows) => rows
+        .map((row) => RepairOrderWithDetails(
+              ro: row.readTable(repairOrders),
+              customer: row.readTableOrNull(customers),
+              vehicle: row.readTableOrNull(vehicles),
+            ))
+        .toList());
+  }
+
+  /// Fetch all line items for a list of RO-linked estimate IDs, for CSV export.
+  Future<List<EstimateLineItem>> getLineItemsForEstimates(List<int> estimateIds) {
+    if (estimateIds.isEmpty) return Future.value([]);
+    return (select(estimateLineItems)
+          ..where((l) => l.estimateId.isIn(estimateIds)))
+        .get();
+  }
+
+  /// Find a customer by exact name + phone for duplicate detection during import.
+  Future<Customer?> findCustomerByNameAndPhone(String name, String phone) {
+    return (select(customers)
+          ..where((c) => c.name.equals(name) & c.phone.equals(phone)))
+        .getSingleOrNull();
+  }
+
+  /// Find a vehicle by VIN for duplicate detection during import.
+  Future<Vehicle?> findVehicleByVin(String vin) {
+    return (select(vehicles)
+          ..where((v) => v.vin.equals(vin)))
+        .getSingleOrNull();
+  }
+
+  /// One-shot fetch of all vendors (for import: match vendor name → id).
+  Future<List<Vendor>> getAllVendors() => select(vendors).get();
+
+  /// One-shot fetch of all technicians (for export: look up name by id).
+  Future<List<Technician>> getAllTechnicians() => select(technicians).get();
+
+  /// One-shot fetch of multiple estimates by id list (for export: tax rate + complaint).
+  Future<List<Estimate>> getEstimatesByIds(List<int> ids) {
+    if (ids.isEmpty) return Future.value([]);
+    return (select(estimates)..where((e) => e.id.isIn(ids))).get();
   }
 }
 

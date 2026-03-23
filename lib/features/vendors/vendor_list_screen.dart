@@ -47,10 +47,12 @@ class VendorListScreen extends ConsumerWidget {
                 ),
               );
             }
-            return ListView.builder(
-              itemCount: vendors.length,
-              itemBuilder: (context, i) =>
-                  _VendorRow(vendor: vendors[i]),
+            return CupertinoScrollbar(
+              child: ListView.builder(
+                itemCount: vendors.length,
+                itemBuilder: (context, i) =>
+                    _VendorRow(vendor: vendors[i]),
+              ),
             );
           },
         ),
@@ -114,7 +116,9 @@ class _VendorRow extends ConsumerWidget {
               ),
             ],
           ),
-          child: Container(
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Container(
             color: CupertinoColors.white,
             padding: const EdgeInsets.symmetric(
                 horizontal: 16, vertical: 14),
@@ -167,6 +171,7 @@ class _VendorRow extends ConsumerWidget {
               ],
             ),
           ),
+        ),
         ),
         Container(
           height: 0.5,

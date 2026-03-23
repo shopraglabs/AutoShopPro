@@ -77,12 +77,14 @@ class EstimateListScreen extends ConsumerWidget {
                 ),
               );
             }
-            return ListView.builder(
-              itemCount: estimates.length,
-              itemBuilder: (context, i) {
-                final item = estimates[i];
-                return _EstimateRow(item: item);
-              },
+            return CupertinoScrollbar(
+              child: ListView.builder(
+                itemCount: estimates.length,
+                itemBuilder: (context, i) {
+                  final item = estimates[i];
+                  return _EstimateRow(item: item);
+                },
+              ),
             );
           },
         ),
@@ -144,7 +146,9 @@ class _EstimateRow extends ConsumerWidget {
 
     return Column(
       children: [
-        GestureDetector(
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
           onTap: () =>
               context.push('/repair-orders/estimates/${item.estimate.id}'),
           onSecondaryTapUp: (details) => showContextMenu(
@@ -254,6 +258,7 @@ class _EstimateRow extends ConsumerWidget {
               ],
             ),
           ),
+        ),
         ),
         Container(
           height: 0.5,

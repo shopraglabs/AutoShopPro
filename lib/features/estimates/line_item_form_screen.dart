@@ -70,6 +70,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
   bool _syncingLabor = false;
 
   bool get _isLabor => widget.type == 'labor';
+  bool get _isOther => widget.type == 'other';
   bool get _isEditing => widget.lineItem != null;
 
   // Formats a double cleanly: 2.0 → "2", 2.5 → "2.5"
@@ -107,6 +108,14 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
             : tot.toStringAsFixed(2);
       } else {
         _loadDefaultLaborRate();
+      }
+    } else if (_isOther) {
+      // Other: just pre-fill name/desc/cost/list if editing
+      if (li != null) {
+        final cost = li.unitCost;
+        final list = li.unitPrice;
+        _unitList.text = list.toStringAsFixed(2);
+        if (cost != null) _unitCost.text = cost.toStringAsFixed(2);
       }
     } else {
       // Parts: wire up the auto-sync listeners
@@ -193,17 +202,19 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     }
   }
 
-  // Total changed → back-calculate Rate (hours stay fixed).
+  // Total changed → back-calculate Hours (rate stays fixed).
   void _onLaborTotalChanged() {
     if (_syncingLabor) return;
-    final hrs = double.tryParse(_quantity.text);
+    final rate = double.tryParse(_laborRate.text);
     final tot = double.tryParse(_laborTotal.text);
-    if (hrs == null || tot == null || hrs <= 0) return;
-    final rate = tot / hrs;
-    final rateStr = rate.toStringAsFixed(2);
-    if (_laborRate.text != rateStr) {
+    if (rate == null || tot == null || rate <= 0) return;
+    final hrs = tot / rate;
+    final hrsStr = hrs % 1 == 0
+        ? hrs.toInt().toString()
+        : hrs.toStringAsFixed(2);
+    if (_quantity.text != hrsStr) {
       _syncingLabor = true;
-      _laborRate.text = rateStr;
+      _quantity.text = hrsStr;
       _syncingLabor = false;
     }
   }
@@ -452,6 +463,43 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     final desc = _description.text.trim();
     final qty = double.tryParse(_quantity.text.replaceAll(',', ''));
 
+    // 'other' type uses name instead of description for required check
+    if (_isOther) {
+      final name = _laborName.text.trim();
+      if (name.isEmpty) {
+        _showError('Please enter a name.');
+        return;
+      }
+      final listPrice =
+          double.tryParse(_unitList.text.replaceAll(',', '')) ?? 0.0;
+      final cost =
+          double.tryParse(_unitCost.text.replaceAll(',', ''));
+      setState(() => _saving = true);
+      final db = ref.read(dbProvider);
+      if (_isEditing) {
+        await db.updateLineItem(widget.lineItem!.copyWith(
+          description: desc.isEmpty ? name : desc,
+          laborName: Value(name),
+          quantity: 1.0,
+          unitPrice: listPrice,
+          unitCost: Value(cost),
+        ));
+      } else {
+        await db.insertLineItem(EstimateLineItemsCompanion.insert(
+          estimateId: widget.estimateId,
+          type: 'other',
+          description: desc.isEmpty ? name : desc,
+          laborName: Value(name),
+          quantity: const Value(1.0),
+          unitPrice: listPrice,
+          unitCost: Value(cost),
+          approvalStatus: const Value('approved'),
+        ));
+      }
+      if (mounted) context.pop();
+      return;
+    }
+
     if (desc.isEmpty) {
       _showError('Please enter a description.');
       return;
@@ -583,8 +631,8 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     ref.watch(serviceTemplatesProvider);
 
     final title = _isEditing
-        ? (_isLabor ? 'Edit Labor' : 'Edit Part')
-        : (_isLabor ? 'Add Labor' : 'Add Part');
+        ? (_isLabor ? 'Edit Labor' : _isOther ? 'Edit Other' : 'Edit Part')
+        : (_isLabor ? 'Add Labor' : _isOther ? 'Add Other' : 'Add Part');
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
@@ -604,20 +652,78 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         child: ListView(
           children: [
             const SizedBox(height: 28),
-            _sectionHeader(_isLabor ? 'LABOR' : 'PART'),
+            _sectionHeader(_isLabor ? 'LABOR' : _isOther ? 'OTHER' : 'PART'),
             Container(
               color: CupertinoColors.white,
               child: Column(
                 children: [
+                  if (_isOther) ...[
+                    // ── Other: Name (required) ───────────────────────────────
+                    _Field(
+                      label: 'Name',
+                      controller: _laborName,
+                      placeholder: 'e.g. Sublet, Shop Supplies',
+                      textCapitalization: TextCapitalization.words,
+                      autofocus: true,
+                    ),
+                    _divider(),
+                    // ── Other: Description (optional) ────────────────────────
+                    _Field(
+                      label: 'Description',
+                      controller: _description,
+                      placeholder: 'Optional details',
+                      textCapitalization: TextCapitalization.sentences,
+                    ),
+                    _divider(),
+                    // ── Other: Cost ──────────────────────────────────────────
+                    _Field(
+                      label: 'Cost',
+                      controller: _unitCost,
+                      placeholder: '0',
+                      prefix: '\$',
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                      selectAllOnTap: true,
+                    ),
+                    _divider(),
+                    // ── Other: List Price ────────────────────────────────────
+                    _Field(
+                      label: 'List Price',
+                      controller: _unitList,
+                      placeholder: '0',
+                      prefix: '\$',
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*')),
+                      ],
+                      selectAllOnTap: true,
+                    ),
+                  ] else if (_isLabor) ...[
+                    // ── Labor: Name (shown first for labor) ──────────
+                    _Field(
+                      label: 'Labor Name',
+                      controller: _laborName,
+                      placeholder: 'e.g. Oil Change',
+                      textCapitalization: TextCapitalization.words,
+                      autofocus: true,
+                    ),
+                    _divider(),
+                  ],
                   // ── Shared: Description ──────────────────────────────
                   _Field(
-                    label: 'Description',
+                    label: _isLabor ? 'Labor Description' : 'Description',
                     controller: _description,
                     placeholder: _isLabor
                         ? 'e.g. Brake pad replacement'
                         : 'e.g. Brake Pads (front)',
                     textCapitalization: TextCapitalization.sentences,
-                    autofocus: true,
+                    autofocus: !_isLabor,
                   ),
                   _divider(),
                   // ── Shared: Qty / Hours ──────────────────────────────
@@ -636,14 +742,6 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                   _divider(),
 
                   if (_isLabor) ...[
-                    // ── Labor: Name ──────────────────────────────────
-                    _Field(
-                      label: 'Labor Name',
-                      controller: _laborName,
-                      placeholder: 'e.g. Oil Change',
-                      textCapitalization: TextCapitalization.words,
-                    ),
-                    _divider(),
                     // ── Labor: From Catalog picker ───────────────────
                     _CatalogPickerRow(
                       label: 'Operation',

@@ -396,12 +396,20 @@ class _HistorySection extends ConsumerWidget {
             final estimates = estSnap.data ?? [];
             final ros = roSnap.data ?? [];
 
+            // Estimates that already have an RO show up as the RO row instead.
+            // Collect all estimateIds claimed by an RO and skip those estimates.
+            final linkedEstimateIds = ros
+                .map((r) => r.ro.estimateId)
+                .whereType<int>()
+                .toSet();
+
             // Build a combined flat list sorted newest first
             // Each entry: (date, widget)
             final items = <({DateTime date, Widget row})>[];
 
             for (final e in estimates) {
               final est = e.estimate;
+              if (linkedEstimateIds.contains(est.id)) continue;
               items.add((
                 date: est.createdAt,
                 row: _HistoryRow(
@@ -427,7 +435,7 @@ class _HistorySection extends ConsumerWidget {
                   trailing: null,
                   statusLabel: _roStatusLabel(ro.status),
                   onTap: () => context
-                      .push('/repair-orders/ro/${ro.id}'),
+                      .push('/repair-orders/ros/${ro.id}'),
                 ),
               ));
             }
@@ -500,10 +508,6 @@ class _HistorySection extends ConsumerWidget {
     switch (status) {
       case 'open':
         return const Color(0xFF007AFF); // blue
-      case 'in_progress':
-        return const Color(0xFFFF9500); // orange
-      case 'completed':
-        return const Color(0xFF34C759); // green
       case 'closed':
         return const Color(0xFF8E8E93); // gray
       default:
@@ -526,10 +530,6 @@ class _HistorySection extends ConsumerWidget {
     switch (status) {
       case 'open':
         return 'Open';
-      case 'in_progress':
-        return 'In Progress';
-      case 'completed':
-        return 'Completed';
       case 'closed':
         return 'Closed';
       default:

@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../../database/database.dart';
+import '../../widgets/context_menu.dart';
 
 // ─── Money + number helpers ────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ Future<Uint8List> buildInvoicePdf({
   required double taxRate,
   required String? shopName,
   String? customerComplaint,
+  String? comment,
 }) async {
   final doc = pw.Document();
 
@@ -310,6 +312,17 @@ Future<Uint8List> buildInvoicePdf({
 
         pw.SizedBox(height: 40),
 
+        // ── Invoice Comment ───────────────────────────────────────────────────
+        if (comment != null && comment.isNotEmpty) ...[
+          pw.Divider(color: light, thickness: 0.5),
+          pw.SizedBox(height: 8),
+          pw.Text(
+            comment,
+            style: pw.TextStyle(fontSize: 10, color: mid),
+          ),
+          pw.SizedBox(height: 16),
+        ],
+
         // ── Footer ────────────────────────────────────────────────────────────
         pw.Center(
           child: pw.Text(
@@ -573,6 +586,7 @@ Future<Uint8List> buildSimpleInvoicePdf({
   required double taxRate,
   required String? shopName,
   String? customerComplaint,
+  String? comment,
 }) async {
   final doc = pw.Document();
 
@@ -857,6 +871,17 @@ Future<Uint8List> buildSimpleInvoicePdf({
 
         pw.SizedBox(height: 40),
 
+        // ── Invoice Comment ───────────────────────────────────────────────────
+        if (comment != null && comment.isNotEmpty) ...[
+          pw.Divider(color: light, thickness: 0.5),
+          pw.SizedBox(height: 8),
+          pw.Text(
+            comment,
+            style: pw.TextStyle(fontSize: 10, color: mid),
+          ),
+          pw.SizedBox(height: 16),
+        ],
+
         pw.Center(
           child: pw.Text(
             'Thank you for your business.',
@@ -886,8 +911,37 @@ Future<void> showInvoiceActions({
   required double taxRate,
   required String? shopName,
   String? customerComplaint,
+  String? comment,
   bool simple = false,
+  Offset? position,
 }) async {
+  if ((Platform.isMacOS || Platform.isWindows) && position != null) {
+    showContextMenu(
+      context: context,
+      position: position,
+      items: [
+        ContextMenuAction(
+          label: 'Save as PDF',
+          icon: CupertinoIcons.arrow_down_doc,
+          onTap: () => _handleSave(context, ro, customer, vehicle, lineItems,
+              taxRate, shopName, customerComplaint, simple, comment: comment),
+        ),
+        ContextMenuAction(
+          label: 'Print',
+          icon: CupertinoIcons.printer,
+          onTap: () => _handlePrint(context, ro, customer, vehicle, lineItems,
+              taxRate, shopName, customerComplaint, simple, comment: comment),
+        ),
+        ContextMenuAction(
+          label: 'Email',
+          icon: CupertinoIcons.mail,
+          onTap: () => _handleEmail(context, ro, customer, vehicle, lineItems,
+              taxRate, shopName, customerComplaint, simple, comment: comment),
+        ),
+      ],
+    );
+    return;
+  }
   await showCupertinoModalPopup<void>(
     context: context,
     builder: (sheetCtx) => CupertinoActionSheet(
@@ -898,7 +952,7 @@ Future<void> showInvoiceActions({
           onPressed: () async {
             Navigator.pop(sheetCtx);
             await _handleSave(context, ro, customer, vehicle, lineItems,
-                taxRate, shopName, customerComplaint, simple);
+                taxRate, shopName, customerComplaint, simple, comment: comment);
           },
           child: const Text('Save as PDF'),
         ),
@@ -906,7 +960,7 @@ Future<void> showInvoiceActions({
           onPressed: () async {
             Navigator.pop(sheetCtx);
             await _handlePrint(context, ro, customer, vehicle, lineItems,
-                taxRate, shopName, customerComplaint, simple);
+                taxRate, shopName, customerComplaint, simple, comment: comment);
           },
           child: const Text('Print'),
         ),
@@ -914,7 +968,7 @@ Future<void> showInvoiceActions({
           onPressed: () async {
             Navigator.pop(sheetCtx);
             await _handleEmail(context, ro, customer, vehicle, lineItems,
-                taxRate, shopName, customerComplaint, simple);
+                taxRate, shopName, customerComplaint, simple, comment: comment);
           },
           child: const Text('Email'),
         ),
@@ -936,8 +990,9 @@ Future<Uint8List> _buildBytes(
   double taxRate,
   String? shopName,
   String? customerComplaint,
-  bool simple,
-) =>
+  bool simple, {
+  String? comment,
+}) =>
     simple
         ? buildSimpleInvoicePdf(
             ro: ro,
@@ -947,6 +1002,7 @@ Future<Uint8List> _buildBytes(
             taxRate: taxRate,
             shopName: shopName,
             customerComplaint: customerComplaint,
+            comment: comment,
           )
         : buildInvoicePdf(
             ro: ro,
@@ -956,6 +1012,7 @@ Future<Uint8List> _buildBytes(
             taxRate: taxRate,
             shopName: shopName,
             customerComplaint: customerComplaint,
+            comment: comment,
           );
 
 Future<void> _handleSave(
@@ -967,11 +1024,13 @@ Future<void> _handleSave(
   double taxRate,
   String? shopName,
   String? customerComplaint,
-  bool simple,
-) async {
+  bool simple, {
+  String? comment,
+}) async {
   try {
     final bytes = await _buildBytes(
-        ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple);
+        ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple,
+        comment: comment);
     final path = await saveInvoiceToDownloads(bytes, ro.id);
     final fileName = path.split('/').last;
     if (context.mounted) {
@@ -1011,11 +1070,13 @@ Future<void> _handlePrint(
   double taxRate,
   String? shopName,
   String? customerComplaint,
-  bool simple,
-) async {
+  bool simple, {
+  String? comment,
+}) async {
   try {
     final bytes = await _buildBytes(
-        ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple);
+        ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple,
+        comment: comment);
     final path = await saveInvoiceToTemp(bytes, ro.id);
     await openInPreview(path);
     if (context.mounted) {
@@ -1048,11 +1109,13 @@ Future<void> _handleEmail(
   double taxRate,
   String? shopName,
   String? customerComplaint,
-  bool simple,
-) async {
+  bool simple, {
+  String? comment,
+}) async {
   try {
     final bytes = await _buildBytes(
-        ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple);
+        ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple,
+        comment: comment);
     final path = await saveInvoiceToTemp(bytes, ro.id);
     await openInMailWithAttachment(
       filePath: path,
@@ -1367,7 +1430,35 @@ Future<void> showEstimateActions({
   required Vehicle? vehicle,
   required List<EstimateLineItem> lineItems,
   required String? shopName,
+  Offset? position,
 }) async {
+  if ((Platform.isMacOS || Platform.isWindows) && position != null) {
+    showContextMenu(
+      context: context,
+      position: position,
+      items: [
+        ContextMenuAction(
+          label: 'Save as PDF',
+          icon: CupertinoIcons.arrow_down_doc,
+          onTap: () => _handleEstimateSave(
+              context, estimate, customer, vehicle, lineItems, shopName),
+        ),
+        ContextMenuAction(
+          label: 'Print',
+          icon: CupertinoIcons.printer,
+          onTap: () => _handleEstimatePrint(
+              context, estimate, customer, vehicle, lineItems, shopName),
+        ),
+        ContextMenuAction(
+          label: 'Email',
+          icon: CupertinoIcons.mail,
+          onTap: () => _handleEstimateEmail(
+              context, estimate, customer, vehicle, lineItems, shopName),
+        ),
+      ],
+    );
+    return;
+  }
   await showCupertinoModalPopup<void>(
     context: context,
     builder: (sheetCtx) => CupertinoActionSheet(

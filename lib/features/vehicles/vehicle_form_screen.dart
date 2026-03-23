@@ -165,7 +165,7 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
         licensePlate: Value(plateValue),
       ));
     } else {
-      await db.insertVehicle(VehiclesCompanion.insert(
+      final newId = await db.insertVehicle(VehiclesCompanion.insert(
         customerId: widget.customerId,
         year: Value(parseInt(_year.text)),
         make: Value(blankToNull(_make.text)),
@@ -174,6 +174,12 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
         mileage: Value(parseInt(_mileage.text)),
         licensePlate: Value(plateValue),
       ));
+      if (mounted) {
+        context.go(
+          '/repair-orders/customers/${widget.customerId}/vehicles/$newId',
+        );
+      }
+      return;
     }
 
     if (mounted) context.pop();

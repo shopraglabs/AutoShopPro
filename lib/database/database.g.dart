@@ -3142,6 +3142,28 @@ class $RepairOrdersTable extends RepairOrders
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _serviceDateMeta = const VerificationMeta(
+    'serviceDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> serviceDate = GeneratedColumn<DateTime>(
+    'service_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _commentMeta = const VerificationMeta(
+    'comment',
+  );
+  @override
+  late final GeneratedColumn<String> comment = GeneratedColumn<String>(
+    'comment',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -3163,6 +3185,8 @@ class $RepairOrdersTable extends RepairOrders
     note,
     status,
     technicianId,
+    serviceDate,
+    comment,
     createdAt,
   ];
   @override
@@ -3221,6 +3245,21 @@ class $RepairOrdersTable extends RepairOrders
         ),
       );
     }
+    if (data.containsKey('service_date')) {
+      context.handle(
+        _serviceDateMeta,
+        serviceDate.isAcceptableOrUnknown(
+          data['service_date']!,
+          _serviceDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('comment')) {
+      context.handle(
+        _commentMeta,
+        comment.isAcceptableOrUnknown(data['comment']!, _commentMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3264,6 +3303,14 @@ class $RepairOrdersTable extends RepairOrders
         DriftSqlType.int,
         data['${effectivePrefix}technician_id'],
       ),
+      serviceDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}service_date'],
+      ),
+      comment: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}comment'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -3285,6 +3332,8 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
   final String? note;
   final String status;
   final int? technicianId;
+  final DateTime? serviceDate;
+  final String? comment;
   final DateTime createdAt;
   const RepairOrder({
     required this.id,
@@ -3294,6 +3343,8 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     this.note,
     required this.status,
     this.technicianId,
+    this.serviceDate,
+    this.comment,
     required this.createdAt,
   });
   @override
@@ -3314,6 +3365,12 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     if (!nullToAbsent || technicianId != null) {
       map['technician_id'] = Variable<int>(technicianId);
     }
+    if (!nullToAbsent || serviceDate != null) {
+      map['service_date'] = Variable<DateTime>(serviceDate);
+    }
+    if (!nullToAbsent || comment != null) {
+      map['comment'] = Variable<String>(comment);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -3333,6 +3390,12 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
       technicianId: technicianId == null && nullToAbsent
           ? const Value.absent()
           : Value(technicianId),
+      serviceDate: serviceDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serviceDate),
+      comment: comment == null && nullToAbsent
+          ? const Value.absent()
+          : Value(comment),
       createdAt: Value(createdAt),
     );
   }
@@ -3350,6 +3413,8 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
       note: serializer.fromJson<String?>(json['note']),
       status: serializer.fromJson<String>(json['status']),
       technicianId: serializer.fromJson<int?>(json['technicianId']),
+      serviceDate: serializer.fromJson<DateTime?>(json['serviceDate']),
+      comment: serializer.fromJson<String?>(json['comment']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -3364,6 +3429,8 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
       'note': serializer.toJson<String?>(note),
       'status': serializer.toJson<String>(status),
       'technicianId': serializer.toJson<int?>(technicianId),
+      'serviceDate': serializer.toJson<DateTime?>(serviceDate),
+      'comment': serializer.toJson<String?>(comment),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -3376,6 +3443,8 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     Value<String?> note = const Value.absent(),
     String? status,
     Value<int?> technicianId = const Value.absent(),
+    Value<DateTime?> serviceDate = const Value.absent(),
+    Value<String?> comment = const Value.absent(),
     DateTime? createdAt,
   }) => RepairOrder(
     id: id ?? this.id,
@@ -3385,6 +3454,8 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     note: note.present ? note.value : this.note,
     status: status ?? this.status,
     technicianId: technicianId.present ? technicianId.value : this.technicianId,
+    serviceDate: serviceDate.present ? serviceDate.value : this.serviceDate,
+    comment: comment.present ? comment.value : this.comment,
     createdAt: createdAt ?? this.createdAt,
   );
   RepairOrder copyWithCompanion(RepairOrdersCompanion data) {
@@ -3402,6 +3473,10 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
       technicianId: data.technicianId.present
           ? data.technicianId.value
           : this.technicianId,
+      serviceDate: data.serviceDate.present
+          ? data.serviceDate.value
+          : this.serviceDate,
+      comment: data.comment.present ? data.comment.value : this.comment,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -3416,6 +3491,8 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
           ..write('note: $note, ')
           ..write('status: $status, ')
           ..write('technicianId: $technicianId, ')
+          ..write('serviceDate: $serviceDate, ')
+          ..write('comment: $comment, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -3430,6 +3507,8 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     note,
     status,
     technicianId,
+    serviceDate,
+    comment,
     createdAt,
   );
   @override
@@ -3443,6 +3522,8 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
           other.note == this.note &&
           other.status == this.status &&
           other.technicianId == this.technicianId &&
+          other.serviceDate == this.serviceDate &&
+          other.comment == this.comment &&
           other.createdAt == this.createdAt);
 }
 
@@ -3454,6 +3535,8 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
   final Value<String?> note;
   final Value<String> status;
   final Value<int?> technicianId;
+  final Value<DateTime?> serviceDate;
+  final Value<String?> comment;
   final Value<DateTime> createdAt;
   const RepairOrdersCompanion({
     this.id = const Value.absent(),
@@ -3463,6 +3546,8 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     this.note = const Value.absent(),
     this.status = const Value.absent(),
     this.technicianId = const Value.absent(),
+    this.serviceDate = const Value.absent(),
+    this.comment = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   RepairOrdersCompanion.insert({
@@ -3473,6 +3558,8 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     this.note = const Value.absent(),
     this.status = const Value.absent(),
     this.technicianId = const Value.absent(),
+    this.serviceDate = const Value.absent(),
+    this.comment = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : customerId = Value(customerId);
   static Insertable<RepairOrder> custom({
@@ -3483,6 +3570,8 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     Expression<String>? note,
     Expression<String>? status,
     Expression<int>? technicianId,
+    Expression<DateTime>? serviceDate,
+    Expression<String>? comment,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -3493,6 +3582,8 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
       if (note != null) 'note': note,
       if (status != null) 'status': status,
       if (technicianId != null) 'technician_id': technicianId,
+      if (serviceDate != null) 'service_date': serviceDate,
+      if (comment != null) 'comment': comment,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -3505,6 +3596,8 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     Value<String?>? note,
     Value<String>? status,
     Value<int?>? technicianId,
+    Value<DateTime?>? serviceDate,
+    Value<String?>? comment,
     Value<DateTime>? createdAt,
   }) {
     return RepairOrdersCompanion(
@@ -3515,6 +3608,8 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
       note: note ?? this.note,
       status: status ?? this.status,
       technicianId: technicianId ?? this.technicianId,
+      serviceDate: serviceDate ?? this.serviceDate,
+      comment: comment ?? this.comment,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -3543,6 +3638,12 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     if (technicianId.present) {
       map['technician_id'] = Variable<int>(technicianId.value);
     }
+    if (serviceDate.present) {
+      map['service_date'] = Variable<DateTime>(serviceDate.value);
+    }
+    if (comment.present) {
+      map['comment'] = Variable<String>(comment.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3559,6 +3660,8 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
           ..write('note: $note, ')
           ..write('status: $status, ')
           ..write('technicianId: $technicianId, ')
+          ..write('serviceDate: $serviceDate, ')
+          ..write('comment: $comment, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -7068,6 +7171,8 @@ typedef $$RepairOrdersTableCreateCompanionBuilder =
       Value<String?> note,
       Value<String> status,
       Value<int?> technicianId,
+      Value<DateTime?> serviceDate,
+      Value<String?> comment,
       Value<DateTime> createdAt,
     });
 typedef $$RepairOrdersTableUpdateCompanionBuilder =
@@ -7079,6 +7184,8 @@ typedef $$RepairOrdersTableUpdateCompanionBuilder =
       Value<String?> note,
       Value<String> status,
       Value<int?> technicianId,
+      Value<DateTime?> serviceDate,
+      Value<String?> comment,
       Value<DateTime> createdAt,
     });
 
@@ -7123,6 +7230,16 @@ class $$RepairOrdersTableFilterComposer
 
   ColumnFilters<int> get technicianId => $composableBuilder(
     column: $table.technicianId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get serviceDate => $composableBuilder(
+    column: $table.serviceDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get comment => $composableBuilder(
+    column: $table.comment,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7176,6 +7293,16 @@ class $$RepairOrdersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get serviceDate => $composableBuilder(
+    column: $table.serviceDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get comment => $composableBuilder(
+    column: $table.comment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -7217,6 +7344,14 @@ class $$RepairOrdersTableAnnotationComposer
     column: $table.technicianId,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get serviceDate => $composableBuilder(
+    column: $table.serviceDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get comment =>
+      $composableBuilder(column: $table.comment, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -7260,6 +7395,8 @@ class $$RepairOrdersTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int?> technicianId = const Value.absent(),
+                Value<DateTime?> serviceDate = const Value.absent(),
+                Value<String?> comment = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => RepairOrdersCompanion(
                 id: id,
@@ -7269,6 +7406,8 @@ class $$RepairOrdersTableTableManager
                 note: note,
                 status: status,
                 technicianId: technicianId,
+                serviceDate: serviceDate,
+                comment: comment,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -7280,6 +7419,8 @@ class $$RepairOrdersTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int?> technicianId = const Value.absent(),
+                Value<DateTime?> serviceDate = const Value.absent(),
+                Value<String?> comment = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => RepairOrdersCompanion.insert(
                 id: id,
@@ -7289,6 +7430,8 @@ class $$RepairOrdersTableTableManager
                 note: note,
                 status: status,
                 technicianId: technicianId,
+                serviceDate: serviceDate,
+                comment: comment,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

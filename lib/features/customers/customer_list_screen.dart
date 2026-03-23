@@ -74,7 +74,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                   if (filtered.isEmpty) {
                     return _buildEmpty();
                   }
-                  return ListView.separated(
+                  return CupertinoScrollbar(
+                    child: ListView.separated(
                     itemCount: filtered.length,
                     separatorBuilder: (_, __) => Container(
                       height: 0.5,
@@ -90,7 +91,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                             '/repair-orders/customers/${customer.id}'),
                       );
                     },
-                  );
+                  ));
                 },
               ),
             ),
@@ -171,7 +172,9 @@ class _CustomerTile extends ConsumerWidget {
     final initial =
         customer.name.isNotEmpty ? customer.name[0].toUpperCase() : '?';
 
-    return GestureDetector(
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
       onTap: onTap,
       onSecondaryTapUp: (details) => showContextMenu(
         context: context,
@@ -257,6 +260,7 @@ class _CustomerTile extends ConsumerWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

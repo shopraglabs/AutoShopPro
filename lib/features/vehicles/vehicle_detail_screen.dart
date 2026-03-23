@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -176,6 +175,11 @@ class _VehicleDetail extends ConsumerWidget {
               ],
             ),
 
+            const SizedBox(height: 28),
+
+            // Vehicle history
+            _VehicleHistorySection(vehicle: vehicle),
+
             const SizedBox(height: 24),
 
             // Delete — subtle text link
@@ -238,6 +242,208 @@ class _VehicleDetail extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Vehicle History ──────────────────────────────────────────────────────────
+class _VehicleHistorySection extends ConsumerWidget {
+  final Vehicle vehicle;
+  const _VehicleHistorySection({required this.vehicle});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(dbProvider);
+    return StreamBuilder<List<EstimateWithDetails>>(
+      stream: db.watchEstimatesForVehicle(vehicle.id),
+      builder: (context, estSnap) {
+        return StreamBuilder<List<RepairOrderWithDetails>>(
+          stream: db.watchRepairOrdersForVehicle(vehicle.id),
+          builder: (context, roSnap) {
+            final estimates = estSnap.data ?? [];
+            final ros = roSnap.data ?? [];
+
+            // If an estimate has a linked RO, show the RO row only
+            final linkedEstimateIds = ros
+                .map((r) => r.ro.estimateId)
+                .whereType<int>()
+                .toSet();
+
+            final items = <({DateTime date, Widget row})>[];
+
+            for (final e in estimates) {
+              if (linkedEstimateIds.contains(e.estimate.id)) continue;
+              final est = e.estimate;
+              items.add((
+                date: est.createdAt,
+                row: _VehicleHistoryRow(
+                  dot: _estimateDot(est.status),
+                  label: 'EST-${est.id.toString().padLeft(4, '0')}',
+                  statusLabel: _estimateStatusLabel(est.status),
+                  onTap: () =>
+                      context.push('/repair-orders/estimates/${est.id}'),
+                ),
+              ));
+            }
+
+            for (final r in ros) {
+              final ro = r.ro;
+              items.add((
+                date: ro.createdAt,
+                row: _VehicleHistoryRow(
+                  dot: _roDot(ro.status),
+                  label: 'RO-${ro.id.toString().padLeft(4, '0')}',
+                  statusLabel: _roStatusLabel(ro.status),
+                  onTap: () => context.push('/repair-orders/ros/${ro.id}'),
+                ),
+              ));
+            }
+
+            items.sort((a, b) => b.date.compareTo(a.date));
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Text(
+                    'HISTORY',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF8E8E93),
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                Container(
+                  color: CupertinoColors.white,
+                  child: items.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          child: Text(
+                            'No estimates or repair orders yet.',
+                            style: TextStyle(
+                                fontSize: 15, color: Color(0xFF8E8E93)),
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            for (int i = 0; i < items.length; i++) ...[
+                              items[i].row,
+                              if (i < items.length - 1)
+                                Container(
+                                  height: 0.5,
+                                  color: const Color(0xFFE5E5EA),
+                                  margin: const EdgeInsets.only(left: 38),
+                                ),
+                            ],
+                          ],
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Color _estimateDot(String status) {
+    switch (status) {
+      case 'approved':
+        return const Color(0xFF34C759);
+      case 'declined':
+        return const Color(0xFFFF3B30);
+      default:
+        return const Color(0xFF8E8E93);
+    }
+  }
+
+  Color _roDot(String status) {
+    switch (status) {
+      case 'open':
+        return const Color(0xFF007AFF);
+      default:
+        return const Color(0xFF8E8E93);
+    }
+  }
+
+  String _estimateStatusLabel(String status) {
+    switch (status) {
+      case 'approved':
+        return 'Approved';
+      case 'declined':
+        return 'Declined';
+      default:
+        return 'Estimate';
+    }
+  }
+
+  String _roStatusLabel(String status) {
+    switch (status) {
+      case 'open':
+        return 'Open';
+      case 'closed':
+        return 'Closed';
+      default:
+        return status;
+    }
+  }
+}
+
+class _VehicleHistoryRow extends StatelessWidget {
+  final Color dot;
+  final String label;
+  final String statusLabel;
+  final VoidCallback onTap;
+
+  const _VehicleHistoryRow({
+    required this.dot,
+    required this.label,
+    required this.statusLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          color: CupertinoColors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF1C1C1E),
+                  ),
+                ),
+              ),
+              Text(
+                statusLabel,
+                style: TextStyle(fontSize: 13, color: dot),
+              ),
+              const SizedBox(width: 6),
+              const Icon(CupertinoIcons.chevron_right,
+                  size: 14, color: Color(0xFFC7C7CC)),
+            ],
+          ),
+        ),
       ),
     );
   }

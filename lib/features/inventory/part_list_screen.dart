@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
 import '../../widgets/context_menu.dart';
-import '../customers/customers_provider.dart' show dbProvider;
+import '../customers/customers_provider.dart';
 import 'inventory_provider.dart';
 
 class PartListScreen extends ConsumerStatefulWidget {
@@ -85,6 +85,7 @@ class _PartListScreenState extends ConsumerState<PartListScreen> {
                   .toList();
 
           return SafeArea(
+            child: CupertinoScrollbar(
             child: CustomScrollView(
               slivers: [
                 // Search bar — scrolls with the list
@@ -119,7 +120,9 @@ class _PartListScreenState extends ConsumerState<PartListScreen> {
                       final status = _stockStatus(part);
                       final isLast = index == filtered.length - 1;
 
-                      return GestureDetector(
+                      return MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
                         onSecondaryTapUp: (details) => showContextMenu(
                           context: context,
                           position: details.globalPosition,
@@ -259,12 +262,14 @@ class _PartListScreenState extends ConsumerState<PartListScreen> {
                           ],
                         ),
                         ),
+                        ),
                       );
                     },
                     childCount: filtered.length,
                   ),
                 ),
               ],
+            ),
             ),
           );
         },

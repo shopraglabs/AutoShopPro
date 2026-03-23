@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
 import '../customers/customers_provider.dart';
 import '../settings/markup_rules_provider.dart';
+import '../../widgets/context_menu.dart';
 
 const _kCategories = ['Part', 'Fluid', 'Filter', 'Chemical', 'Other'];
 
@@ -145,8 +147,21 @@ class _PartFormScreenState extends ConsumerState<PartFormScreen> {
 
   // ── Category picker ────────────────────────────────────────────────────────
 
-  Future<void> _pickCategory() async {
-    await showCupertinoModalPopup<void>(
+  void _pickCategory({Offset? position}) {
+    if ((Platform.isMacOS || Platform.isWindows) && position != null) {
+      showContextMenu(
+        context: context,
+        position: position,
+        items: _kCategories
+            .map((cat) => ContextMenuAction(
+                  label: cat,
+                  onTap: () => setState(() => _category = cat),
+                ))
+            .toList(),
+      );
+      return;
+    }
+    showCupertinoModalPopup<void>(
       context: context,
       builder: (sheetCtx) => CupertinoActionSheet(
         title: const Text('Category'),
@@ -444,7 +459,7 @@ class _PartFormScreenState extends ConsumerState<PartFormScreen> {
                   ),
                 ),
                 GestureDetector(
-                  onTap: _pickCategory,
+                  onTapUp: (d) => _pickCategory(position: d.globalPosition),
                   child: Container(
                     color: CupertinoColors.systemBackground,
                     padding: const EdgeInsets.symmetric(

@@ -3,7 +3,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
+import '../../widgets/context_menu.dart';
 import '../customers/customers_provider.dart';
+import '../data/data_service.dart';
 import 'markup_rules_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -467,11 +469,232 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
 
+                  const SizedBox(height: 20),
+
+                  // ── Data Management ───────────────────────────────────────
+                  _sectionHeader('DATA MANAGEMENT'),
+                  Container(
+                    color: CupertinoColors.systemBackground,
+                    child: Column(
+                      children: [
+                        // Export
+                        GestureDetector(
+                          onTap: _exportCsv,
+                          child: Container(
+                            color: CupertinoColors.systemBackground,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
+                            child: const Row(
+                              children: [
+                                Icon(CupertinoIcons.arrow_up_doc,
+                                    size: 18, color: Color(0xFF007AFF)),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text('Export to CSV',
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          color: Color(0xFF007AFF))),
+                                ),
+                                Icon(CupertinoIcons.chevron_right,
+                                    size: 16, color: Color(0xFFC7C7CC)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+                        // Import
+                        GestureDetector(
+                          onTap: _importCsv,
+                          child: Container(
+                            color: CupertinoColors.systemBackground,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
+                            child: const Row(
+                              children: [
+                                Icon(CupertinoIcons.arrow_down_doc,
+                                    size: 18, color: Color(0xFF007AFF)),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text('Import from CSV',
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          color: Color(0xFF007AFF))),
+                                ),
+                                Icon(CupertinoIcons.chevron_right,
+                                    size: 16, color: Color(0xFFC7C7CC)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Danger Zone ───────────────────────────────────────────
+                  _sectionHeader('DANGER ZONE'),
+                  Container(
+                    color: CupertinoColors.systemBackground,
+                    child: Center(
+                      child: CupertinoButton(
+                        onPressed: _confirmClearData,
+                        child: const Text(
+                          'Clear All Customer Data',
+                          style: TextStyle(
+                              color: CupertinoColors.destructiveRed),
+                        ),
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 32),
                 ],
               ),
             )
           : const Center(child: CupertinoActivityIndicator()),
+    );
+  }
+
+  Future<void> _exportCsv() async {
+    final svc = ref.read(dataServiceProvider);
+    try {
+      final path = await svc.exportToCsv();
+      if (!mounted) return;
+      await showCupertinoDialog<void>(
+        context: context,
+        builder: (dialogCtx) => CupertinoAlertDialog(
+          title: const Text('Export Complete'),
+          content: Text('Saved to:\n$path'),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showError('Export failed: $e');
+    }
+  }
+
+  Future<void> _importCsv() async {
+    final svc = ref.read(dataServiceProvider);
+    try {
+      final path = await svc.pickCsvFile();
+      if (path == null) return; // user cancelled
+      if (!mounted) return;
+
+      // Show a loading indicator
+      showCupertinoDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogCtx) => const CupertinoAlertDialog(
+          title: Text('Importing…'),
+          content: Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: CupertinoActivityIndicator(),
+          ),
+        ),
+      );
+
+      final result = await svc.importFromCsv(path);
+      if (!mounted) return;
+      Navigator.pop(context); // dismiss loading
+
+      final summary = [
+        '${result.customersCreated} customers added',
+        '${result.vehiclesCreated} vehicles added',
+        '${result.recordsCreated} records created',
+        if (result.duplicatesSkipped > 0)
+          '${result.duplicatesSkipped} duplicates skipped',
+        if (result.errors.isNotEmpty)
+          '${result.errors.length} errors (see below)',
+      ].join('\n');
+
+      final errorDetail = result.errors.take(5).join('\n');
+
+      await showCupertinoDialog<void>(
+        context: context,
+        builder: (dialogCtx) => CupertinoAlertDialog(
+          title: const Text('Import Complete'),
+          content: Text(
+              '$summary${errorDetail.isNotEmpty ? '\n\n$errorDetail' : ''}'),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showError('Import failed: $e');
+    }
+  }
+
+  Future<void> _confirmClearData() async {
+    await showCupertinoDialog<void>(
+      context: context,
+      builder: (dialogCtx) => CupertinoAlertDialog(
+        title: const Text('Clear All Customer Data?'),
+        content: const Text(
+            'This permanently deletes all customers, vehicles, estimates, '
+            'and repair orders. Your shop settings, templates, technicians, '
+            'vendors, and inventory are kept.\n\nThis cannot be undone.'),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              await ref.read(dbProvider).clearAllCustomerData();
+              if (!mounted) return;
+              await showCupertinoDialog<void>(
+                context: context,
+                builder: (d) => CupertinoAlertDialog(
+                  title: const Text('Done'),
+                  content:
+                      const Text('All customer data has been cleared.'),
+                  actions: [
+                    CupertinoDialogAction(
+                      isDefaultAction: true,
+                      onPressed: () => Navigator.pop(d),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+            },
+            child: const Text('Clear Everything'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    showCupertinoDialog<void>(
+      context: context,
+      builder: (dialogCtx) => CupertinoAlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -502,8 +725,28 @@ class _MarkupRuleRow extends StatelessWidget {
             color: CupertinoColors.white, size: 20),
       ),
       onDismissed: (_) => onDelete(),
-      child: GestureDetector(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
         onTap: onEdit,
+        onSecondaryTapUp: (details) => showContextMenu(
+          context: context,
+          position: details.globalPosition,
+          items: [
+            ContextMenuAction(
+              label: 'Edit',
+              icon: CupertinoIcons.pencil,
+              onTap: onEdit,
+            ),
+            contextMenuDivider,
+            ContextMenuAction(
+              label: 'Delete',
+              icon: CupertinoIcons.trash,
+              isDestructive: true,
+              onTap: onDelete,
+            ),
+          ],
+        ),
         child: Container(
           color: CupertinoColors.systemBackground,
           padding:
@@ -528,6 +771,7 @@ class _MarkupRuleRow extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

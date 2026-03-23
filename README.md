@@ -6,6 +6,8 @@ A cross-platform automotive shop management app built with Flutter. One codebase
 
 ## Project Status
 
+**v0.10.0 — Buttoned Up** — Simplified RO flow (Open → Closed only), "Other" line item type, invoice comment field on ROs (prints on PDF), editable customer concerns, vehicle history on vehicle detail, Complete All button on open ROs, desktop dropdown menus, and scrollbars throughout.
+
 **v0.9.0 — Dialed In** — UX polish: Add Part button under each labor row (auto-linked), customer complaints shown on estimate detail, template linked parts as opt-in dropdown with quantities, part number field on line items, new estimate from vehicle page goes through the form with customer/vehicle pre-filled, and number fields now select-all on tap throughout the app.
 
 **v0.8.0 — Linked Up** — Templates now link to inventory parts; applying a template drops in the labor line plus all linked parts in one tap. Parts inventory has categories (Part/Fluid/Filter/Chemical) and a full markup calculator with auto-tier rules. Labor names show as bold titles throughout estimates, ROs, and invoice PDFs.

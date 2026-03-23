@@ -297,6 +297,27 @@ The heart of the app. Everything else depends on this.
 
 ---
 
+### UX Polish & RO Cleanup (v0.10.0 Buttoned Up)
+- ✅ Scrollbars on vendor, technician, and part list screens (CupertinoScrollbar)
+- ✅ Hover cursors on list rows throughout the app (MouseRegion)
+- ✅ Dropdown context menus on desktop for category pickers, approval badge, invoice actions
+- ✅ After saving a new vehicle → navigate to that vehicle's detail page
+- ✅ Labor form field order: Labor Name first, then Labor Description
+- ✅ Typing in the Total field back-calculates Hours (rate stays fixed)
+- ✅ Duplicate customer concerns removed from estimate detail header
+- ✅ Customer concern editable after entry — Add/Edit link next to section title
+- ✅ Vehicle history section on vehicle detail page (estimates + ROs, deduplication)
+- ✅ "Complete All Services" button on open ROs — checks every item done in one tap
+- ✅ Simplified RO status: Open → Closed only (removed In Progress and Completed)
+- ✅ RO list filter pills: All / Open / Closed
+- ✅ Edit Repair Order consolidates Edit Estimate + Edit Record into one button
+- ✅ "Other" line item type — name, description, cost, list price; shown in OTHER section
+- ✅ RO invoice comment field — Add/Edit on RO detail; prints on PDF invoices
+- ✅ Schema v23 — comment column on repair_orders
+- ✅ Apply Template removed from ADD ITEMS (template access is in Add Labor → Operation)
+
+---
+
 ### Backend (Go — planned)
 - ⬜ Go project scaffolding
 - ⬜ PostgreSQL schema

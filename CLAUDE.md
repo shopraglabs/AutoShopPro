@@ -35,7 +35,7 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **Line items** — add labor (hrs × rate, default rate from settings), add parts (unit cost + markup % / $ / list, part number, vendor picker, link to labor line), swipe to delete, live total preview, edit existing items; Add Part button under each labor row pre-links the part
 - **Parts display** — grouped under their linked labor line sub-header in estimate and RO detail
 - **Estimate approval** — tap circle badge on any line item to approve or decline; declined items show strikethrough/gray and are excluded from totals; "X items declined" footnote in totals section
-- **Repair Orders** — convert estimate → RO (declined items excluded), RO list (color-coded status, status filter pills), RO detail, status flow (Open → In Progress → Completed → Closed), mark items done per line item, Edit Estimate link on non-closed ROs, edit RO note, assign technician from bottom sheet picker
+- **Repair Orders** — convert estimate → RO (declined items excluded), RO list (color-coded status, filter pills: All/Open/Closed), RO detail, status flow (Open → Closed), mark items done per line item, Complete All button, Edit Repair Order, edit RO note, assign technician from bottom sheet picker, invoice comment field (shown on PDFs), service date picker
 - **Vendors** — list, add/edit/delete, account # forced uppercase, contact name
 - **Shop settings** — default labor rate + parts markup, stored in DB, accessible via ⌘,
 - **macOS menu bar** — AutoShopPro / File (⌘N, ⇧⌘N, ⌘F for Search) / Window / Help
@@ -50,7 +50,10 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **Global search** — Search screen in sidebar + ⌘F; searches customers, vehicles, estimates, and ROs simultaneously; results grouped by section with direct navigation
 - **Inline search in pickers** — all picker/dropdown sheets (customer, vehicle, vendor, labor, technician, template) autofocus a search field; list filters as you type
 - **Default approve** — new line items save as approved automatically
-- **Database** — Drift/SQLite, schema v21, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts
+- **Other line items** — third line item type (alongside labor and parts); fields: name, description, cost, list price; displayed in OTHER section on estimates and ROs
+- **Vehicle history** — vehicle detail page shows all estimates and ROs for that vehicle, chronological, deduplicated
+- **Customer concern editing** — Add/Edit link next to "CUSTOMER CONCERN" section title on estimate detail; opens dialog to set or change the complaint text
+- **Database** — Drift/SQLite, schema v23, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
@@ -229,4 +232,4 @@ onTap: () => controller.selection = TextSelection(
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.9.0 Dialed In
+v0.10.0 Buttoned Up

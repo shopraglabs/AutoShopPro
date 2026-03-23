@@ -2,10 +2,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../database/database.dart';
-import '../customers/customers_provider.dart' show dbProvider;
+import '../../widgets/context_menu.dart';
+import '../customers/customers_provider.dart';
 import 'service_templates_provider.dart';
 
-// List of all saved service templates. Tap a row to edit. Swipe to delete.
+// List of all saved service templates. Tap to edit. Right-click or swipe to delete.
 class ServiceTemplateListScreen extends ConsumerWidget {
   const ServiceTemplateListScreen({super.key});
 
@@ -63,96 +64,148 @@ class ServiceTemplateListScreen extends ConsumerWidget {
 
   Widget _list(BuildContext context, WidgetRef ref,
       List<ServiceTemplate> templates) {
-    return ListView.builder(
-      itemCount: templates.length,
-      itemBuilder: (context, i) {
-        final t = templates[i];
-        return Column(
-          children: [
-            if (i == 0)
-              Container(height: 0.5, color: const Color(0xFFE5E5EA)),
-            Dismissible(
-              key: ValueKey(t.id),
-              direction: DismissDirection.endToStart,
-              background: Container(
-                color: CupertinoColors.destructiveRed,
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 20),
-                child: const Icon(CupertinoIcons.trash,
-                    color: CupertinoColors.white),
-              ),
-              confirmDismiss: (_) async {
-                bool confirmed = false;
-                await showCupertinoDialog(
-                  context: context,
-                  builder: (d) => CupertinoAlertDialog(
-                    title: Text('Delete "${t.name}"?'),
-                    content: const Text(
-                        'This template will be permanently removed.'),
-                    actions: [
-                      CupertinoDialogAction(
-                        isDestructiveAction: true,
-                        onPressed: () {
-                          confirmed = true;
-                          Navigator.pop(d);
-                        },
-                        child: const Text('Delete'),
-                      ),
-                      CupertinoDialogAction(
-                        isDefaultAction: true,
-                        onPressed: () => Navigator.pop(d),
-                        child: const Text('Cancel'),
-                      ),
-                    ],
-                  ),
-                );
-                return confirmed;
-              },
-              onDismissed: (_) =>
-                  ref.read(dbProvider).deleteServiceTemplate(t.id),
-              child: GestureDetector(
-                onTap: () => context.push(
-                    '/settings/service-templates/${t.id}/edit'),
-                child: Container(
-                  color: CupertinoColors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 13),
-                  child: Row(
-                    children: [
-                      const Icon(CupertinoIcons.doc_text,
-                          size: 18, color: Color(0xFF007AFF)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(t.name,
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Color(0xFF1C1C1E))),
-                            Text(
-                              '${_fmtHours(t.defaultHours)} hr · ${t.laborDescription}',
-                              style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Color(0xFF8E8E93)),
-                            ),
-                          ],
+    return CupertinoScrollbar(
+      child: ListView.builder(
+        itemCount: templates.length,
+        itemBuilder: (context, i) {
+          final t = templates[i];
+          return Column(
+            children: [
+              if (i == 0)
+                Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+              Dismissible(
+                key: ValueKey(t.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  color: CupertinoColors.destructiveRed,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  child: const Icon(CupertinoIcons.trash,
+                      color: CupertinoColors.white),
+                ),
+                confirmDismiss: (_) async {
+                  bool confirmed = false;
+                  await showCupertinoDialog(
+                    context: context,
+                    builder: (d) => CupertinoAlertDialog(
+                      title: Text('Delete "${t.name}"?'),
+                      content: const Text(
+                          'This template will be permanently removed.'),
+                      actions: [
+                        CupertinoDialogAction(
+                          isDestructiveAction: true,
+                          onPressed: () {
+                            confirmed = true;
+                            Navigator.pop(d);
+                          },
+                          child: const Text('Delete'),
                         ),
+                        CupertinoDialogAction(
+                          isDefaultAction: true,
+                          onPressed: () => Navigator.pop(d),
+                          child: const Text('Cancel'),
+                        ),
+                      ],
+                    ),
+                  );
+                  return confirmed;
+                },
+                onDismissed: (_) =>
+                    ref.read(dbProvider).deleteServiceTemplate(t.id),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => context.push(
+                        '/settings/service-templates/${t.id}/edit'),
+                    onSecondaryTapUp: (details) => showContextMenu(
+                      context: context,
+                      position: details.globalPosition,
+                      items: [
+                        ContextMenuAction(
+                          label: 'Edit',
+                          icon: CupertinoIcons.pencil,
+                          onTap: () => context.push(
+                              '/settings/service-templates/${t.id}/edit'),
+                        ),
+                        contextMenuDivider,
+                        ContextMenuAction(
+                          label: 'Delete',
+                          icon: CupertinoIcons.trash,
+                          isDestructive: true,
+                          onTap: () async {
+                            bool confirmed = false;
+                            await showCupertinoDialog(
+                              context: context,
+                              builder: (d) => CupertinoAlertDialog(
+                                title: Text('Delete "${t.name}"?'),
+                                content: const Text(
+                                    'This template will be permanently removed.'),
+                                actions: [
+                                  CupertinoDialogAction(
+                                    isDestructiveAction: true,
+                                    onPressed: () {
+                                      confirmed = true;
+                                      Navigator.pop(d);
+                                    },
+                                    child: const Text('Delete'),
+                                  ),
+                                  CupertinoDialogAction(
+                                    isDefaultAction: true,
+                                    onPressed: () => Navigator.pop(d),
+                                    child: const Text('Cancel'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirmed) {
+                              ref.read(dbProvider).deleteServiceTemplate(t.id);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    child: Container(
+                      color: CupertinoColors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 13),
+                      child: Row(
+                        children: [
+                          const Icon(CupertinoIcons.doc_text,
+                              size: 18, color: Color(0xFF007AFF)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(t.name,
+                                    style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Color(0xFF1C1C1E))),
+                                Text(
+                                  '${_fmtHours(t.defaultHours)} hr · ${t.laborDescription}',
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF8E8E93)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(CupertinoIcons.chevron_right,
+                              size: 16, color: Color(0xFFC7C7CC)),
+                        ],
                       ),
-                      const Icon(CupertinoIcons.chevron_right,
-                          size: 16, color: Color(0xFFC7C7CC)),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            Container(
-                height: 0.5,
-                color: const Color(0xFFE5E5EA),
-                margin: const EdgeInsets.only(left: 46)),
-          ],
-        );
-      },
+              Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E5EA),
+                  margin: const EdgeInsets.only(left: 46)),
+            ],
+          );
+        },
+      ),
     );
   }
 

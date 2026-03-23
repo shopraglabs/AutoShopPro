@@ -10,6 +10,15 @@ import 'repair_orders_provider.dart';
 
 String _roNumber(int id) => 'RO-${id.toString().padLeft(4, '0')}';
 
+// Formats a DateTime as a readable date string, e.g. "Jan 20, 2026".
+String _fmtDate(DateTime d) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  return '${months[d.month - 1]} ${d.day}, ${d.year}';
+}
+
 // Formats a double as a dollar amount. Omits cents when zero:
 // 1234.0 → "$1,234"  |  1234.5 → "$1,234.50"
 String _money(double amount) {
@@ -32,10 +41,6 @@ String _statusLabel(String status) {
   switch (status) {
     case 'open':
       return 'Open';
-    case 'in_progress':
-      return 'In Progress';
-    case 'completed':
-      return 'Completed';
     case 'closed':
       return 'Closed';
     default:
@@ -47,10 +52,6 @@ Color _statusColor(String status) {
   switch (status) {
     case 'open':
       return const Color(0xFF007AFF);
-    case 'in_progress':
-      return const Color(0xFFFF9500);
-    case 'completed':
-      return const Color(0xFF34C759);
     case 'closed':
       return const Color(0xFF8E8E93);
     default:
@@ -62,10 +63,6 @@ Color _statusColor(String status) {
 IconData _nextIcon(String status) {
   switch (status) {
     case 'open':
-      return CupertinoIcons.wrench_fill;
-    case 'in_progress':
-      return CupertinoIcons.checkmark_seal_fill;
-    case 'completed':
       return CupertinoIcons.lock_fill;
     default:
       return CupertinoIcons.chevron_right;
@@ -77,11 +74,7 @@ IconData _nextIcon(String status) {
 ({String buttonLabel, String nextStatus})? _nextStep(String status) {
   switch (status) {
     case 'open':
-      return (buttonLabel: 'Start Job', nextStatus: 'in_progress');
-    case 'in_progress':
-      return (buttonLabel: 'Mark Complete', nextStatus: 'completed');
-    case 'completed':
-      return (buttonLabel: 'Close RO', nextStatus: 'closed');
+      return (buttonLabel: 'Close Repair Order', nextStatus: 'closed');
     default:
       return null; // closed — nothing left to do
   }
@@ -160,8 +153,24 @@ class _RoDetailView extends ConsumerWidget {
     );
   }
 
+  Future<void> _completeAll(WidgetRef ref) async {
+    final db = ref.read(dbProvider);
+    final items = lineItemsAsync.value ?? [];
+    final undone = items.where((i) => !(i.isDone ?? false)).toList();
+    for (final item in undone) {
+      await db.updateLineItem(item.copyWith(isDone: const Value(true)));
+      if (item.type == 'part' && item.inventoryPartId != null) {
+        final part = await db.getPart(item.inventoryPartId!);
+        if (part != null) {
+          await db.updatePart(
+              part.copyWith(stockQty: part.stockQty - item.quantity.round()));
+        }
+      }
+    }
+  }
+
   Future<void> _generateInvoice(BuildContext context, WidgetRef ref,
-      {bool simple = false}) async {
+      {bool simple = false, Offset? position}) async {
     final db = ref.read(dbProvider);
     final results = await Future.wait([
       db.getCustomer(ro.customerId),
@@ -197,13 +206,103 @@ class _RoDetailView extends ConsumerWidget {
       taxRate: estimate?.taxRate ?? 0.0,
       shopName: settings.shopName,
       customerComplaint: estimate?.customerComplaint,
+      comment: ro.comment,
       simple: simple,
+      position: position,
     );
   }
 
   Future<void> _advanceStatus(WidgetRef ref, String nextStatus) async {
     final db = ref.read(dbProvider);
-    await db.updateRepairOrder(ro.copyWith(status: nextStatus));
+    // When closing the RO, stamp serviceDate with today so the record reflects
+    // when work was actually completed, not when it was first opened.
+    final updatedRo = nextStatus == 'closed'
+        ? ro.copyWith(status: nextStatus, serviceDate: Value(DateTime.now()))
+        : ro.copyWith(status: nextStatus);
+    await db.updateRepairOrder(updatedRo);
+  }
+
+  Future<void> _editComment(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController(text: ro.comment ?? '');
+    await showCupertinoDialog<void>(
+      context: context,
+      builder: (dialogCtx) => CupertinoAlertDialog(
+        title: const Text('Invoice Comment'),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: CupertinoTextField(
+            controller: controller,
+            placeholder: 'e.g. Warranty: 12 months / 12,000 miles',
+            minLines: 3,
+            maxLines: 6,
+            textCapitalization: TextCapitalization.sentences,
+            autofocus: true,
+            contextMenuBuilder: (ctx, state) =>
+                CupertinoAdaptiveTextSelectionToolbar.editableText(
+                    editableTextState: state),
+          ),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () async {
+              final text = controller.text.trim();
+              Navigator.pop(dialogCtx);
+              await ref.read(dbProvider).updateRepairOrder(
+                    ro.copyWith(
+                        comment: Value(text.isEmpty ? null : text)),
+                  );
+            },
+            child: const Text('Save'),
+          ),
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+  }
+
+  void _pickServiceDate(BuildContext context, WidgetRef ref, RepairOrder ro) {
+    final initial = ro.serviceDate ?? ro.createdAt;
+    DateTime picked = initial;
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (ctx) => Container(
+        height: 300,
+        color: CupertinoColors.systemBackground,
+        child: Column(
+          children: [
+            // Done button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                CupertinoButton(
+                  onPressed: () async {
+                    await ref.read(dbProvider).updateRepairOrder(
+                          ro.copyWith(serviceDate: Value(picked)),
+                        );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                  child: const Text('Done',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+            Expanded(
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: initial,
+                maximumDate: DateTime.now().add(const Duration(days: 365)),
+                onDateTimeChanged: (d) => picked = d,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showTechPicker(BuildContext context, WidgetRef ref) {
@@ -247,6 +346,7 @@ class _RoDetailView extends ConsumerWidget {
         .toList();
     final laborLines = lineItems.where((l) => l.type == 'labor').toList();
     final partLines = lineItems.where((l) => l.type == 'part').toList();
+    final otherLines = lineItems.where((l) => l.type == 'other').toList();
 
     final subtotal =
         lineItems.fold(0.0, (s, l) => s + l.quantity * l.unitPrice);
@@ -312,6 +412,44 @@ class _RoDetailView extends ConsumerWidget {
               ),
             ),
 
+            const SizedBox(height: 12),
+
+            // ── Service date ──────────────────────────────────────────────
+            GestureDetector(
+              onTap: () => _pickServiceDate(context, ref, ro),
+              child: Container(
+                color: CupertinoColors.systemBackground,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 13),
+                child: Row(
+                  children: [
+                    const Icon(CupertinoIcons.calendar,
+                        size: 17, color: Color(0xFF8E8E93)),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Service Date',
+                      style: TextStyle(
+                          fontSize: 15,
+                          color: CupertinoColors.secondaryLabel),
+                    ),
+                    const Spacer(),
+                    Text(
+                      ro.serviceDate != null
+                          ? _fmtDate(ro.serviceDate!)
+                          : _fmtDate(ro.createdAt),
+                      style: const TextStyle(
+                          fontSize: 15,
+                          color: CupertinoColors.label,
+                          fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(CupertinoIcons.chevron_right,
+                        size: 14, color: Color(0xFFC7C7CC)),
+                  ],
+                ),
+              ),
+            ),
+
             const SizedBox(height: 16),
 
             // ── Customer + Vehicle header ─────────────────────────────────
@@ -335,6 +473,16 @@ class _RoDetailView extends ConsumerWidget {
               _LineItemSection(
                   items: partLines,
                   laborLines: laborLines,
+                  canMark: ro.status != 'closed'),
+              const SizedBox(height: 20),
+            ],
+
+            // ── Other lines ───────────────────────────────────────────────
+            if (otherLines.isNotEmpty) ...[
+              _sectionHeader('OTHER'),
+              _LineItemSection(
+                  items: otherLines,
+                  laborLines: const [],
                   canMark: ro.status != 'closed'),
               const SizedBox(height: 20),
             ],
@@ -373,6 +521,57 @@ class _RoDetailView extends ConsumerWidget {
               const SizedBox(height: 28),
             ],
 
+            // ── Invoice Comment ───────────────────────────────────────────
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'INVOICE COMMENT',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF8E8E93),
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    minSize: 0,
+                    onPressed: () => _editComment(context, ref),
+                    child: Text(
+                      ro.comment != null && ro.comment!.isNotEmpty
+                          ? 'Edit'
+                          : 'Add',
+                      style: const TextStyle(
+                          fontSize: 13, color: Color(0xFF007AFF)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              color: CupertinoColors.white,
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: ro.comment != null && ro.comment!.isNotEmpty
+                  ? Text(
+                      ro.comment!,
+                      style: const TextStyle(
+                          fontSize: 15, color: Color(0xFF1C1C1E)),
+                    )
+                  : const Text(
+                      'No comment — tap Add to add one.',
+                      style: TextStyle(
+                          fontSize: 15, color: Color(0xFF8E8E93)),
+                    ),
+            ),
+            const SizedBox(height: 28),
+
             // ── Actions ───────────────────────────────────────────────────
             if (ro.status != 'closed') ...[
               _sectionHeader('ACTIONS'),
@@ -380,7 +579,7 @@ class _RoDetailView extends ConsumerWidget {
                 color: CupertinoColors.white,
                 child: Column(
                   children: [
-                    // Edit Estimate — visible on any non-closed RO with an estimate
+                    // Edit Repair Order — opens the linked estimate
                     if (ro.estimateId != null) ...[
                       GestureDetector(
                         onTap: () => context
@@ -391,11 +590,11 @@ class _RoDetailView extends ConsumerWidget {
                               horizontal: 16, vertical: 14),
                           child: const Row(
                             children: [
-                              Icon(CupertinoIcons.doc_text,
+                              Icon(CupertinoIcons.pencil,
                                   size: 18, color: Color(0xFF007AFF)),
                               SizedBox(width: 12),
                               Expanded(
-                                child: Text('Edit Estimate',
+                                child: Text('Edit Repair Order',
                                     style: TextStyle(
                                         fontSize: 16,
                                         color: Color(0xFF007AFF))),
@@ -411,35 +610,6 @@ class _RoDetailView extends ConsumerWidget {
                           color: const Color(0xFFE5E5EA),
                           margin: const EdgeInsets.only(left: 46)),
                     ],
-                    // Edit RO note
-                    GestureDetector(
-                      onTap: () => context
-                          .push('/repair-orders/ros/${ro.id}/edit'),
-                      child: Container(
-                        color: CupertinoColors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        child: const Row(
-                          children: [
-                            Icon(CupertinoIcons.pencil,
-                                size: 18, color: Color(0xFF007AFF)),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Text('Edit RO',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      color: Color(0xFF007AFF))),
-                            ),
-                            Icon(CupertinoIcons.chevron_right,
-                                size: 16, color: Color(0xFFC7C7CC)),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Container(
-                        height: 0.5,
-                        color: const Color(0xFFE5E5EA),
-                        margin: const EdgeInsets.only(left: 46)),
                     // Assign Technician
                     GestureDetector(
                       onTap: () => _showTechPicker(context, ref),
@@ -468,6 +638,36 @@ class _RoDetailView extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    // Complete All — shown when there are undone line items
+                    if ((lineItemsAsync.value ?? []).any((i) => !(i.isDone ?? false))) ...[
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 46)),
+                      GestureDetector(
+                        onTap: () => _completeAll(ref),
+                        child: Container(
+                          color: CupertinoColors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          child: const Row(
+                            children: [
+                              Icon(CupertinoIcons.checkmark_circle_fill,
+                                  size: 18, color: Color(0xFF34C759)),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text('Complete All Services',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: Color(0xFF34C759))),
+                              ),
+                              Icon(CupertinoIcons.chevron_right,
+                                  size: 16, color: Color(0xFFC7C7CC)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                     // Status advancement button
                     if (next != null) ...[
                       Container(
@@ -510,9 +710,40 @@ class _RoDetailView extends ConsumerWidget {
                 color: CupertinoColors.white,
                 child: Column(
                   children: [
+                    // Edit Record — opens the linked estimate to correct line items
+                    if (ro.estimateId != null) ...[
+                      GestureDetector(
+                        onTap: () => context
+                            .push('/repair-orders/estimates/${ro.estimateId}'),
+                        child: Container(
+                          color: CupertinoColors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          child: const Row(
+                            children: [
+                              Icon(CupertinoIcons.pencil,
+                                  size: 18, color: Color(0xFF007AFF)),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text('Edit Record',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: Color(0xFF007AFF))),
+                              ),
+                              Icon(CupertinoIcons.chevron_right,
+                                  size: 16, color: Color(0xFFC7C7CC)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 46)),
+                    ],
                     // Itemized Invoice
                     GestureDetector(
-                      onTap: () => _generateInvoice(context, ref, simple: false),
+                      onTapUp: (d) => _generateInvoice(context, ref, simple: false, position: d.globalPosition),
                       child: Container(
                         color: CupertinoColors.white,
                         padding: const EdgeInsets.symmetric(
@@ -540,7 +771,7 @@ class _RoDetailView extends ConsumerWidget {
                         margin: const EdgeInsets.only(left: 46)),
                     // Simple Invoice
                     GestureDetector(
-                      onTap: () => _generateInvoice(context, ref, simple: true),
+                      onTapUp: (d) => _generateInvoice(context, ref, simple: true, position: d.globalPosition),
                       child: Container(
                         color: CupertinoColors.white,
                         padding: const EdgeInsets.symmetric(
@@ -563,6 +794,16 @@ class _RoDetailView extends ConsumerWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: CupertinoButton(
+                  onPressed: () => _confirmDelete(context, ref),
+                  child: const Text(
+                    'Delete Repair Order',
+                    style: TextStyle(color: CupertinoColors.destructiveRed),
+                  ),
                 ),
               ),
             ],
@@ -1122,7 +1363,9 @@ class _LineItemRow extends StatelessWidget {
     final lineTotal = item.quantity * item.unitPrice;
     final qtyLabel = item.type == 'labor'
         ? '${_qty(item.quantity)} hr @ \$${item.unitPrice.toStringAsFixed(2)}/hr'
-        : '${_qty(item.quantity)} × \$${item.unitPrice.toStringAsFixed(2)}';
+        : item.type == 'other'
+            ? '\$${item.unitPrice.toStringAsFixed(2)}'
+            : '${_qty(item.quantity)} × \$${item.unitPrice.toStringAsFixed(2)}';
 
     final textColor =
         done ? const Color(0xFFAAAAAA) : const Color(0xFF1C1C1E);
@@ -1156,7 +1399,8 @@ class _LineItemRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.type == 'labor' && item.laborName != null
+                    (item.type == 'labor' || item.type == 'other') &&
+                            item.laborName != null
                         ? item.laborName!
                         : item.description,
                     style: TextStyle(

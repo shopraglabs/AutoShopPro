@@ -81,7 +81,8 @@ class TechnicianListScreen extends ConsumerWidget {
               );
             }
 
-            return ListView.builder(
+            return CupertinoScrollbar(
+              child: ListView.builder(
               itemCount: techs.length,
               itemBuilder: (context, index) {
                 final tech = techs[index];
@@ -92,7 +93,7 @@ class TechnicianListScreen extends ConsumerWidget {
                   showDivider: index < techs.length - 1,
                 );
               },
-            );
+            ));
           },
         ),
       ),
@@ -116,7 +117,9 @@ class _TechRow extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        GestureDetector(
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
           onTap: onTap,
           child: Container(
             color: CupertinoColors.white,
@@ -175,6 +178,7 @@ class _TechRow extends StatelessWidget {
               ],
             ),
           ),
+        ),
         ),
         if (showDivider)
           Container(

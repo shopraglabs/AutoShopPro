@@ -12,10 +12,6 @@ String _statusLabel(String status) {
   switch (status) {
     case 'open':
       return 'Open';
-    case 'in_progress':
-      return 'In Progress';
-    case 'completed':
-      return 'Completed';
     case 'closed':
       return 'Closed';
     default:
@@ -23,18 +19,13 @@ String _statusLabel(String status) {
   }
 }
 
-// Returns the color for each status — these match what shops expect:
-// blue = new/open, orange = active work, green = done, gray = archived
+// blue = open, gray = closed
 Color _statusColor(String status) {
   switch (status) {
     case 'open':
-      return const Color(0xFF007AFF); // blue
-    case 'in_progress':
-      return const Color(0xFFFF9500); // orange
-    case 'completed':
-      return const Color(0xFF34C759); // green
+      return const Color(0xFF007AFF);
     case 'closed':
-      return const Color(0xFF8E8E93); // gray
+      return const Color(0xFF8E8E93);
     default:
       return const Color(0xFF8E8E93);
   }
@@ -45,8 +36,6 @@ Color _statusColor(String status) {
 const _filters = <(String label, String? value)>[
   ('All', null),
   ('Open', 'open'),
-  ('In Progress', 'in_progress'),
-  ('Completed', 'completed'),
   ('Closed', 'closed'),
 ];
 
@@ -149,7 +138,8 @@ class _RoListScreenState extends ConsumerState<RoListScreen> {
                     );
                   }
 
-                  return ListView.builder(
+                  return CupertinoScrollbar(
+                    child: ListView.builder(
                     itemCount: ros.length,
                     itemBuilder: (context, index) {
                       final item = ros[index];
@@ -160,7 +150,7 @@ class _RoListScreenState extends ConsumerState<RoListScreen> {
                         showDivider: index < ros.length - 1,
                       );
                     },
-                  );
+                  ));
                 },
               ),
             ),
@@ -242,7 +232,9 @@ class _RoRow extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        GestureDetector(
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
           onTap: onTap,
           child: Container(
             color: CupertinoColors.white,
@@ -315,6 +307,7 @@ class _RoRow extends StatelessWidget {
               ],
             ),
           ),
+        ),
         ),
         if (showDivider)
           Container(
