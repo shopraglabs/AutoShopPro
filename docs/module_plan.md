@@ -329,6 +329,20 @@ The heart of the app. Everything else depends on this.
 - ✅ "Add Parts" confirm button in template picker replaced with list-row style
 - ✅ Patch naming convention: patches inherit parent minor/major version name
 
+### Audit & Bug Fixes (v0.10.2 Buttoned Up)
+- ✅ Cascade deletes — deleting a customer removes all linked vehicles, estimates, line items, and ROs; deleting a vehicle removes its estimates, line items, and ROs; deleting an estimate removes its line items; deleting a service template removes its linked parts
+- ✅ Archive vendors — soft-delete with isArchived flag (schema v25); archived vendors hidden from lists and pickers but records preserved
+- ✅ Archive technicians — soft-delete with isArchived flag (schema v25); archived technicians hidden from lists and pickers but existing ROs preserved
+- ✅ Estimate list sorted newest-first (orderBy id DESC)
+- ✅ RO detail tax rate sourced from linked estimate (was always 0% if taxRate not re-derived)
+- ✅ Complete All confirmation dialog — shows item count, filters out declined items
+- ✅ Stock floor clamping — inventory stock cannot go below 0 (individual toggle and Complete All)
+- ✅ Other items included in invoice PDFs (both Itemized and Simple)
+- ✅ Invoice date uses RO service date instead of generation date
+- ✅ Search enhancements — vehicle year included in search; RO search supports RO number lookup
+- ✅ Router edit loaders fixed — futures cached in initState (no re-fire on rebuild)
+- ✅ Schema v25 — isArchived column on vendors and technicians tables
+
 ---
 
 ### Backend (Go — planned)

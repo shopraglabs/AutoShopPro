@@ -238,4 +238,4 @@ onTap: () => controller.selection = TextSelection(
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.10.1 Buttoned Up
+v0.10.2 Buttoned Up

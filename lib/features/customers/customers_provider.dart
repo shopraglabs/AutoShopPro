@@ -16,6 +16,18 @@ final customersProvider = StreamProvider<List<Customer>>((ref) {
   return ref.watch(dbProvider).watchAllCustomers();
 });
 
+// Emits a single customer (or null) by id — rebuilds when that customer changes.
+final customerProvider =
+    StreamProvider.family<Customer?, int>((ref, customerId) {
+  return ref.watch(dbProvider).watchCustomer(customerId);
+});
+
+// Emits a single vehicle (or null) by id — rebuilds when that vehicle changes.
+final vehicleProvider =
+    StreamProvider.family<Vehicle?, int>((ref, vehicleId) {
+  return ref.watch(dbProvider).watchVehicle(vehicleId);
+});
+
 // Emits a fresh list of vehicles for a specific customer.
 // Pass the customer's id as a parameter.
 final vehiclesProvider =

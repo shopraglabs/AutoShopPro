@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'database/database.dart';
 import 'main.dart';
 import 'features/repair_orders/repair_orders_screen.dart';
 import 'features/customers/customer_list_screen.dart';
@@ -353,29 +354,22 @@ class _CustomerEditLoader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(dbProvider);
-    return FutureBuilder(
-      future: db.getCustomer(customerId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const CupertinoPageScaffold(
-            child: Center(child: CupertinoActivityIndicator()),
-          );
-        }
-        if (snapshot.hasError) {
-          return const CupertinoPageScaffold(
-            navigationBar: CupertinoNavigationBar(middle: Text('Edit Customer')),
-            child: Center(child: Text('Error loading customer.')),
-          );
-        }
-        final customer = snapshot.data;
+    final customerAsync = ref.watch(customerProvider(customerId));
+    return customerAsync.when(
+      loading: () => const CupertinoPageScaffold(
+        child: Center(child: CupertinoActivityIndicator()),
+      ),
+      error: (e, _) => const CupertinoPageScaffold(
+        navigationBar: CupertinoNavigationBar(middle: Text('Edit Customer')),
+        child: Center(child: Text('Error loading customer.')),
+      ),
+      data: (customer) {
         if (customer == null) {
           return const CupertinoPageScaffold(
             navigationBar: CupertinoNavigationBar(middle: Text('Edit Customer')),
             child: Center(child: Text('Customer not found.')),
           );
         }
-        // Hand the loaded customer to the form so its fields are pre-filled
         return CustomerFormScreen(customer: customer);
       },
     );
@@ -384,25 +378,31 @@ class _CustomerEditLoader extends ConsumerWidget {
 
 // Fetches a vendor from the database by id, then shows the edit form
 // pre-filled with that vendor's data.
-class _VendorEditLoader extends ConsumerWidget {
+class _VendorEditLoader extends ConsumerStatefulWidget {
   final int vendorId;
   const _VendorEditLoader({required this.vendorId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(dbProvider);
+  ConsumerState<_VendorEditLoader> createState() => _VendorEditLoaderState();
+}
+
+class _VendorEditLoaderState extends ConsumerState<_VendorEditLoader> {
+  late final Future<Vendor?> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = ref.read(dbProvider).getVendor(widget.vendorId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder(
-      future: db.getVendor(vendorId),
+      future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CupertinoPageScaffold(
             child: Center(child: CupertinoActivityIndicator()),
-          );
-        }
-        if (snapshot.hasError) {
-          return const CupertinoPageScaffold(
-            navigationBar: CupertinoNavigationBar(middle: Text('Edit Vendor')),
-            child: Center(child: Text('Error loading vendor.')),
           );
         }
         final vendor = snapshot.data;
@@ -420,7 +420,7 @@ class _VendorEditLoader extends ConsumerWidget {
 }
 
 // Fetches a line item from the database by id, then shows the edit form.
-class _LineItemEditLoader extends ConsumerWidget {
+class _LineItemEditLoader extends ConsumerStatefulWidget {
   final int estimateId;
   final int lineItemId;
   const _LineItemEditLoader({
@@ -429,20 +429,27 @@ class _LineItemEditLoader extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(dbProvider);
+  ConsumerState<_LineItemEditLoader> createState() =>
+      _LineItemEditLoaderState();
+}
+
+class _LineItemEditLoaderState extends ConsumerState<_LineItemEditLoader> {
+  late final Future<EstimateLineItem?> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = ref.read(dbProvider).getLineItem(widget.lineItemId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder(
-      future: db.getLineItem(lineItemId),
+      future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CupertinoPageScaffold(
             child: Center(child: CupertinoActivityIndicator()),
-          );
-        }
-        if (snapshot.hasError) {
-          return const CupertinoPageScaffold(
-            navigationBar: CupertinoNavigationBar(middle: Text('Edit')),
-            child: Center(child: Text('Error loading line item.')),
           );
         }
         final lineItem = snapshot.data;
@@ -453,7 +460,7 @@ class _LineItemEditLoader extends ConsumerWidget {
           );
         }
         return LineItemFormScreen(
-          estimateId: estimateId,
+          estimateId: widget.estimateId,
           type: lineItem.type,
           lineItem: lineItem,
         );
@@ -463,15 +470,27 @@ class _LineItemEditLoader extends ConsumerWidget {
 }
 
 // Fetches a repair order from the database by id, then shows the edit form.
-class _RoEditLoader extends ConsumerWidget {
+class _RoEditLoader extends ConsumerStatefulWidget {
   final int roId;
   const _RoEditLoader({required this.roId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(dbProvider);
+  ConsumerState<_RoEditLoader> createState() => _RoEditLoaderState();
+}
+
+class _RoEditLoaderState extends ConsumerState<_RoEditLoader> {
+  late final Future<RepairOrder?> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = ref.read(dbProvider).getRepairOrder(widget.roId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder(
-      future: db.getRepairOrder(roId),
+      future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CupertinoPageScaffold(
@@ -492,15 +511,27 @@ class _RoEditLoader extends ConsumerWidget {
 }
 
 // Fetches a technician from the database by id, then shows the edit form.
-class _TechEditLoader extends ConsumerWidget {
+class _TechEditLoader extends ConsumerStatefulWidget {
   final int techId;
   const _TechEditLoader({required this.techId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(dbProvider);
+  ConsumerState<_TechEditLoader> createState() => _TechEditLoaderState();
+}
+
+class _TechEditLoaderState extends ConsumerState<_TechEditLoader> {
+  late final Future<Technician?> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = ref.read(dbProvider).getTechnician(widget.techId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder(
-      future: db.getTechnician(techId),
+      future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CupertinoPageScaffold(
@@ -533,22 +564,16 @@ class _VehicleEditLoader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(dbProvider);
-    return FutureBuilder(
-      future: db.getVehicle(vehicleId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const CupertinoPageScaffold(
-            child: Center(child: CupertinoActivityIndicator()),
-          );
-        }
-        if (snapshot.hasError) {
-          return const CupertinoPageScaffold(
-            navigationBar: CupertinoNavigationBar(middle: Text('Edit Vehicle')),
-            child: Center(child: Text('Error loading vehicle.')),
-          );
-        }
-        final vehicle = snapshot.data;
+    final vehicleAsync = ref.watch(vehicleProvider(vehicleId));
+    return vehicleAsync.when(
+      loading: () => const CupertinoPageScaffold(
+        child: Center(child: CupertinoActivityIndicator()),
+      ),
+      error: (e, _) => const CupertinoPageScaffold(
+        navigationBar: CupertinoNavigationBar(middle: Text('Edit Vehicle')),
+        child: Center(child: Text('Error loading vehicle.')),
+      ),
+      data: (vehicle) {
         if (vehicle == null) {
           return const CupertinoPageScaffold(
             navigationBar:
@@ -563,15 +588,27 @@ class _VehicleEditLoader extends ConsumerWidget {
 }
 
 // Fetches a part from the database by id, then shows the edit form.
-class _PartEditLoader extends ConsumerWidget {
+class _PartEditLoader extends ConsumerStatefulWidget {
   final int partId;
   const _PartEditLoader({required this.partId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(dbProvider);
+  ConsumerState<_PartEditLoader> createState() => _PartEditLoaderState();
+}
+
+class _PartEditLoaderState extends ConsumerState<_PartEditLoader> {
+  late final Future<InventoryPart?> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = ref.read(dbProvider).getPart(widget.partId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder(
-      future: db.getPart(partId),
+      future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CupertinoPageScaffold(
@@ -592,15 +629,29 @@ class _PartEditLoader extends ConsumerWidget {
 }
 
 // Fetches a service template from the database by id, then shows the edit form.
-class _ServiceTemplateEditLoader extends ConsumerWidget {
+class _ServiceTemplateEditLoader extends ConsumerStatefulWidget {
   final int templateId;
   const _ServiceTemplateEditLoader({required this.templateId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(dbProvider);
+  ConsumerState<_ServiceTemplateEditLoader> createState() =>
+      _ServiceTemplateEditLoaderState();
+}
+
+class _ServiceTemplateEditLoaderState
+    extends ConsumerState<_ServiceTemplateEditLoader> {
+  late final Future<ServiceTemplate?> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = ref.read(dbProvider).getServiceTemplate(widget.templateId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder(
-      future: db.getServiceTemplate(templateId),
+      future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CupertinoPageScaffold(

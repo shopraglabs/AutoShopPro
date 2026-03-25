@@ -2764,6 +2764,21 @@ class $VendorsTable extends Vendors with TableInfo<$VendorsTable, Vendor> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isArchivedMeta = const VerificationMeta(
+    'isArchived',
+  );
+  @override
+  late final GeneratedColumn<bool> isArchived = GeneratedColumn<bool>(
+    'is_archived',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_archived" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2783,6 +2798,7 @@ class $VendorsTable extends Vendors with TableInfo<$VendorsTable, Vendor> {
     contactName,
     phone,
     accountNumber,
+    isArchived,
     createdAt,
   ];
   @override
@@ -2832,6 +2848,12 @@ class $VendorsTable extends Vendors with TableInfo<$VendorsTable, Vendor> {
         ),
       );
     }
+    if (data.containsKey('is_archived')) {
+      context.handle(
+        _isArchivedMeta,
+        isArchived.isAcceptableOrUnknown(data['is_archived']!, _isArchivedMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2867,6 +2889,10 @@ class $VendorsTable extends Vendors with TableInfo<$VendorsTable, Vendor> {
         DriftSqlType.string,
         data['${effectivePrefix}account_number'],
       ),
+      isArchived: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_archived'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2886,6 +2912,7 @@ class Vendor extends DataClass implements Insertable<Vendor> {
   final String? contactName;
   final String? phone;
   final String? accountNumber;
+  final bool isArchived;
   final DateTime createdAt;
   const Vendor({
     required this.id,
@@ -2893,6 +2920,7 @@ class Vendor extends DataClass implements Insertable<Vendor> {
     this.contactName,
     this.phone,
     this.accountNumber,
+    required this.isArchived,
     required this.createdAt,
   });
   @override
@@ -2909,6 +2937,7 @@ class Vendor extends DataClass implements Insertable<Vendor> {
     if (!nullToAbsent || accountNumber != null) {
       map['account_number'] = Variable<String>(accountNumber);
     }
+    map['is_archived'] = Variable<bool>(isArchived);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -2926,6 +2955,7 @@ class Vendor extends DataClass implements Insertable<Vendor> {
       accountNumber: accountNumber == null && nullToAbsent
           ? const Value.absent()
           : Value(accountNumber),
+      isArchived: Value(isArchived),
       createdAt: Value(createdAt),
     );
   }
@@ -2941,6 +2971,7 @@ class Vendor extends DataClass implements Insertable<Vendor> {
       contactName: serializer.fromJson<String?>(json['contactName']),
       phone: serializer.fromJson<String?>(json['phone']),
       accountNumber: serializer.fromJson<String?>(json['accountNumber']),
+      isArchived: serializer.fromJson<bool>(json['isArchived']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -2953,6 +2984,7 @@ class Vendor extends DataClass implements Insertable<Vendor> {
       'contactName': serializer.toJson<String?>(contactName),
       'phone': serializer.toJson<String?>(phone),
       'accountNumber': serializer.toJson<String?>(accountNumber),
+      'isArchived': serializer.toJson<bool>(isArchived),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -2963,6 +2995,7 @@ class Vendor extends DataClass implements Insertable<Vendor> {
     Value<String?> contactName = const Value.absent(),
     Value<String?> phone = const Value.absent(),
     Value<String?> accountNumber = const Value.absent(),
+    bool? isArchived,
     DateTime? createdAt,
   }) => Vendor(
     id: id ?? this.id,
@@ -2972,6 +3005,7 @@ class Vendor extends DataClass implements Insertable<Vendor> {
     accountNumber: accountNumber.present
         ? accountNumber.value
         : this.accountNumber,
+    isArchived: isArchived ?? this.isArchived,
     createdAt: createdAt ?? this.createdAt,
   );
   Vendor copyWithCompanion(VendorsCompanion data) {
@@ -2985,6 +3019,9 @@ class Vendor extends DataClass implements Insertable<Vendor> {
       accountNumber: data.accountNumber.present
           ? data.accountNumber.value
           : this.accountNumber,
+      isArchived: data.isArchived.present
+          ? data.isArchived.value
+          : this.isArchived,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -2997,14 +3034,22 @@ class Vendor extends DataClass implements Insertable<Vendor> {
           ..write('contactName: $contactName, ')
           ..write('phone: $phone, ')
           ..write('accountNumber: $accountNumber, ')
+          ..write('isArchived: $isArchived, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, contactName, phone, accountNumber, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    contactName,
+    phone,
+    accountNumber,
+    isArchived,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3014,6 +3059,7 @@ class Vendor extends DataClass implements Insertable<Vendor> {
           other.contactName == this.contactName &&
           other.phone == this.phone &&
           other.accountNumber == this.accountNumber &&
+          other.isArchived == this.isArchived &&
           other.createdAt == this.createdAt);
 }
 
@@ -3023,6 +3069,7 @@ class VendorsCompanion extends UpdateCompanion<Vendor> {
   final Value<String?> contactName;
   final Value<String?> phone;
   final Value<String?> accountNumber;
+  final Value<bool> isArchived;
   final Value<DateTime> createdAt;
   const VendorsCompanion({
     this.id = const Value.absent(),
@@ -3030,6 +3077,7 @@ class VendorsCompanion extends UpdateCompanion<Vendor> {
     this.contactName = const Value.absent(),
     this.phone = const Value.absent(),
     this.accountNumber = const Value.absent(),
+    this.isArchived = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   VendorsCompanion.insert({
@@ -3038,6 +3086,7 @@ class VendorsCompanion extends UpdateCompanion<Vendor> {
     this.contactName = const Value.absent(),
     this.phone = const Value.absent(),
     this.accountNumber = const Value.absent(),
+    this.isArchived = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Vendor> custom({
@@ -3046,6 +3095,7 @@ class VendorsCompanion extends UpdateCompanion<Vendor> {
     Expression<String>? contactName,
     Expression<String>? phone,
     Expression<String>? accountNumber,
+    Expression<bool>? isArchived,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -3054,6 +3104,7 @@ class VendorsCompanion extends UpdateCompanion<Vendor> {
       if (contactName != null) 'contact_name': contactName,
       if (phone != null) 'phone': phone,
       if (accountNumber != null) 'account_number': accountNumber,
+      if (isArchived != null) 'is_archived': isArchived,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -3064,6 +3115,7 @@ class VendorsCompanion extends UpdateCompanion<Vendor> {
     Value<String?>? contactName,
     Value<String?>? phone,
     Value<String?>? accountNumber,
+    Value<bool>? isArchived,
     Value<DateTime>? createdAt,
   }) {
     return VendorsCompanion(
@@ -3072,6 +3124,7 @@ class VendorsCompanion extends UpdateCompanion<Vendor> {
       contactName: contactName ?? this.contactName,
       phone: phone ?? this.phone,
       accountNumber: accountNumber ?? this.accountNumber,
+      isArchived: isArchived ?? this.isArchived,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -3094,6 +3147,9 @@ class VendorsCompanion extends UpdateCompanion<Vendor> {
     if (accountNumber.present) {
       map['account_number'] = Variable<String>(accountNumber.value);
     }
+    if (isArchived.present) {
+      map['is_archived'] = Variable<bool>(isArchived.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3108,6 +3164,7 @@ class VendorsCompanion extends UpdateCompanion<Vendor> {
           ..write('contactName: $contactName, ')
           ..write('phone: $phone, ')
           ..write('accountNumber: $accountNumber, ')
+          ..write('isArchived: $isArchived, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -3770,6 +3827,21 @@ class $TechniciansTable extends Technicians
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isArchivedMeta = const VerificationMeta(
+    'isArchived',
+  );
+  @override
+  late final GeneratedColumn<bool> isArchived = GeneratedColumn<bool>(
+    'is_archived',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_archived" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -3783,7 +3855,14 @@ class $TechniciansTable extends Technicians
     defaultValue: currentDateAndTime,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, specialty, phone, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    specialty,
+    phone,
+    isArchived,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3819,6 +3898,12 @@ class $TechniciansTable extends Technicians
         phone.isAcceptableOrUnknown(data['phone']!, _phoneMeta),
       );
     }
+    if (data.containsKey('is_archived')) {
+      context.handle(
+        _isArchivedMeta,
+        isArchived.isAcceptableOrUnknown(data['is_archived']!, _isArchivedMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3850,6 +3935,10 @@ class $TechniciansTable extends Technicians
         DriftSqlType.string,
         data['${effectivePrefix}phone'],
       ),
+      isArchived: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_archived'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -3868,12 +3957,14 @@ class Technician extends DataClass implements Insertable<Technician> {
   final String name;
   final String? specialty;
   final String? phone;
+  final bool isArchived;
   final DateTime createdAt;
   const Technician({
     required this.id,
     required this.name,
     this.specialty,
     this.phone,
+    required this.isArchived,
     required this.createdAt,
   });
   @override
@@ -3887,6 +3978,7 @@ class Technician extends DataClass implements Insertable<Technician> {
     if (!nullToAbsent || phone != null) {
       map['phone'] = Variable<String>(phone);
     }
+    map['is_archived'] = Variable<bool>(isArchived);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -3901,6 +3993,7 @@ class Technician extends DataClass implements Insertable<Technician> {
       phone: phone == null && nullToAbsent
           ? const Value.absent()
           : Value(phone),
+      isArchived: Value(isArchived),
       createdAt: Value(createdAt),
     );
   }
@@ -3915,6 +4008,7 @@ class Technician extends DataClass implements Insertable<Technician> {
       name: serializer.fromJson<String>(json['name']),
       specialty: serializer.fromJson<String?>(json['specialty']),
       phone: serializer.fromJson<String?>(json['phone']),
+      isArchived: serializer.fromJson<bool>(json['isArchived']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -3926,6 +4020,7 @@ class Technician extends DataClass implements Insertable<Technician> {
       'name': serializer.toJson<String>(name),
       'specialty': serializer.toJson<String?>(specialty),
       'phone': serializer.toJson<String?>(phone),
+      'isArchived': serializer.toJson<bool>(isArchived),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -3935,12 +4030,14 @@ class Technician extends DataClass implements Insertable<Technician> {
     String? name,
     Value<String?> specialty = const Value.absent(),
     Value<String?> phone = const Value.absent(),
+    bool? isArchived,
     DateTime? createdAt,
   }) => Technician(
     id: id ?? this.id,
     name: name ?? this.name,
     specialty: specialty.present ? specialty.value : this.specialty,
     phone: phone.present ? phone.value : this.phone,
+    isArchived: isArchived ?? this.isArchived,
     createdAt: createdAt ?? this.createdAt,
   );
   Technician copyWithCompanion(TechniciansCompanion data) {
@@ -3949,6 +4046,9 @@ class Technician extends DataClass implements Insertable<Technician> {
       name: data.name.present ? data.name.value : this.name,
       specialty: data.specialty.present ? data.specialty.value : this.specialty,
       phone: data.phone.present ? data.phone.value : this.phone,
+      isArchived: data.isArchived.present
+          ? data.isArchived.value
+          : this.isArchived,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -3960,13 +4060,15 @@ class Technician extends DataClass implements Insertable<Technician> {
           ..write('name: $name, ')
           ..write('specialty: $specialty, ')
           ..write('phone: $phone, ')
+          ..write('isArchived: $isArchived, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, specialty, phone, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, specialty, phone, isArchived, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3975,6 +4077,7 @@ class Technician extends DataClass implements Insertable<Technician> {
           other.name == this.name &&
           other.specialty == this.specialty &&
           other.phone == this.phone &&
+          other.isArchived == this.isArchived &&
           other.createdAt == this.createdAt);
 }
 
@@ -3983,12 +4086,14 @@ class TechniciansCompanion extends UpdateCompanion<Technician> {
   final Value<String> name;
   final Value<String?> specialty;
   final Value<String?> phone;
+  final Value<bool> isArchived;
   final Value<DateTime> createdAt;
   const TechniciansCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.specialty = const Value.absent(),
     this.phone = const Value.absent(),
+    this.isArchived = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   TechniciansCompanion.insert({
@@ -3996,6 +4101,7 @@ class TechniciansCompanion extends UpdateCompanion<Technician> {
     required String name,
     this.specialty = const Value.absent(),
     this.phone = const Value.absent(),
+    this.isArchived = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Technician> custom({
@@ -4003,6 +4109,7 @@ class TechniciansCompanion extends UpdateCompanion<Technician> {
     Expression<String>? name,
     Expression<String>? specialty,
     Expression<String>? phone,
+    Expression<bool>? isArchived,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -4010,6 +4117,7 @@ class TechniciansCompanion extends UpdateCompanion<Technician> {
       if (name != null) 'name': name,
       if (specialty != null) 'specialty': specialty,
       if (phone != null) 'phone': phone,
+      if (isArchived != null) 'is_archived': isArchived,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -4019,6 +4127,7 @@ class TechniciansCompanion extends UpdateCompanion<Technician> {
     Value<String>? name,
     Value<String?>? specialty,
     Value<String?>? phone,
+    Value<bool>? isArchived,
     Value<DateTime>? createdAt,
   }) {
     return TechniciansCompanion(
@@ -4026,6 +4135,7 @@ class TechniciansCompanion extends UpdateCompanion<Technician> {
       name: name ?? this.name,
       specialty: specialty ?? this.specialty,
       phone: phone ?? this.phone,
+      isArchived: isArchived ?? this.isArchived,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -4045,6 +4155,9 @@ class TechniciansCompanion extends UpdateCompanion<Technician> {
     if (phone.present) {
       map['phone'] = Variable<String>(phone.value);
     }
+    if (isArchived.present) {
+      map['is_archived'] = Variable<bool>(isArchived.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -4058,6 +4171,7 @@ class TechniciansCompanion extends UpdateCompanion<Technician> {
           ..write('name: $name, ')
           ..write('specialty: $specialty, ')
           ..write('phone: $phone, ')
+          ..write('isArchived: $isArchived, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -7033,6 +7147,7 @@ typedef $$VendorsTableCreateCompanionBuilder =
       Value<String?> contactName,
       Value<String?> phone,
       Value<String?> accountNumber,
+      Value<bool> isArchived,
       Value<DateTime> createdAt,
     });
 typedef $$VendorsTableUpdateCompanionBuilder =
@@ -7042,6 +7157,7 @@ typedef $$VendorsTableUpdateCompanionBuilder =
       Value<String?> contactName,
       Value<String?> phone,
       Value<String?> accountNumber,
+      Value<bool> isArchived,
       Value<DateTime> createdAt,
     });
 
@@ -7076,6 +7192,11 @@ class $$VendorsTableFilterComposer
 
   ColumnFilters<String> get accountNumber => $composableBuilder(
     column: $table.accountNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isArchived => $composableBuilder(
+    column: $table.isArchived,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7119,6 +7240,11 @@ class $$VendorsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isArchived => $composableBuilder(
+    column: $table.isArchived,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -7150,6 +7276,11 @@ class $$VendorsTableAnnotationComposer
 
   GeneratedColumn<String> get accountNumber => $composableBuilder(
     column: $table.accountNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isArchived => $composableBuilder(
+    column: $table.isArchived,
     builder: (column) => column,
   );
 
@@ -7190,6 +7321,7 @@ class $$VendorsTableTableManager
                 Value<String?> contactName = const Value.absent(),
                 Value<String?> phone = const Value.absent(),
                 Value<String?> accountNumber = const Value.absent(),
+                Value<bool> isArchived = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => VendorsCompanion(
                 id: id,
@@ -7197,6 +7329,7 @@ class $$VendorsTableTableManager
                 contactName: contactName,
                 phone: phone,
                 accountNumber: accountNumber,
+                isArchived: isArchived,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -7206,6 +7339,7 @@ class $$VendorsTableTableManager
                 Value<String?> contactName = const Value.absent(),
                 Value<String?> phone = const Value.absent(),
                 Value<String?> accountNumber = const Value.absent(),
+                Value<bool> isArchived = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => VendorsCompanion.insert(
                 id: id,
@@ -7213,6 +7347,7 @@ class $$VendorsTableTableManager
                 contactName: contactName,
                 phone: phone,
                 accountNumber: accountNumber,
+                isArchived: isArchived,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -7540,6 +7675,7 @@ typedef $$TechniciansTableCreateCompanionBuilder =
       required String name,
       Value<String?> specialty,
       Value<String?> phone,
+      Value<bool> isArchived,
       Value<DateTime> createdAt,
     });
 typedef $$TechniciansTableUpdateCompanionBuilder =
@@ -7548,6 +7684,7 @@ typedef $$TechniciansTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String?> specialty,
       Value<String?> phone,
+      Value<bool> isArchived,
       Value<DateTime> createdAt,
     });
 
@@ -7577,6 +7714,11 @@ class $$TechniciansTableFilterComposer
 
   ColumnFilters<String> get phone => $composableBuilder(
     column: $table.phone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isArchived => $composableBuilder(
+    column: $table.isArchived,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7615,6 +7757,11 @@ class $$TechniciansTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isArchived => $composableBuilder(
+    column: $table.isArchived,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -7641,6 +7788,11 @@ class $$TechniciansTableAnnotationComposer
 
   GeneratedColumn<String> get phone =>
       $composableBuilder(column: $table.phone, builder: (column) => column);
+
+  GeneratedColumn<bool> get isArchived => $composableBuilder(
+    column: $table.isArchived,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -7681,12 +7833,14 @@ class $$TechniciansTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String?> specialty = const Value.absent(),
                 Value<String?> phone = const Value.absent(),
+                Value<bool> isArchived = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => TechniciansCompanion(
                 id: id,
                 name: name,
                 specialty: specialty,
                 phone: phone,
+                isArchived: isArchived,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -7695,12 +7849,14 @@ class $$TechniciansTableTableManager
                 required String name,
                 Value<String?> specialty = const Value.absent(),
                 Value<String?> phone = const Value.absent(),
+                Value<bool> isArchived = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => TechniciansCompanion.insert(
                 id: id,
                 name: name,
                 specialty: specialty,
                 phone: phone,
+                isArchived: isArchived,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

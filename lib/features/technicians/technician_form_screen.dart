@@ -41,12 +41,13 @@ class _TechnicianFormScreenState extends ConsumerState<TechnicianFormScreen> {
     super.dispose();
   }
 
-  Future<void> _confirmDelete(BuildContext context) {
+  Future<void> _confirmArchive(BuildContext context) {
     return showCupertinoDialog(
       context: context,
       builder: (dialogCtx) => CupertinoAlertDialog(
-        title: Text('Delete ${widget.technician!.name}?'),
-        content: const Text('This cannot be undone.'),
+        title: Text('Archive ${widget.technician!.name}?'),
+        content: const Text(
+            'Archived technicians are hidden from lists and pickers but existing repair orders that reference them are preserved.'),
         actions: [
           CupertinoDialogAction(
             isDestructiveAction: true,
@@ -54,10 +55,10 @@ class _TechnicianFormScreenState extends ConsumerState<TechnicianFormScreen> {
               Navigator.pop(dialogCtx);
               await ref
                   .read(dbProvider)
-                  .deleteTechnician(widget.technician!.id);
+                  .archiveTechnician(widget.technician!.id);
               if (mounted) context.pop();
             },
-            child: const Text('Delete'),
+            child: const Text('Archive'),
           ),
           CupertinoDialogAction(
             isDefaultAction: true,
@@ -161,9 +162,9 @@ class _TechnicianFormScreenState extends ConsumerState<TechnicianFormScreen> {
               const SizedBox(height: 36),
               Center(
                 child: CupertinoButton(
-                  onPressed: () => _confirmDelete(context),
+                  onPressed: () => _confirmArchive(context),
                   child: const Text(
-                    'Delete Technician',
+                    'Archive Technician',
                     style: TextStyle(
                       color: CupertinoColors.destructiveRed,
                       fontSize: 16,
@@ -230,6 +231,10 @@ class _TechnicianFormScreenState extends ConsumerState<TechnicianFormScreen> {
                 placeholderStyle: const TextStyle(
                     fontSize: 16, color: Color(0xFFC7C7CC)),
                 padding: const EdgeInsets.symmetric(vertical: 13),
+                contextMenuBuilder: (context, editableTextState) =>
+                    CupertinoAdaptiveTextSelectionToolbar.editableText(
+                      editableTextState: editableTextState,
+                    ),
               ),
             ),
           ],

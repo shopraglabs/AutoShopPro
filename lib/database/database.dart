@@ -91,6 +91,9 @@ class Vendors extends Table {
   TextColumn get phone => text().nullable()();
   // The shop's account number with this vendor
   TextColumn get accountNumber => text().nullable()();
+  // Soft-delete: archived vendors stay in DB (existing line items still reference
+  // them) but are hidden from lists and pickers.
+  BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -106,7 +109,7 @@ class RepairOrders extends Table {
   IntColumn get vehicleId => integer().nullable()();
   // Short description of the work, carried over from the estimate
   TextColumn get note => text().nullable()();
-  // 'open' | 'in_progress' | 'completed' | 'closed'
+  // 'open' | 'closed'
   TextColumn get status => text().withDefault(const Constant('open'))();
   // Which technician is assigned to this RO (optional)
   IntColumn get technicianId => integer().nullable()();
@@ -157,6 +160,9 @@ class Technicians extends Table {
   // e.g. "Engine", "Brakes", "Electrical"
   TextColumn get specialty => text().nullable()();
   TextColumn get phone => text().nullable()();
+  // Soft-delete: archived technicians stay in DB (existing ROs still reference
+  // them) but are hidden from lists and pickers.
+  BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -252,7 +258,7 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   // Drift runs this when it finds an older database on the device.
   @override
@@ -457,6 +463,21 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(estimates, estimates.estimateDate);
         }
       }
+      if (from < 25) {
+        // Added in v25: isArchived on vendors + technicians (soft-delete).
+        final vendorCols = await m.database.customSelect(
+          "SELECT name FROM pragma_table_info('vendors') WHERE name='is_archived'",
+        ).get();
+        if (vendorCols.isEmpty) {
+          await m.addColumn(vendors, vendors.isArchived);
+        }
+        final techCols = await m.database.customSelect(
+          "SELECT name FROM pragma_table_info('technicians') WHERE name='is_archived'",
+        ).get();
+        if (techCols.isEmpty) {
+          await m.addColumn(technicians, technicians.isArchived);
+        }
+      }
     },
   );
 
@@ -482,9 +503,23 @@ class AppDatabase extends _$AppDatabase {
   Future<bool> updateCustomer(Customer customer) =>
       update(customers).replace(customer);
 
-  // Permanently removes a customer by id.
-  Future<int> deleteCustomer(int id) =>
-      (delete(customers)..where((c) => c.id.equals(id))).go();
+  // Permanently removes a customer and all related records (vehicles, estimates,
+  // line items, and repair orders).
+  Future<void> deleteCustomer(int id) async {
+    // Delete line items for all of this customer's estimates
+    final ests = await (select(estimates)
+          ..where((e) => e.customerId.equals(id)))
+        .get();
+    for (final est in ests) {
+      await (delete(estimateLineItems)
+            ..where((l) => l.estimateId.equals(est.id)))
+          .go();
+    }
+    await (delete(repairOrders)..where((r) => r.customerId.equals(id))).go();
+    await (delete(estimates)..where((e) => e.customerId.equals(id))).go();
+    await (delete(vehicles)..where((v) => v.customerId.equals(id))).go();
+    await (delete(customers)..where((c) => c.id.equals(id))).go();
+  }
 
   // ─── Vehicle Queries ────────────────────────────────────────────────────────
 
@@ -508,9 +543,20 @@ class AppDatabase extends _$AppDatabase {
   Future<bool> updateVehicle(Vehicle vehicle) =>
       update(vehicles).replace(vehicle);
 
-  // Permanently removes a vehicle by id.
-  Future<int> deleteVehicle(int id) =>
-      (delete(vehicles)..where((v) => v.id.equals(id))).go();
+  // Permanently removes a vehicle and all linked estimates, line items, and ROs.
+  Future<void> deleteVehicle(int id) async {
+    final ests = await (select(estimates)
+          ..where((e) => e.vehicleId.equals(id)))
+        .get();
+    for (final est in ests) {
+      await (delete(estimateLineItems)
+            ..where((l) => l.estimateId.equals(est.id)))
+          .go();
+    }
+    await (delete(repairOrders)..where((r) => r.vehicleId.equals(id))).go();
+    await (delete(estimates)..where((e) => e.vehicleId.equals(id))).go();
+    await (delete(vehicles)..where((v) => v.id.equals(id))).go();
+  }
 
   // ─── Estimate Queries ────────────────────────────────────────────────────────
 
@@ -521,6 +567,7 @@ class AppDatabase extends _$AppDatabase {
       leftOuterJoin(customers, customers.id.equalsExp(estimates.customerId)),
       leftOuterJoin(vehicles, vehicles.id.equalsExp(estimates.vehicleId)),
     ]);
+    q.orderBy([OrderingTerm.desc(estimates.id)]);
     return q.watch().map((rows) => rows
         .map((row) => EstimateWithDetails(
               estimate: row.readTable(estimates),
@@ -546,9 +593,13 @@ class AppDatabase extends _$AppDatabase {
   Future<bool> updateEstimate(Estimate estimate) =>
       update(estimates).replace(estimate);
 
-  // Permanently removes an estimate by id.
-  Future<int> deleteEstimate(int id) =>
-      (delete(estimates)..where((e) => e.id.equals(id))).go();
+  // Permanently removes an estimate and all its line items.
+  Future<void> deleteEstimate(int id) async {
+    await (delete(estimateLineItems)
+          ..where((l) => l.estimateId.equals(id)))
+        .go();
+    await (delete(estimates)..where((e) => e.id.equals(id))).go();
+  }
 
   // ─── Line Item Queries ───────────────────────────────────────────────────────
 
@@ -597,7 +648,16 @@ class AppDatabase extends _$AppDatabase {
 
   // ─── Vendor Queries ───────────────────────────────────────────────────────
 
+  // Returns only active (non-archived) vendors for lists and pickers.
   Stream<List<Vendor>> watchAllVendors() =>
+      (select(vendors)
+            ..where((v) => v.isArchived.equals(false))
+            ..orderBy([(v) => OrderingTerm.asc(v.name)]))
+          .watch();
+
+  // Returns ALL vendors including archived — used when displaying historical
+  // data (e.g. a line item that references an archived vendor).
+  Stream<List<Vendor>> watchAllVendorsIncludingArchived() =>
       (select(vendors)..orderBy([(v) => OrderingTerm.asc(v.name)])).watch();
 
   Future<Vendor?> getVendor(int id) =>
@@ -611,6 +671,14 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> deleteVendor(int id) =>
       (delete(vendors)..where((v) => v.id.equals(id))).go();
+
+  Future<void> archiveVendor(int id) =>
+      (update(vendors)..where((v) => v.id.equals(id)))
+          .write(const VendorsCompanion(isArchived: Value(true)));
+
+  Future<void> unarchiveVendor(int id) =>
+      (update(vendors)..where((v) => v.id.equals(id)))
+          .write(const VendorsCompanion(isArchived: Value(false)));
 
   // ─── Repair Order Queries ─────────────────────────────────────────────────
 
@@ -730,8 +798,11 @@ class AppDatabase extends _$AppDatabase {
 
   // ─── Technician Queries ───────────────────────────────────────────────────
 
+  // Returns only active (non-archived) technicians for lists and pickers.
   Stream<List<Technician>> watchAllTechnicians() =>
-      (select(technicians)..orderBy([(t) => OrderingTerm.asc(t.name)]))
+      (select(technicians)
+            ..where((t) => t.isArchived.equals(false))
+            ..orderBy([(t) => OrderingTerm.asc(t.name)]))
           .watch();
 
   Future<Technician?> getTechnician(int id) =>
@@ -745,6 +816,14 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> deleteTechnician(int id) =>
       (delete(technicians)..where((t) => t.id.equals(id))).go();
+
+  Future<void> archiveTechnician(int id) =>
+      (update(technicians)..where((t) => t.id.equals(id)))
+          .write(const TechniciansCompanion(isArchived: Value(true)));
+
+  Future<void> unarchiveTechnician(int id) =>
+      (update(technicians)..where((t) => t.id.equals(id)))
+          .write(const TechniciansCompanion(isArchived: Value(false)));
 
   // ─── Inventory Part Queries ───────────────────────────────────────────────
 
@@ -799,8 +878,13 @@ class AppDatabase extends _$AppDatabase {
   Future<bool> updateServiceTemplate(ServiceTemplate t) =>
       update(serviceTemplates).replace(t);
 
-  Future<int> deleteServiceTemplate(int id) =>
-      (delete(serviceTemplates)..where((t) => t.id.equals(id))).go();
+  // Permanently removes a service template and its linked parts.
+  Future<void> deleteServiceTemplate(int id) async {
+    await (delete(serviceTemplateParts)
+          ..where((p) => p.templateId.equals(id)))
+        .go();
+    await (delete(serviceTemplates)..where((t) => t.id.equals(id))).go();
+  }
 
   // ─── Service Template Part Queries ────────────────────────────────────────
 
@@ -849,7 +933,8 @@ class AppDatabase extends _$AppDatabase {
               v.make.lower().like(lower) |
               v.model.lower().like(lower) |
               v.vin.lower().like(lower) |
-              v.licensePlate.lower().like(lower))
+              v.licensePlate.lower().like(lower) |
+              v.year.cast<String>().like(lower))
           ..orderBy([(v) => OrderingTerm.asc(v.make)]))
         .get();
   }
@@ -875,12 +960,19 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<RepairOrderWithDetails>> searchRepairOrders(String q) {
     final lower = '%${q.toLowerCase()}%';
+    // Also match on RO number — strip "RO-" prefix so "RO-0012" or "12" both work
+    final stripped = q.replaceAll(RegExp(r'[^0-9]'), '');
+    final roId = int.tryParse(stripped);
     final query = select(repairOrders).join([
       leftOuterJoin(customers, customers.id.equalsExp(repairOrders.customerId)),
       leftOuterJoin(vehicles, vehicles.id.equalsExp(repairOrders.vehicleId)),
     ]);
-    query.where(customers.name.lower().like(lower) |
-        repairOrders.note.lower().like(lower));
+    var condition = customers.name.lower().like(lower) |
+        repairOrders.note.lower().like(lower);
+    if (roId != null) {
+      condition = condition | repairOrders.id.equals(roId);
+    }
+    query.where(condition);
     query.orderBy([OrderingTerm.desc(repairOrders.createdAt)]);
     return query.get().then((rows) => rows
         .map((row) => RepairOrderWithDetails(

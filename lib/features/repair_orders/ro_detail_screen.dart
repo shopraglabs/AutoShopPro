@@ -113,7 +113,14 @@ class RoDetailScreen extends ConsumerWidget {
             ? ref.watch(lineItemsProvider(ro.estimateId!))
             : const AsyncValue.data(<EstimateLineItem>[]);
 
-        return _RoDetailView(ro: ro, lineItemsAsync: lineItemsAsync);
+        // Watch the estimate to get the tax rate (so RO totals match invoices).
+        final estimateAsync = ro.estimateId != null
+            ? ref.watch(estimateProvider(ro.estimateId!))
+            : const AsyncValue.data(null);
+        final taxRate = estimateAsync.value?.taxRate ?? 0.0;
+
+        return _RoDetailView(
+            ro: ro, lineItemsAsync: lineItemsAsync, taxRate: taxRate);
       },
     );
   }
@@ -124,8 +131,13 @@ class RoDetailScreen extends ConsumerWidget {
 class _RoDetailView extends ConsumerWidget {
   final RepairOrder ro;
   final AsyncValue<List<EstimateLineItem>> lineItemsAsync;
+  final double taxRate;
 
-  const _RoDetailView({required this.ro, required this.lineItemsAsync});
+  const _RoDetailView({
+    required this.ro,
+    required this.lineItemsAsync,
+    this.taxRate = 0.0,
+  });
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) {
     return showCupertinoDialog(
@@ -153,17 +165,40 @@ class _RoDetailView extends ConsumerWidget {
     );
   }
 
-  Future<void> _completeAll(WidgetRef ref) async {
-    final db = ref.read(dbProvider);
-    final items = lineItemsAsync.value ?? [];
+  Future<void> _confirmCompleteAll(BuildContext context, WidgetRef ref) async {
+    final items = (lineItemsAsync.value ?? [])
+        .where((i) => i.approvalStatus != 'declined')
+        .toList();
     final undone = items.where((i) => !(i.isDone ?? false)).toList();
+    if (undone.isEmpty) return;
+    final confirmed = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => CupertinoAlertDialog(
+        title: const Text('Complete All Services?'),
+        content: Text(
+            'Mark ${undone.length} item${undone.length == 1 ? '' : 's'} as done. Stock will be deducted for catalog parts.'),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Complete All'),
+          ),
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final db = ref.read(dbProvider);
     for (final item in undone) {
       await db.updateLineItem(item.copyWith(isDone: const Value(true)));
       if (item.type == 'part' && item.inventoryPartId != null) {
         final part = await db.getPart(item.inventoryPartId!);
         if (part != null) {
-          await db.updatePart(
-              part.copyWith(stockQty: part.stockQty - item.quantity.round()));
+          final newStock = (part.stockQty - item.quantity.round()).clamp(0, 999999);
+          await db.updatePart(part.copyWith(stockQty: newStock));
         }
       }
     }
@@ -357,7 +392,8 @@ class _RoDetailView extends ConsumerWidget {
 
     final subtotal =
         lineItems.fold(0.0, (s, l) => s + l.quantity * l.unitPrice);
-    final total = subtotal; // ROs don't add extra tax (already on estimate)
+    final tax = subtotal * (taxRate / 100);
+    final total = subtotal + tax;
 
     final next = _nextStep(ro.status);
     final statusColor = _statusColor(ro.status);
@@ -511,6 +547,13 @@ class _RoDetailView extends ConsumerWidget {
                 child: Column(
                   children: [
                     _TotalRow(label: 'Subtotal', value: _money(subtotal)),
+                    if (taxRate > 0) ...[
+                      Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+                      _TotalRow(
+                          label:
+                              'Tax (${taxRate % 1 == 0 ? taxRate.toInt() : taxRate.toStringAsFixed(1)}%)',
+                          value: _money(tax)),
+                    ],
                     Container(height: 0.5, color: const Color(0xFFE5E5EA)),
                     _TotalRow(
                         label: 'Total',
@@ -668,7 +711,7 @@ class _RoDetailView extends ConsumerWidget {
                           color: const Color(0xFFE5E5EA),
                           margin: const EdgeInsets.only(left: 46)),
                       GestureDetector(
-                        onTap: () => _completeAll(ref),
+                        onTap: () => _confirmCompleteAll(context, ref),
                         child: Container(
                           color: CupertinoColors.white,
                           padding: const EdgeInsets.symmetric(
@@ -1423,7 +1466,7 @@ class _LineItemRow extends StatelessWidget {
         final qty = item.quantity.round();
         // Checking off → deduct stock. Unchecking → restore stock.
         final newStock = nowDone
-            ? part.stockQty - qty
+            ? (part.stockQty - qty).clamp(0, 999999)
             : part.stockQty + qty;
         await db.updatePart(part.copyWith(stockQty: newStock));
       }

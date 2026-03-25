@@ -6,6 +6,8 @@ A cross-platform automotive shop management app built with Flutter. One codebase
 
 ## Project Status
 
+**v0.10.2 — Buttoned Up** — Comprehensive audit and bug fixes: cascade deletes for customers/vehicles/estimates, archive (soft-delete) for vendors and technicians, RO tax rate now correctly sourced from the linked estimate, Other items included in invoice PDFs, invoice date uses service date, stock cannot go below zero, Complete All filters declined items, estimate list sorted newest-first, RO number search, and router edit loaders no longer re-fire on rebuild.
+
 **v0.10.1 — Buttoned Up** — Bug fix: left-clicking invoice/estimate/approval/category buttons now opens a proper action sheet instead of a context menu dropdown; "Show in Finder" replaced with "Open" on save dialogs; hover cursors and list-row style button fixes throughout.
 
 **v0.10.0 — Buttoned Up** — Simplified RO flow (Open → Closed only), "Other" line item type, invoice comment field on ROs (prints on PDF), editable customer concerns, vehicle history on vehicle detail, Complete All button on open ROs, desktop dropdown menus, and scrollbars throughout.

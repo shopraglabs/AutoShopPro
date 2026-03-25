@@ -43,21 +43,22 @@ class _VendorFormScreenState extends ConsumerState<VendorFormScreen> {
     super.dispose();
   }
 
-  Future<void> _confirmDelete(BuildContext context) {
+  Future<void> _confirmArchive(BuildContext context) {
     return showCupertinoDialog(
       context: context,
       builder: (dialogCtx) => CupertinoAlertDialog(
-        title: Text('Delete ${widget.vendor!.name}?'),
-        content: const Text('This cannot be undone.'),
+        title: Text('Archive ${widget.vendor!.name}?'),
+        content: const Text(
+            'Archived vendors are hidden from lists and pickers but existing records that reference them are preserved.'),
         actions: [
           CupertinoDialogAction(
             isDestructiveAction: true,
             onPressed: () async {
               Navigator.pop(dialogCtx);
-              await ref.read(dbProvider).deleteVendor(widget.vendor!.id);
+              await ref.read(dbProvider).archiveVendor(widget.vendor!.id);
               if (mounted) context.pop();
             },
-            child: const Text('Delete'),
+            child: const Text('Archive'),
           ),
           CupertinoDialogAction(
             isDefaultAction: true,
@@ -170,9 +171,9 @@ class _VendorFormScreenState extends ConsumerState<VendorFormScreen> {
               const SizedBox(height: 36),
               Center(
                 child: CupertinoButton(
-                  onPressed: () => _confirmDelete(context),
+                  onPressed: () => _confirmArchive(context),
                   child: const Text(
-                    'Delete Vendor',
+                    'Archive Vendor',
                     style: TextStyle(
                       color: CupertinoColors.destructiveRed,
                       fontSize: 16,
@@ -239,6 +240,10 @@ class _VendorFormScreenState extends ConsumerState<VendorFormScreen> {
                 placeholderStyle: const TextStyle(
                     fontSize: 16, color: Color(0xFFC7C7CC)),
                 padding: const EdgeInsets.symmetric(vertical: 13),
+                contextMenuBuilder: (context, editableTextState) =>
+                    CupertinoAdaptiveTextSelectionToolbar.editableText(
+                      editableTextState: editableTextState,
+                    ),
               ),
             ),
           ],

@@ -45,6 +45,7 @@ Future<Uint8List> buildInvoicePdf({
   // Only approved/pending items (declined already excluded at RO level)
   final labor = lineItems.where((l) => l.type == 'labor').toList();
   final parts = lineItems.where((l) => l.type == 'part').toList();
+  final otherItems = lineItems.where((l) => l.type == 'other').toList();
   final subtotal = lineItems.fold(0.0, (s, l) => s + l.quantity * l.unitPrice);
   final taxAmount = subtotal * (taxRate / 100);
   final total = subtotal + taxAmount;
@@ -55,10 +56,10 @@ Future<Uint8List> buildInvoicePdf({
   const mid = PdfColor.fromInt(0xFF8E8E93);
   const light = PdfColor.fromInt(0xFFE5E5EA);
 
-  // ── Date string ───────────────────────────────────────────────────────────
-  final now = DateTime.now();
+  // ── Date string — use RO service date when available ────────────────────
+  final invoiceDate = ro.serviceDate ?? ro.createdAt;
   final dateStr =
-      '${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}/${now.year}';
+      '${invoiceDate.month.toString().padLeft(2, '0')}/${invoiceDate.day.toString().padLeft(2, '0')}/${invoiceDate.year}';
 
   // ── Vehicle label ─────────────────────────────────────────────────────────
   final vehicleLabel = vehicle != null
@@ -282,6 +283,25 @@ Future<Uint8List> buildInvoicePdf({
                     mid: mid,
                     light: light,
                   )),
+          pw.SizedBox(height: 16),
+        ],
+
+        // ── Other items (fees, sublet, misc) ────────────────────────────────
+        if (otherItems.isNotEmpty) ...[
+          _sectionDivider('OTHER', accent),
+          pw.SizedBox(height: 8),
+          ...otherItems.map((o) => _lineRow(
+                typeLabel: 'Other',
+                description: o.laborName ?? o.description,
+                subtitle: o.laborName != null ? o.description : null,
+                qty: _qty(o.quantity),
+                unit: _money(o.unitPrice),
+                total: _money(o.quantity * o.unitPrice),
+                isLabor: true,
+                dark: dark,
+                mid: mid,
+                light: light,
+              )),
           pw.SizedBox(height: 16),
         ],
 
@@ -632,6 +652,7 @@ Future<Uint8List> buildSimpleInvoicePdf({
 
   final labor = lineItems.where((l) => l.type == 'labor').toList();
   final parts = lineItems.where((l) => l.type == 'part').toList();
+  final otherItems = lineItems.where((l) => l.type == 'other').toList();
 
   // Build combined rows: each labor line + sum of its linked parts
   final rows =
@@ -656,6 +677,15 @@ Future<Uint8List> buildSimpleInvoicePdf({
       total: p.quantity * p.unitPrice,
     ));
   }
+  // Other items (fees, sublet, misc) — listed on their own
+  for (final o in otherItems) {
+    rows.add((
+      typeLabel: 'Other',
+      description: o.laborName ?? o.description,
+      subtitle: o.laborName != null ? o.description : null,
+      total: o.quantity * o.unitPrice,
+    ));
+  }
 
   final subtotal = rows.fold(0.0, (s, r) => s + r.total);
   final taxAmount = subtotal * (taxRate / 100);
@@ -666,9 +696,9 @@ Future<Uint8List> buildSimpleInvoicePdf({
   const mid = PdfColor.fromInt(0xFF8E8E93);
   const light = PdfColor.fromInt(0xFFE5E5EA);
 
-  final now = DateTime.now();
+  final invoiceDate = ro.serviceDate ?? ro.createdAt;
   final dateStr =
-      '${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}/${now.year}';
+      '${invoiceDate.month.toString().padLeft(2, '0')}/${invoiceDate.day.toString().padLeft(2, '0')}/${invoiceDate.year}';
   final vehicleLabel = vehicle != null
       ? [vehicle.year?.toString(), vehicle.make, vehicle.model]
           .whereType<String>()

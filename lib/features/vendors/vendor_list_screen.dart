@@ -65,20 +65,21 @@ class _VendorRow extends ConsumerWidget {
   final Vendor vendor;
   const _VendorRow({required this.vendor});
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) {
+  Future<void> _confirmArchive(BuildContext context, WidgetRef ref) {
     return showCupertinoDialog(
       context: context,
       builder: (dialogCtx) => CupertinoAlertDialog(
-        title: Text('Delete ${vendor.name}?'),
-        content: const Text('This cannot be undone.'),
+        title: Text('Archive ${vendor.name}?'),
+        content: const Text(
+            'Archived vendors are hidden from lists and pickers but existing records are preserved.'),
         actions: [
           CupertinoDialogAction(
             isDestructiveAction: true,
             onPressed: () async {
               Navigator.pop(dialogCtx);
-              await ref.read(dbProvider).deleteVendor(vendor.id);
+              await ref.read(dbProvider).archiveVendor(vendor.id);
             },
-            child: const Text('Delete'),
+            child: const Text('Archive'),
           ),
           CupertinoDialogAction(
             isDefaultAction: true,
@@ -109,10 +110,10 @@ class _VendorRow extends ConsumerWidget {
               ),
               contextMenuDivider,
               ContextMenuAction(
-                label: 'Delete Vendor',
-                icon: CupertinoIcons.trash,
+                label: 'Archive Vendor',
+                icon: CupertinoIcons.archivebox,
                 isDestructive: true,
-                onTap: () => _confirmDelete(context, ref),
+                onTap: () => _confirmArchive(context, ref),
               ),
             ],
           ),
