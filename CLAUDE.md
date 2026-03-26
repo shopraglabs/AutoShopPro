@@ -58,7 +58,8 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **RO list dates** — each RO row shows the service date (or createdAt); list sorted by id descending for consistent order
 - **Declined items on RO** — DECLINED section below TOTALS on RO detail; red X icon, gray strikethrough text; not counted in totals
 - **Declined items on invoices** — "DECLINED — NOT BILLED" section in both Itemized and Simple Invoice PDFs after totals; gray strikethrough; not included in any totals or tax
-- **Database** — Drift/SQLite, schema v24, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts
+- **Money helpers** — `lib/core/utils/money.dart`: `toCents()`, `fromCents()`, `formatMoney()` (UI, omits .00), `formatMoneyFull()` (PDFs, always 2 decimals); all price/cost/rate values stored as integer cents in the DB
+- **Database** — Drift/SQLite, schema v26, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts; FK constraints enforced via PRAGMA foreign_keys = ON
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
@@ -238,4 +239,4 @@ onTap: () => controller.selection = TextSelection(
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.10.2 Buttoned Up
+v0.10.3 Buttoned Up

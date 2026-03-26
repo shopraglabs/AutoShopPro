@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/money.dart';
 import '../../database/database.dart';
 import '../../widgets/context_menu.dart';
 import '../customers/customers_provider.dart';
@@ -41,7 +42,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) {
       setState(() {
         _shopNameCtrl.text = settings.shopName ?? '';
-        _laborRateCtrl.text = settings.defaultLaborRate.toStringAsFixed(2);
+        // defaultLaborRate is int cents — convert to dollars for display
+        _laborRateCtrl.text = fromCents(settings.defaultLaborRate).toStringAsFixed(2);
         _taxRateCtrl.text = settings.defaultTaxRate.toStringAsFixed(1);
         _loaded = true;
       });
@@ -52,8 +54,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() => _saving = true);
     final db = ref.read(dbProvider);
     final settings = await db.getOrCreateSettings();
-    final laborRate =
-        double.tryParse(_laborRateCtrl.text) ?? settings.defaultLaborRate;
+    // Labor rate entered as dollars — convert to int cents for the DB
+    final laborRateDollars = double.tryParse(_laborRateCtrl.text) ??
+        fromCents(settings.defaultLaborRate);
     final taxRate =
         double.tryParse(_taxRateCtrl.text) ?? settings.defaultTaxRate;
     final shopName = _shopNameCtrl.text.trim();
@@ -61,7 +64,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await db.saveSettings(ShopSettingsCompanion(
       id: const Value(1),
       shopName: Value(shopName.isEmpty ? null : shopName),
-      defaultLaborRate: Value(laborRate),
+      defaultLaborRate: Value(toCents(laborRateDollars)),
       defaultTaxRate: Value(taxRate),
     ));
     if (mounted) setState(() => _saving = false);
@@ -70,11 +73,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _showAddRuleDialog() => _showRuleDialog(existing: null);
 
   Future<void> _showRuleDialog({required MarkupRule? existing}) async {
+    // minCost/maxCost are int cents — convert to dollars for display
     final minCtrl = TextEditingController(
-        text: existing != null ? existing.minCost.toStringAsFixed(2) : '');
+        text: existing != null
+            ? fromCents(existing.minCost).toStringAsFixed(2)
+            : '');
     final maxCtrl = TextEditingController(
         text: existing?.maxCost != null
-            ? existing!.maxCost!.toStringAsFixed(2)
+            ? fromCents(existing!.maxCost!).toStringAsFixed(2)
             : '');
     final pctCtrl = TextEditingController(
         text: existing != null
@@ -151,21 +157,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           CupertinoDialogAction(
             isDefaultAction: true,
             onPressed: () async {
-              final min = double.tryParse(minCtrl.text);
-              final max = double.tryParse(maxCtrl.text);
+              // User enters dollar amounts — convert to int cents for the DB
+              final minDollars = double.tryParse(minCtrl.text);
+              final maxDollars = double.tryParse(maxCtrl.text);
               final pct = double.tryParse(pctCtrl.text);
-              if (min == null || pct == null) return;
+              if (minDollars == null || pct == null) return;
               final db = ref.read(dbProvider);
               if (existing == null) {
                 await db.insertMarkupRule(MarkupRulesCompanion(
-                  minCost: Value(min),
-                  maxCost: Value(max),
+                  minCost: Value(toCents(minDollars)),
+                  maxCost: Value(maxDollars != null ? toCents(maxDollars) : null),
                   markupPercent: Value(pct),
                 ));
               } else {
                 await db.updateMarkupRule(existing.copyWith(
-                  minCost: min,
-                  maxCost: Value(max),
+                  minCost: toCents(minDollars),
+                  maxCost: Value(maxDollars != null ? toCents(maxDollars) : null),
                   markupPercent: pct,
                 ));
               }

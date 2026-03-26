@@ -1574,22 +1574,22 @@ class $EstimateLineItemsTable extends EstimateLineItems
     'unitPrice',
   );
   @override
-  late final GeneratedColumn<double> unitPrice = GeneratedColumn<double>(
+  late final GeneratedColumn<int> unitPrice = GeneratedColumn<int>(
     'unit_price',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _unitCostMeta = const VerificationMeta(
     'unitCost',
   );
   @override
-  late final GeneratedColumn<double> unitCost = GeneratedColumn<double>(
+  late final GeneratedColumn<int> unitCost = GeneratedColumn<int>(
     'unit_cost',
     aliasedName,
     true,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
   static const VerificationMeta _vendorIdMeta = const VerificationMeta(
@@ -1830,11 +1830,11 @@ class $EstimateLineItemsTable extends EstimateLineItems
         data['${effectivePrefix}quantity'],
       )!,
       unitPrice: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}unit_price'],
       )!,
       unitCost: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}unit_cost'],
       ),
       vendorId: attachedDatabase.typeMapping.read(
@@ -1881,8 +1881,8 @@ class EstimateLineItem extends DataClass
   final String type;
   final String description;
   final double quantity;
-  final double unitPrice;
-  final double? unitCost;
+  final int unitPrice;
+  final int? unitCost;
   final int? vendorId;
   final int? parentLaborId;
   final bool? isDone;
@@ -1914,9 +1914,9 @@ class EstimateLineItem extends DataClass
     map['type'] = Variable<String>(type);
     map['description'] = Variable<String>(description);
     map['quantity'] = Variable<double>(quantity);
-    map['unit_price'] = Variable<double>(unitPrice);
+    map['unit_price'] = Variable<int>(unitPrice);
     if (!nullToAbsent || unitCost != null) {
-      map['unit_cost'] = Variable<double>(unitCost);
+      map['unit_cost'] = Variable<int>(unitCost);
     }
     if (!nullToAbsent || vendorId != null) {
       map['vendor_id'] = Variable<int>(vendorId);
@@ -1988,8 +1988,8 @@ class EstimateLineItem extends DataClass
       type: serializer.fromJson<String>(json['type']),
       description: serializer.fromJson<String>(json['description']),
       quantity: serializer.fromJson<double>(json['quantity']),
-      unitPrice: serializer.fromJson<double>(json['unitPrice']),
-      unitCost: serializer.fromJson<double?>(json['unitCost']),
+      unitPrice: serializer.fromJson<int>(json['unitPrice']),
+      unitCost: serializer.fromJson<int?>(json['unitCost']),
       vendorId: serializer.fromJson<int?>(json['vendorId']),
       parentLaborId: serializer.fromJson<int?>(json['parentLaborId']),
       isDone: serializer.fromJson<bool?>(json['isDone']),
@@ -2008,8 +2008,8 @@ class EstimateLineItem extends DataClass
       'type': serializer.toJson<String>(type),
       'description': serializer.toJson<String>(description),
       'quantity': serializer.toJson<double>(quantity),
-      'unitPrice': serializer.toJson<double>(unitPrice),
-      'unitCost': serializer.toJson<double?>(unitCost),
+      'unitPrice': serializer.toJson<int>(unitPrice),
+      'unitCost': serializer.toJson<int?>(unitCost),
       'vendorId': serializer.toJson<int?>(vendorId),
       'parentLaborId': serializer.toJson<int?>(parentLaborId),
       'isDone': serializer.toJson<bool?>(isDone),
@@ -2026,8 +2026,8 @@ class EstimateLineItem extends DataClass
     String? type,
     String? description,
     double? quantity,
-    double? unitPrice,
-    Value<double?> unitCost = const Value.absent(),
+    int? unitPrice,
+    Value<int?> unitCost = const Value.absent(),
     Value<int?> vendorId = const Value.absent(),
     Value<int?> parentLaborId = const Value.absent(),
     Value<bool?> isDone = const Value.absent(),
@@ -2152,8 +2152,8 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
   final Value<String> type;
   final Value<String> description;
   final Value<double> quantity;
-  final Value<double> unitPrice;
-  final Value<double?> unitCost;
+  final Value<int> unitPrice;
+  final Value<int?> unitCost;
   final Value<int?> vendorId;
   final Value<int?> parentLaborId;
   final Value<bool?> isDone;
@@ -2183,7 +2183,7 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     required String type,
     required String description,
     this.quantity = const Value.absent(),
-    required double unitPrice,
+    required int unitPrice,
     this.unitCost = const Value.absent(),
     this.vendorId = const Value.absent(),
     this.parentLaborId = const Value.absent(),
@@ -2202,8 +2202,8 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     Expression<String>? type,
     Expression<String>? description,
     Expression<double>? quantity,
-    Expression<double>? unitPrice,
-    Expression<double>? unitCost,
+    Expression<int>? unitPrice,
+    Expression<int>? unitCost,
     Expression<int>? vendorId,
     Expression<int>? parentLaborId,
     Expression<bool>? isDone,
@@ -2236,8 +2236,8 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
     Value<String>? type,
     Value<String>? description,
     Value<double>? quantity,
-    Value<double>? unitPrice,
-    Value<double?>? unitCost,
+    Value<int>? unitPrice,
+    Value<int?>? unitCost,
     Value<int?>? vendorId,
     Value<int?>? parentLaborId,
     Value<bool?>? isDone,
@@ -2283,10 +2283,10 @@ class EstimateLineItemsCompanion extends UpdateCompanion<EstimateLineItem> {
       map['quantity'] = Variable<double>(quantity.value);
     }
     if (unitPrice.present) {
-      map['unit_price'] = Variable<double>(unitPrice.value);
+      map['unit_price'] = Variable<int>(unitPrice.value);
     }
     if (unitCost.present) {
-      map['unit_cost'] = Variable<double>(unitCost.value);
+      map['unit_cost'] = Variable<int>(unitCost.value);
     }
     if (vendorId.present) {
       map['vendor_id'] = Variable<int>(vendorId.value);
@@ -2368,13 +2368,13 @@ class $ShopSettingsTable extends ShopSettings
     'defaultLaborRate',
   );
   @override
-  late final GeneratedColumn<double> defaultLaborRate = GeneratedColumn<double>(
+  late final GeneratedColumn<int> defaultLaborRate = GeneratedColumn<int>(
     'default_labor_rate',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(120.0),
+    defaultValue: const Constant(12000),
   );
   static const VerificationMeta _defaultPartsMarkupMeta =
       const VerificationMeta('defaultPartsMarkup');
@@ -2474,7 +2474,7 @@ class $ShopSettingsTable extends ShopSettings
         data['${effectivePrefix}shop_name'],
       ),
       defaultLaborRate: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}default_labor_rate'],
       )!,
       defaultPartsMarkup: attachedDatabase.typeMapping.read(
@@ -2497,7 +2497,7 @@ class $ShopSettingsTable extends ShopSettings
 class ShopSetting extends DataClass implements Insertable<ShopSetting> {
   final int id;
   final String? shopName;
-  final double defaultLaborRate;
+  final int defaultLaborRate;
   final double defaultPartsMarkup;
   final double defaultTaxRate;
   const ShopSetting({
@@ -2514,7 +2514,7 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
     if (!nullToAbsent || shopName != null) {
       map['shop_name'] = Variable<String>(shopName);
     }
-    map['default_labor_rate'] = Variable<double>(defaultLaborRate);
+    map['default_labor_rate'] = Variable<int>(defaultLaborRate);
     map['default_parts_markup'] = Variable<double>(defaultPartsMarkup);
     map['default_tax_rate'] = Variable<double>(defaultTaxRate);
     return map;
@@ -2540,7 +2540,7 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
     return ShopSetting(
       id: serializer.fromJson<int>(json['id']),
       shopName: serializer.fromJson<String?>(json['shopName']),
-      defaultLaborRate: serializer.fromJson<double>(json['defaultLaborRate']),
+      defaultLaborRate: serializer.fromJson<int>(json['defaultLaborRate']),
       defaultPartsMarkup: serializer.fromJson<double>(
         json['defaultPartsMarkup'],
       ),
@@ -2553,7 +2553,7 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'shopName': serializer.toJson<String?>(shopName),
-      'defaultLaborRate': serializer.toJson<double>(defaultLaborRate),
+      'defaultLaborRate': serializer.toJson<int>(defaultLaborRate),
       'defaultPartsMarkup': serializer.toJson<double>(defaultPartsMarkup),
       'defaultTaxRate': serializer.toJson<double>(defaultTaxRate),
     };
@@ -2562,7 +2562,7 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
   ShopSetting copyWith({
     int? id,
     Value<String?> shopName = const Value.absent(),
-    double? defaultLaborRate,
+    int? defaultLaborRate,
     double? defaultPartsMarkup,
     double? defaultTaxRate,
   }) => ShopSetting(
@@ -2622,7 +2622,7 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
 class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
   final Value<int> id;
   final Value<String?> shopName;
-  final Value<double> defaultLaborRate;
+  final Value<int> defaultLaborRate;
   final Value<double> defaultPartsMarkup;
   final Value<double> defaultTaxRate;
   const ShopSettingsCompanion({
@@ -2642,7 +2642,7 @@ class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
   static Insertable<ShopSetting> custom({
     Expression<int>? id,
     Expression<String>? shopName,
-    Expression<double>? defaultLaborRate,
+    Expression<int>? defaultLaborRate,
     Expression<double>? defaultPartsMarkup,
     Expression<double>? defaultTaxRate,
   }) {
@@ -2659,7 +2659,7 @@ class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
   ShopSettingsCompanion copyWith({
     Value<int>? id,
     Value<String?>? shopName,
-    Value<double>? defaultLaborRate,
+    Value<int>? defaultLaborRate,
     Value<double>? defaultPartsMarkup,
     Value<double>? defaultTaxRate,
   }) {
@@ -2682,7 +2682,7 @@ class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
       map['shop_name'] = Variable<String>(shopName.value);
     }
     if (defaultLaborRate.present) {
-      map['default_labor_rate'] = Variable<double>(defaultLaborRate.value);
+      map['default_labor_rate'] = Variable<int>(defaultLaborRate.value);
     }
     if (defaultPartsMarkup.present) {
       map['default_parts_markup'] = Variable<double>(defaultPartsMarkup.value);
@@ -4232,25 +4232,25 @@ class $InventoryPartsTable extends InventoryParts
   );
   static const VerificationMeta _costMeta = const VerificationMeta('cost');
   @override
-  late final GeneratedColumn<double> cost = GeneratedColumn<double>(
+  late final GeneratedColumn<int> cost = GeneratedColumn<int>(
     'cost',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(0.0),
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _sellPriceMeta = const VerificationMeta(
     'sellPrice',
   );
   @override
-  late final GeneratedColumn<double> sellPrice = GeneratedColumn<double>(
+  late final GeneratedColumn<int> sellPrice = GeneratedColumn<int>(
     'sell_price',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant(0.0),
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _stockQtyMeta = const VerificationMeta(
     'stockQty',
@@ -4397,11 +4397,11 @@ class $InventoryPartsTable extends InventoryParts
         data['${effectivePrefix}category'],
       ),
       cost: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}cost'],
       )!,
       sellPrice: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}sell_price'],
       )!,
       stockQty: attachedDatabase.typeMapping.read(
@@ -4430,8 +4430,8 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
   final String? partNumber;
   final String description;
   final String? category;
-  final double cost;
-  final double sellPrice;
+  final int cost;
+  final int sellPrice;
   final int stockQty;
   final int lowStockThreshold;
   final DateTime createdAt;
@@ -4457,8 +4457,8 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
     if (!nullToAbsent || category != null) {
       map['category'] = Variable<String>(category);
     }
-    map['cost'] = Variable<double>(cost);
-    map['sell_price'] = Variable<double>(sellPrice);
+    map['cost'] = Variable<int>(cost);
+    map['sell_price'] = Variable<int>(sellPrice);
     map['stock_qty'] = Variable<int>(stockQty);
     map['low_stock_threshold'] = Variable<int>(lowStockThreshold);
     map['created_at'] = Variable<DateTime>(createdAt);
@@ -4493,8 +4493,8 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
       partNumber: serializer.fromJson<String?>(json['partNumber']),
       description: serializer.fromJson<String>(json['description']),
       category: serializer.fromJson<String?>(json['category']),
-      cost: serializer.fromJson<double>(json['cost']),
-      sellPrice: serializer.fromJson<double>(json['sellPrice']),
+      cost: serializer.fromJson<int>(json['cost']),
+      sellPrice: serializer.fromJson<int>(json['sellPrice']),
       stockQty: serializer.fromJson<int>(json['stockQty']),
       lowStockThreshold: serializer.fromJson<int>(json['lowStockThreshold']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -4508,8 +4508,8 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
       'partNumber': serializer.toJson<String?>(partNumber),
       'description': serializer.toJson<String>(description),
       'category': serializer.toJson<String?>(category),
-      'cost': serializer.toJson<double>(cost),
-      'sellPrice': serializer.toJson<double>(sellPrice),
+      'cost': serializer.toJson<int>(cost),
+      'sellPrice': serializer.toJson<int>(sellPrice),
       'stockQty': serializer.toJson<int>(stockQty),
       'lowStockThreshold': serializer.toJson<int>(lowStockThreshold),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -4521,8 +4521,8 @@ class InventoryPart extends DataClass implements Insertable<InventoryPart> {
     Value<String?> partNumber = const Value.absent(),
     String? description,
     Value<String?> category = const Value.absent(),
-    double? cost,
-    double? sellPrice,
+    int? cost,
+    int? sellPrice,
     int? stockQty,
     int? lowStockThreshold,
     DateTime? createdAt,
@@ -4605,8 +4605,8 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
   final Value<String?> partNumber;
   final Value<String> description;
   final Value<String?> category;
-  final Value<double> cost;
-  final Value<double> sellPrice;
+  final Value<int> cost;
+  final Value<int> sellPrice;
   final Value<int> stockQty;
   final Value<int> lowStockThreshold;
   final Value<DateTime> createdAt;
@@ -4637,8 +4637,8 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
     Expression<String>? partNumber,
     Expression<String>? description,
     Expression<String>? category,
-    Expression<double>? cost,
-    Expression<double>? sellPrice,
+    Expression<int>? cost,
+    Expression<int>? sellPrice,
     Expression<int>? stockQty,
     Expression<int>? lowStockThreshold,
     Expression<DateTime>? createdAt,
@@ -4661,8 +4661,8 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
     Value<String?>? partNumber,
     Value<String>? description,
     Value<String?>? category,
-    Value<double>? cost,
-    Value<double>? sellPrice,
+    Value<int>? cost,
+    Value<int>? sellPrice,
     Value<int>? stockQty,
     Value<int>? lowStockThreshold,
     Value<DateTime>? createdAt,
@@ -4696,10 +4696,10 @@ class InventoryPartsCompanion extends UpdateCompanion<InventoryPart> {
       map['category'] = Variable<String>(category.value);
     }
     if (cost.present) {
-      map['cost'] = Variable<double>(cost.value);
+      map['cost'] = Variable<int>(cost.value);
     }
     if (sellPrice.present) {
-      map['sell_price'] = Variable<double>(sellPrice.value);
+      map['sell_price'] = Variable<int>(sellPrice.value);
     }
     if (stockQty.present) {
       map['stock_qty'] = Variable<int>(stockQty.value);
@@ -4753,22 +4753,22 @@ class $MarkupRulesTable extends MarkupRules
     'minCost',
   );
   @override
-  late final GeneratedColumn<double> minCost = GeneratedColumn<double>(
+  late final GeneratedColumn<int> minCost = GeneratedColumn<int>(
     'min_cost',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _maxCostMeta = const VerificationMeta(
     'maxCost',
   );
   @override
-  late final GeneratedColumn<double> maxCost = GeneratedColumn<double>(
+  late final GeneratedColumn<int> maxCost = GeneratedColumn<int>(
     'max_cost',
     aliasedName,
     true,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
   static const VerificationMeta _markupPercentMeta = const VerificationMeta(
@@ -4838,11 +4838,11 @@ class $MarkupRulesTable extends MarkupRules
         data['${effectivePrefix}id'],
       )!,
       minCost: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}min_cost'],
       )!,
       maxCost: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}max_cost'],
       ),
       markupPercent: attachedDatabase.typeMapping.read(
@@ -4860,8 +4860,8 @@ class $MarkupRulesTable extends MarkupRules
 
 class MarkupRule extends DataClass implements Insertable<MarkupRule> {
   final int id;
-  final double minCost;
-  final double? maxCost;
+  final int minCost;
+  final int? maxCost;
   final double markupPercent;
   const MarkupRule({
     required this.id,
@@ -4873,9 +4873,9 @@ class MarkupRule extends DataClass implements Insertable<MarkupRule> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    map['min_cost'] = Variable<double>(minCost);
+    map['min_cost'] = Variable<int>(minCost);
     if (!nullToAbsent || maxCost != null) {
-      map['max_cost'] = Variable<double>(maxCost);
+      map['max_cost'] = Variable<int>(maxCost);
     }
     map['markup_percent'] = Variable<double>(markupPercent);
     return map;
@@ -4899,8 +4899,8 @@ class MarkupRule extends DataClass implements Insertable<MarkupRule> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return MarkupRule(
       id: serializer.fromJson<int>(json['id']),
-      minCost: serializer.fromJson<double>(json['minCost']),
-      maxCost: serializer.fromJson<double?>(json['maxCost']),
+      minCost: serializer.fromJson<int>(json['minCost']),
+      maxCost: serializer.fromJson<int?>(json['maxCost']),
       markupPercent: serializer.fromJson<double>(json['markupPercent']),
     );
   }
@@ -4909,16 +4909,16 @@ class MarkupRule extends DataClass implements Insertable<MarkupRule> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'minCost': serializer.toJson<double>(minCost),
-      'maxCost': serializer.toJson<double?>(maxCost),
+      'minCost': serializer.toJson<int>(minCost),
+      'maxCost': serializer.toJson<int?>(maxCost),
       'markupPercent': serializer.toJson<double>(markupPercent),
     };
   }
 
   MarkupRule copyWith({
     int? id,
-    double? minCost,
-    Value<double?> maxCost = const Value.absent(),
+    int? minCost,
+    Value<int?> maxCost = const Value.absent(),
     double? markupPercent,
   }) => MarkupRule(
     id: id ?? this.id,
@@ -4962,8 +4962,8 @@ class MarkupRule extends DataClass implements Insertable<MarkupRule> {
 
 class MarkupRulesCompanion extends UpdateCompanion<MarkupRule> {
   final Value<int> id;
-  final Value<double> minCost;
-  final Value<double?> maxCost;
+  final Value<int> minCost;
+  final Value<int?> maxCost;
   final Value<double> markupPercent;
   const MarkupRulesCompanion({
     this.id = const Value.absent(),
@@ -4973,15 +4973,15 @@ class MarkupRulesCompanion extends UpdateCompanion<MarkupRule> {
   });
   MarkupRulesCompanion.insert({
     this.id = const Value.absent(),
-    required double minCost,
+    required int minCost,
     this.maxCost = const Value.absent(),
     required double markupPercent,
   }) : minCost = Value(minCost),
        markupPercent = Value(markupPercent);
   static Insertable<MarkupRule> custom({
     Expression<int>? id,
-    Expression<double>? minCost,
-    Expression<double>? maxCost,
+    Expression<int>? minCost,
+    Expression<int>? maxCost,
     Expression<double>? markupPercent,
   }) {
     return RawValuesInsertable({
@@ -4994,8 +4994,8 @@ class MarkupRulesCompanion extends UpdateCompanion<MarkupRule> {
 
   MarkupRulesCompanion copyWith({
     Value<int>? id,
-    Value<double>? minCost,
-    Value<double?>? maxCost,
+    Value<int>? minCost,
+    Value<int?>? maxCost,
     Value<double>? markupPercent,
   }) {
     return MarkupRulesCompanion(
@@ -5013,10 +5013,10 @@ class MarkupRulesCompanion extends UpdateCompanion<MarkupRule> {
       map['id'] = Variable<int>(id.value);
     }
     if (minCost.present) {
-      map['min_cost'] = Variable<double>(minCost.value);
+      map['min_cost'] = Variable<int>(minCost.value);
     }
     if (maxCost.present) {
-      map['max_cost'] = Variable<double>(maxCost.value);
+      map['max_cost'] = Variable<int>(maxCost.value);
     }
     if (markupPercent.present) {
       map['markup_percent'] = Variable<double>(markupPercent.value);
@@ -5091,11 +5091,11 @@ class $ServiceTemplatesTable extends ServiceTemplates
     'defaultRate',
   );
   @override
-  late final GeneratedColumn<double> defaultRate = GeneratedColumn<double>(
+  late final GeneratedColumn<int> defaultRate = GeneratedColumn<int>(
     'default_rate',
     aliasedName,
     true,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
@@ -5203,7 +5203,7 @@ class $ServiceTemplatesTable extends ServiceTemplates
         data['${effectivePrefix}default_hours'],
       )!,
       defaultRate: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}default_rate'],
       ),
       createdAt: attachedDatabase.typeMapping.read(
@@ -5224,7 +5224,7 @@ class ServiceTemplate extends DataClass implements Insertable<ServiceTemplate> {
   final String name;
   final String laborDescription;
   final double defaultHours;
-  final double? defaultRate;
+  final int? defaultRate;
   final DateTime createdAt;
   const ServiceTemplate({
     required this.id,
@@ -5242,7 +5242,7 @@ class ServiceTemplate extends DataClass implements Insertable<ServiceTemplate> {
     map['labor_description'] = Variable<String>(laborDescription);
     map['default_hours'] = Variable<double>(defaultHours);
     if (!nullToAbsent || defaultRate != null) {
-      map['default_rate'] = Variable<double>(defaultRate);
+      map['default_rate'] = Variable<int>(defaultRate);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -5271,7 +5271,7 @@ class ServiceTemplate extends DataClass implements Insertable<ServiceTemplate> {
       name: serializer.fromJson<String>(json['name']),
       laborDescription: serializer.fromJson<String>(json['laborDescription']),
       defaultHours: serializer.fromJson<double>(json['defaultHours']),
-      defaultRate: serializer.fromJson<double?>(json['defaultRate']),
+      defaultRate: serializer.fromJson<int?>(json['defaultRate']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -5283,7 +5283,7 @@ class ServiceTemplate extends DataClass implements Insertable<ServiceTemplate> {
       'name': serializer.toJson<String>(name),
       'laborDescription': serializer.toJson<String>(laborDescription),
       'defaultHours': serializer.toJson<double>(defaultHours),
-      'defaultRate': serializer.toJson<double?>(defaultRate),
+      'defaultRate': serializer.toJson<int?>(defaultRate),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -5293,7 +5293,7 @@ class ServiceTemplate extends DataClass implements Insertable<ServiceTemplate> {
     String? name,
     String? laborDescription,
     double? defaultHours,
-    Value<double?> defaultRate = const Value.absent(),
+    Value<int?> defaultRate = const Value.absent(),
     DateTime? createdAt,
   }) => ServiceTemplate(
     id: id ?? this.id,
@@ -5359,7 +5359,7 @@ class ServiceTemplatesCompanion extends UpdateCompanion<ServiceTemplate> {
   final Value<String> name;
   final Value<String> laborDescription;
   final Value<double> defaultHours;
-  final Value<double?> defaultRate;
+  final Value<int?> defaultRate;
   final Value<DateTime> createdAt;
   const ServiceTemplatesCompanion({
     this.id = const Value.absent(),
@@ -5383,7 +5383,7 @@ class ServiceTemplatesCompanion extends UpdateCompanion<ServiceTemplate> {
     Expression<String>? name,
     Expression<String>? laborDescription,
     Expression<double>? defaultHours,
-    Expression<double>? defaultRate,
+    Expression<int>? defaultRate,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -5401,7 +5401,7 @@ class ServiceTemplatesCompanion extends UpdateCompanion<ServiceTemplate> {
     Value<String>? name,
     Value<String>? laborDescription,
     Value<double>? defaultHours,
-    Value<double?>? defaultRate,
+    Value<int?>? defaultRate,
     Value<DateTime>? createdAt,
   }) {
     return ServiceTemplatesCompanion(
@@ -5430,7 +5430,7 @@ class ServiceTemplatesCompanion extends UpdateCompanion<ServiceTemplate> {
       map['default_hours'] = Variable<double>(defaultHours.value);
     }
     if (defaultRate.present) {
-      map['default_rate'] = Variable<double>(defaultRate.value);
+      map['default_rate'] = Variable<int>(defaultRate.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -6557,8 +6557,8 @@ typedef $$EstimateLineItemsTableCreateCompanionBuilder =
       required String type,
       required String description,
       Value<double> quantity,
-      required double unitPrice,
-      Value<double?> unitCost,
+      required int unitPrice,
+      Value<int?> unitCost,
       Value<int?> vendorId,
       Value<int?> parentLaborId,
       Value<bool?> isDone,
@@ -6574,8 +6574,8 @@ typedef $$EstimateLineItemsTableUpdateCompanionBuilder =
       Value<String> type,
       Value<String> description,
       Value<double> quantity,
-      Value<double> unitPrice,
-      Value<double?> unitCost,
+      Value<int> unitPrice,
+      Value<int?> unitCost,
       Value<int?> vendorId,
       Value<int?> parentLaborId,
       Value<bool?> isDone,
@@ -6619,12 +6619,12 @@ class $$EstimateLineItemsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get unitPrice => $composableBuilder(
+  ColumnFilters<int> get unitPrice => $composableBuilder(
     column: $table.unitPrice,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get unitCost => $composableBuilder(
+  ColumnFilters<int> get unitCost => $composableBuilder(
     column: $table.unitCost,
     builder: (column) => ColumnFilters(column),
   );
@@ -6699,12 +6699,12 @@ class $$EstimateLineItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get unitPrice => $composableBuilder(
+  ColumnOrderings<int> get unitPrice => $composableBuilder(
     column: $table.unitPrice,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get unitCost => $composableBuilder(
+  ColumnOrderings<int> get unitCost => $composableBuilder(
     column: $table.unitCost,
     builder: (column) => ColumnOrderings(column),
   );
@@ -6773,10 +6773,10 @@ class $$EstimateLineItemsTableAnnotationComposer
   GeneratedColumn<double> get quantity =>
       $composableBuilder(column: $table.quantity, builder: (column) => column);
 
-  GeneratedColumn<double> get unitPrice =>
+  GeneratedColumn<int> get unitPrice =>
       $composableBuilder(column: $table.unitPrice, builder: (column) => column);
 
-  GeneratedColumn<double> get unitCost =>
+  GeneratedColumn<int> get unitCost =>
       $composableBuilder(column: $table.unitCost, builder: (column) => column);
 
   GeneratedColumn<int> get vendorId =>
@@ -6854,8 +6854,8 @@ class $$EstimateLineItemsTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<String> description = const Value.absent(),
                 Value<double> quantity = const Value.absent(),
-                Value<double> unitPrice = const Value.absent(),
-                Value<double?> unitCost = const Value.absent(),
+                Value<int> unitPrice = const Value.absent(),
+                Value<int?> unitCost = const Value.absent(),
                 Value<int?> vendorId = const Value.absent(),
                 Value<int?> parentLaborId = const Value.absent(),
                 Value<bool?> isDone = const Value.absent(),
@@ -6886,8 +6886,8 @@ class $$EstimateLineItemsTableTableManager
                 required String type,
                 required String description,
                 Value<double> quantity = const Value.absent(),
-                required double unitPrice,
-                Value<double?> unitCost = const Value.absent(),
+                required int unitPrice,
+                Value<int?> unitCost = const Value.absent(),
                 Value<int?> vendorId = const Value.absent(),
                 Value<int?> parentLaborId = const Value.absent(),
                 Value<bool?> isDone = const Value.absent(),
@@ -6944,7 +6944,7 @@ typedef $$ShopSettingsTableCreateCompanionBuilder =
     ShopSettingsCompanion Function({
       Value<int> id,
       Value<String?> shopName,
-      Value<double> defaultLaborRate,
+      Value<int> defaultLaborRate,
       Value<double> defaultPartsMarkup,
       Value<double> defaultTaxRate,
     });
@@ -6952,7 +6952,7 @@ typedef $$ShopSettingsTableUpdateCompanionBuilder =
     ShopSettingsCompanion Function({
       Value<int> id,
       Value<String?> shopName,
-      Value<double> defaultLaborRate,
+      Value<int> defaultLaborRate,
       Value<double> defaultPartsMarkup,
       Value<double> defaultTaxRate,
     });
@@ -6976,7 +6976,7 @@ class $$ShopSettingsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get defaultLaborRate => $composableBuilder(
+  ColumnFilters<int> get defaultLaborRate => $composableBuilder(
     column: $table.defaultLaborRate,
     builder: (column) => ColumnFilters(column),
   );
@@ -7011,7 +7011,7 @@ class $$ShopSettingsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get defaultLaborRate => $composableBuilder(
+  ColumnOrderings<int> get defaultLaborRate => $composableBuilder(
     column: $table.defaultLaborRate,
     builder: (column) => ColumnOrderings(column),
   );
@@ -7042,7 +7042,7 @@ class $$ShopSettingsTableAnnotationComposer
   GeneratedColumn<String> get shopName =>
       $composableBuilder(column: $table.shopName, builder: (column) => column);
 
-  GeneratedColumn<double> get defaultLaborRate => $composableBuilder(
+  GeneratedColumn<int> get defaultLaborRate => $composableBuilder(
     column: $table.defaultLaborRate,
     builder: (column) => column,
   );
@@ -7091,7 +7091,7 @@ class $$ShopSettingsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String?> shopName = const Value.absent(),
-                Value<double> defaultLaborRate = const Value.absent(),
+                Value<int> defaultLaborRate = const Value.absent(),
                 Value<double> defaultPartsMarkup = const Value.absent(),
                 Value<double> defaultTaxRate = const Value.absent(),
               }) => ShopSettingsCompanion(
@@ -7105,7 +7105,7 @@ class $$ShopSettingsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String?> shopName = const Value.absent(),
-                Value<double> defaultLaborRate = const Value.absent(),
+                Value<int> defaultLaborRate = const Value.absent(),
                 Value<double> defaultPartsMarkup = const Value.absent(),
                 Value<double> defaultTaxRate = const Value.absent(),
               }) => ShopSettingsCompanion.insert(
@@ -7890,8 +7890,8 @@ typedef $$InventoryPartsTableCreateCompanionBuilder =
       Value<String?> partNumber,
       required String description,
       Value<String?> category,
-      Value<double> cost,
-      Value<double> sellPrice,
+      Value<int> cost,
+      Value<int> sellPrice,
       Value<int> stockQty,
       Value<int> lowStockThreshold,
       Value<DateTime> createdAt,
@@ -7902,8 +7902,8 @@ typedef $$InventoryPartsTableUpdateCompanionBuilder =
       Value<String?> partNumber,
       Value<String> description,
       Value<String?> category,
-      Value<double> cost,
-      Value<double> sellPrice,
+      Value<int> cost,
+      Value<int> sellPrice,
       Value<int> stockQty,
       Value<int> lowStockThreshold,
       Value<DateTime> createdAt,
@@ -7938,12 +7938,12 @@ class $$InventoryPartsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get cost => $composableBuilder(
+  ColumnFilters<int> get cost => $composableBuilder(
     column: $table.cost,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get sellPrice => $composableBuilder(
+  ColumnFilters<int> get sellPrice => $composableBuilder(
     column: $table.sellPrice,
     builder: (column) => ColumnFilters(column),
   );
@@ -7993,12 +7993,12 @@ class $$InventoryPartsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get cost => $composableBuilder(
+  ColumnOrderings<int> get cost => $composableBuilder(
     column: $table.cost,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get sellPrice => $composableBuilder(
+  ColumnOrderings<int> get sellPrice => $composableBuilder(
     column: $table.sellPrice,
     builder: (column) => ColumnOrderings(column),
   );
@@ -8044,10 +8044,10 @@ class $$InventoryPartsTableAnnotationComposer
   GeneratedColumn<String> get category =>
       $composableBuilder(column: $table.category, builder: (column) => column);
 
-  GeneratedColumn<double> get cost =>
+  GeneratedColumn<int> get cost =>
       $composableBuilder(column: $table.cost, builder: (column) => column);
 
-  GeneratedColumn<double> get sellPrice =>
+  GeneratedColumn<int> get sellPrice =>
       $composableBuilder(column: $table.sellPrice, builder: (column) => column);
 
   GeneratedColumn<int> get stockQty =>
@@ -8099,8 +8099,8 @@ class $$InventoryPartsTableTableManager
                 Value<String?> partNumber = const Value.absent(),
                 Value<String> description = const Value.absent(),
                 Value<String?> category = const Value.absent(),
-                Value<double> cost = const Value.absent(),
-                Value<double> sellPrice = const Value.absent(),
+                Value<int> cost = const Value.absent(),
+                Value<int> sellPrice = const Value.absent(),
                 Value<int> stockQty = const Value.absent(),
                 Value<int> lowStockThreshold = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -8121,8 +8121,8 @@ class $$InventoryPartsTableTableManager
                 Value<String?> partNumber = const Value.absent(),
                 required String description,
                 Value<String?> category = const Value.absent(),
-                Value<double> cost = const Value.absent(),
-                Value<double> sellPrice = const Value.absent(),
+                Value<int> cost = const Value.absent(),
+                Value<int> sellPrice = const Value.absent(),
                 Value<int> stockQty = const Value.absent(),
                 Value<int> lowStockThreshold = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -8165,15 +8165,15 @@ typedef $$InventoryPartsTableProcessedTableManager =
 typedef $$MarkupRulesTableCreateCompanionBuilder =
     MarkupRulesCompanion Function({
       Value<int> id,
-      required double minCost,
-      Value<double?> maxCost,
+      required int minCost,
+      Value<int?> maxCost,
       required double markupPercent,
     });
 typedef $$MarkupRulesTableUpdateCompanionBuilder =
     MarkupRulesCompanion Function({
       Value<int> id,
-      Value<double> minCost,
-      Value<double?> maxCost,
+      Value<int> minCost,
+      Value<int?> maxCost,
       Value<double> markupPercent,
     });
 
@@ -8191,12 +8191,12 @@ class $$MarkupRulesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get minCost => $composableBuilder(
+  ColumnFilters<int> get minCost => $composableBuilder(
     column: $table.minCost,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get maxCost => $composableBuilder(
+  ColumnFilters<int> get maxCost => $composableBuilder(
     column: $table.maxCost,
     builder: (column) => ColumnFilters(column),
   );
@@ -8221,12 +8221,12 @@ class $$MarkupRulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get minCost => $composableBuilder(
+  ColumnOrderings<int> get minCost => $composableBuilder(
     column: $table.minCost,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get maxCost => $composableBuilder(
+  ColumnOrderings<int> get maxCost => $composableBuilder(
     column: $table.maxCost,
     builder: (column) => ColumnOrderings(column),
   );
@@ -8249,10 +8249,10 @@ class $$MarkupRulesTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<double> get minCost =>
+  GeneratedColumn<int> get minCost =>
       $composableBuilder(column: $table.minCost, builder: (column) => column);
 
-  GeneratedColumn<double> get maxCost =>
+  GeneratedColumn<int> get maxCost =>
       $composableBuilder(column: $table.maxCost, builder: (column) => column);
 
   GeneratedColumn<double> get markupPercent => $composableBuilder(
@@ -8293,8 +8293,8 @@ class $$MarkupRulesTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                Value<double> minCost = const Value.absent(),
-                Value<double?> maxCost = const Value.absent(),
+                Value<int> minCost = const Value.absent(),
+                Value<int?> maxCost = const Value.absent(),
                 Value<double> markupPercent = const Value.absent(),
               }) => MarkupRulesCompanion(
                 id: id,
@@ -8305,8 +8305,8 @@ class $$MarkupRulesTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                required double minCost,
-                Value<double?> maxCost = const Value.absent(),
+                required int minCost,
+                Value<int?> maxCost = const Value.absent(),
                 required double markupPercent,
               }) => MarkupRulesCompanion.insert(
                 id: id,
@@ -8345,7 +8345,7 @@ typedef $$ServiceTemplatesTableCreateCompanionBuilder =
       required String name,
       required String laborDescription,
       Value<double> defaultHours,
-      Value<double?> defaultRate,
+      Value<int?> defaultRate,
       Value<DateTime> createdAt,
     });
 typedef $$ServiceTemplatesTableUpdateCompanionBuilder =
@@ -8354,7 +8354,7 @@ typedef $$ServiceTemplatesTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> laborDescription,
       Value<double> defaultHours,
-      Value<double?> defaultRate,
+      Value<int?> defaultRate,
       Value<DateTime> createdAt,
     });
 
@@ -8387,7 +8387,7 @@ class $$ServiceTemplatesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get defaultRate => $composableBuilder(
+  ColumnFilters<int> get defaultRate => $composableBuilder(
     column: $table.defaultRate,
     builder: (column) => ColumnFilters(column),
   );
@@ -8427,7 +8427,7 @@ class $$ServiceTemplatesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get defaultRate => $composableBuilder(
+  ColumnOrderings<int> get defaultRate => $composableBuilder(
     column: $table.defaultRate,
     builder: (column) => ColumnOrderings(column),
   );
@@ -8463,7 +8463,7 @@ class $$ServiceTemplatesTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<double> get defaultRate => $composableBuilder(
+  GeneratedColumn<int> get defaultRate => $composableBuilder(
     column: $table.defaultRate,
     builder: (column) => column,
   );
@@ -8513,7 +8513,7 @@ class $$ServiceTemplatesTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> laborDescription = const Value.absent(),
                 Value<double> defaultHours = const Value.absent(),
-                Value<double?> defaultRate = const Value.absent(),
+                Value<int?> defaultRate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ServiceTemplatesCompanion(
                 id: id,
@@ -8529,7 +8529,7 @@ class $$ServiceTemplatesTableTableManager
                 required String name,
                 required String laborDescription,
                 Value<double> defaultHours = const Value.absent(),
-                Value<double?> defaultRate = const Value.absent(),
+                Value<int?> defaultRate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ServiceTemplatesCompanion.insert(
                 id: id,

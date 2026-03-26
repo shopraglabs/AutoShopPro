@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/money.dart';
 import '../../database/database.dart';
 import '../estimates/estimates_provider.dart';
 import '../invoices/invoice_service.dart';
@@ -391,7 +392,7 @@ class _RoDetailView extends ConsumerWidget {
     final otherLines = lineItems.where((l) => l.type == 'other').toList();
 
     final subtotal =
-        lineItems.fold(0.0, (s, l) => s + l.quantity * l.unitPrice);
+        lineItems.fold(0.0, (s, l) => s + l.quantity * fromCents(l.unitPrice));
     final tax = subtotal * (taxRate / 100);
     final total = subtotal + tax;
 
@@ -1310,7 +1311,7 @@ class _DeclinedItemRow extends StatelessWidget {
             item.laborName != null
         ? item.laborName!
         : item.description;
-    final price = _money(item.quantity * item.unitPrice);
+    final price = _money(item.quantity * fromCents(item.unitPrice));
 
     return Container(
       color: CupertinoColors.white,
@@ -1476,12 +1477,12 @@ class _LineItemRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final done = item.isDone ?? false;
-    final lineTotal = item.quantity * item.unitPrice;
+    final lineTotal = item.quantity * fromCents(item.unitPrice);
     final qtyLabel = item.type == 'labor'
-        ? '${_qty(item.quantity)} hr @ \$${item.unitPrice.toStringAsFixed(2)}/hr'
+        ? '${_qty(item.quantity)} hr @ \$${fromCents(item.unitPrice).toStringAsFixed(2)}/hr'
         : item.type == 'other'
-            ? '\$${item.unitPrice.toStringAsFixed(2)}'
-            : '${_qty(item.quantity)} × \$${item.unitPrice.toStringAsFixed(2)}';
+            ? '\$${fromCents(item.unitPrice).toStringAsFixed(2)}'
+            : '${_qty(item.quantity)} × \$${fromCents(item.unitPrice).toStringAsFixed(2)}';
 
     final textColor =
         done ? const Color(0xFFAAAAAA) : const Color(0xFF1C1C1E);
@@ -1553,7 +1554,7 @@ class _LineItemRow extends StatelessWidget {
                               decorationColor: subColor)),
                     if (item.unitCost != null)
                       Text(
-                        'Cost \$${item.unitCost!.toStringAsFixed(2)}',
+                        'Cost \$${fromCents(item.unitCost!).toStringAsFixed(2)}',
                         style: TextStyle(
                             fontSize: 12,
                             color: subColor,

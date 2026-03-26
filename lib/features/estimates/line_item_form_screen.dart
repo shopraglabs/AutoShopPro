@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/money.dart';
 import '../../database/database.dart';
 import 'estimates_provider.dart';
 import '../vendors/vendors_provider.dart' show vendorsProvider;
@@ -100,9 +101,11 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
       _laborRate.addListener(_onLaborHoursOrRateChanged);
       _laborTotal.addListener(_onLaborTotalChanged);
       if (li != null) {
-        _laborRate.text = li.unitPrice.toStringAsFixed(2);
-        // Pre-fill total from existing hours × rate
-        final tot = li.quantity * li.unitPrice;
+        // unitPrice is stored as int cents — convert to dollars for display
+        final rateDollars = fromCents(li.unitPrice);
+        _laborRate.text = rateDollars.toStringAsFixed(2);
+        // Pre-fill total from existing hours × rate (both in dollars)
+        final tot = li.quantity * rateDollars;
         _laborTotal.text = tot % 1 == 0
             ? tot.toInt().toString()
             : tot.toStringAsFixed(2);
@@ -112,10 +115,11 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     } else if (_isOther) {
       // Other: just pre-fill name/desc/cost/list if editing
       if (li != null) {
-        final cost = li.unitCost;
-        final list = li.unitPrice;
-        _unitList.text = list.toStringAsFixed(2);
-        if (cost != null) _unitCost.text = cost.toStringAsFixed(2);
+        // unitPrice/unitCost are int cents — convert to dollars for display
+        _unitList.text = fromCents(li.unitPrice).toStringAsFixed(2);
+        if (li.unitCost != null) {
+          _unitCost.text = fromCents(li.unitCost!).toStringAsFixed(2);
+        }
       }
     } else {
       // Parts: wire up the auto-sync listeners
@@ -125,16 +129,16 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
       _unitList.addListener(_onListChanged);
 
       if (li != null) {
-        // Pre-fill from existing line item
-        final cost = li.unitCost;
-        final list = li.unitPrice;
-        _unitList.text = list.toStringAsFixed(2);
-        if (cost != null) {
-          _unitCost.text = cost.toStringAsFixed(2);
-          // Derive markup % from stored cost and list price
-          if (cost > 0) {
-            final pct = (list - cost) / cost * 100;
-            final dollar = list - cost;
+        // unitPrice/unitCost are int cents — convert to dollars for display
+        final listDollars = fromCents(li.unitPrice);
+        _unitList.text = listDollars.toStringAsFixed(2);
+        if (li.unitCost != null) {
+          final costDollars = fromCents(li.unitCost!);
+          _unitCost.text = costDollars.toStringAsFixed(2);
+          // Derive markup % and $ from stored cost and list price (dollar values)
+          if (costDollars > 0) {
+            final pct = (listDollars - costDollars) / costDollars * 100;
+            final dollar = listDollars - costDollars;
             _markupPercent.text = pct.toStringAsFixed(1);
             _markupDollar.text = dollar.toStringAsFixed(2);
           }
@@ -157,7 +161,8 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
   Future<void> _loadDefaultLaborRate() async {
     final settings = await ref.read(dbProvider).getOrCreateSettings();
     if (mounted && _laborRate.text.isEmpty) {
-      _laborRate.text = settings.defaultLaborRate.toStringAsFixed(2);
+      // defaultLaborRate is stored as int cents — convert to dollars for display
+      _laborRate.text = fromCents(settings.defaultLaborRate).toStringAsFixed(2);
     }
   }
 
@@ -233,13 +238,15 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
   // if a matching tier is found. Uses the syncingMarkup guard so setting
   // the percent field doesn't trigger an infinite listener loop.
   void _applyMarkupTier() {
-    final cost = double.tryParse(_unitCost.text);
-    if (cost == null) return;
+    final costDollars = double.tryParse(_unitCost.text);
+    if (costDollars == null) return;
+    // Convert text-field dollars to cents for comparison with int-cents rules
+    final costCents = toCents(costDollars);
     final rules = ref.read(markupRulesProvider).value ?? [];
     for (final rule in rules) {
       final withinMax =
-          rule.maxCost == null || cost < rule.maxCost!;
-      if (cost >= rule.minCost && withinMax) {
+          rule.maxCost == null || costCents < rule.maxCost!;
+      if (costCents >= rule.minCost && withinMax) {
         final newPct = rule.markupPercent.toStringAsFixed(1);
         if (_markupPercent.text != newPct) {
           _syncingMarkup = true;
@@ -375,12 +382,15 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
       if (picked.partNumber != null && picked.partNumber!.isNotEmpty) {
         _partNumber.text = picked.partNumber!;
       }
-      _unitCost.text = picked.cost.toStringAsFixed(2);
-      _unitList.text = picked.sellPrice.toStringAsFixed(2);
-      // Derive markup from cost and sell price
+      // cost/sellPrice are int cents — convert to dollars for display
+      final costDollars = fromCents(picked.cost);
+      final sellDollars = fromCents(picked.sellPrice);
+      _unitCost.text = costDollars.toStringAsFixed(2);
+      _unitList.text = sellDollars.toStringAsFixed(2);
+      // Derive markup from cost and sell price (dollar values)
       if (picked.cost > 0) {
-        final dollar = picked.sellPrice - picked.cost;
-        final pct = dollar / picked.cost * 100;
+        final dollar = sellDollars - costDollars;
+        final pct = dollar / costDollars * 100;
         _markupDollar.text = dollar.toStringAsFixed(2);
         _markupPercent.text = pct.toStringAsFixed(1);
       }
@@ -421,7 +431,8 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
           ? picked.defaultHours.toInt().toString()
           : picked.defaultHours.toStringAsFixed(1);
       if (picked.defaultRate != null) {
-        _laborRate.text = picked.defaultRate!.toStringAsFixed(2);
+        // defaultRate is stored as int cents — convert to dollars for display
+        _laborRate.text = fromCents(picked.defaultRate!).toStringAsFixed(2);
       }
       setState(() => _catalogTemplateName = picked.name);
 
@@ -472,17 +483,18 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
       }
       final listPrice =
           double.tryParse(_unitList.text.replaceAll(',', '')) ?? 0.0;
-      final cost =
+      final costDollars =
           double.tryParse(_unitCost.text.replaceAll(',', ''));
       setState(() => _saving = true);
       final db = ref.read(dbProvider);
+      // Convert dollar amounts to int cents before saving
       if (_isEditing) {
         await db.updateLineItem(widget.lineItem!.copyWith(
           description: desc.isEmpty ? name : desc,
           laborName: Value(name),
           quantity: 1.0,
-          unitPrice: listPrice,
-          unitCost: Value(cost),
+          unitPrice: toCents(listPrice),
+          unitCost: Value(costDollars != null ? toCents(costDollars) : null),
         ));
       } else {
         await db.insertLineItem(EstimateLineItemsCompanion.insert(
@@ -491,8 +503,8 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
           description: desc.isEmpty ? name : desc,
           laborName: Value(name),
           quantity: const Value(1.0),
-          unitPrice: listPrice,
-          unitCost: Value(cost),
+          unitPrice: toCents(listPrice),
+          unitCost: Value(costDollars != null ? toCents(costDollars) : null),
           approvalStatus: const Value('approved'),
         ));
       }
@@ -511,19 +523,19 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
       return;
     }
 
-    double? price;
-    double? unitCost;
+    double? priceDollars;
+    double? unitCostDollars;
 
     if (_isLabor) {
-      price = double.tryParse(_laborRate.text.replaceAll(',', ''));
-      if (price == null || price < 0) {
+      priceDollars = double.tryParse(_laborRate.text.replaceAll(',', ''));
+      if (priceDollars == null || priceDollars < 0) {
         _showError('Please enter a valid rate.');
         return;
       }
     } else {
-      price = double.tryParse(_unitList.text.replaceAll(',', ''));
-      unitCost = double.tryParse(_unitCost.text.replaceAll(',', ''));
-      if (price == null || price < 0) {
+      priceDollars = double.tryParse(_unitList.text.replaceAll(',', ''));
+      unitCostDollars = double.tryParse(_unitCost.text.replaceAll(',', ''));
+      if (priceDollars == null || priceDollars < 0) {
         _showError('Please enter a valid unit list price.');
         return;
       }
@@ -535,13 +547,18 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     final laborNameVal = _laborName.text.trim();
     final partNumberVal = _partNumber.text.trim();
 
+    // Convert dollar amounts to int cents before saving to the database
+    final unitPriceCents = toCents(priceDollars);
+    final unitCostCents =
+        unitCostDollars != null ? toCents(unitCostDollars) : null;
+
     if (_isEditing) {
       final existing = widget.lineItem!;
       await db.updateLineItem(existing.copyWith(
         description: desc,
         quantity: qty,
-        unitPrice: price,
-        unitCost: Value(unitCost),
+        unitPrice: unitPriceCents,
+        unitCost: Value(unitCostCents),
         vendorId: Value(_vendorId),
         parentLaborId: Value(_parentLaborId),
         inventoryPartId: Value(_catalogPartId ?? existing.inventoryPartId),
@@ -554,8 +571,8 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         type: widget.type,
         description: desc,
         quantity: Value(qty),
-        unitPrice: price,
-        unitCost: Value(unitCost),
+        unitPrice: unitPriceCents,
+        unitCost: Value(unitCostCents),
         vendorId: Value(_vendorId),
         parentLaborId: Value(_parentLaborId),
         inventoryPartId: Value(_catalogPartId),
@@ -563,7 +580,8 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         partNumber: Value(partNumberVal.isEmpty ? null : partNumberVal),
         approvalStatus: const Value('approved'),
       ));
-      // Insert linked template parts, each tied to the new labor line
+      // Insert linked template parts, each tied to the new labor line.
+      // part.sellPrice and part.cost are already int cents — copy directly.
       if (_isLabor) {
         for (final entry in _linkedTemplateParts) {
           final q = double.tryParse(
@@ -575,8 +593,8 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
               type: 'part',
               description: entry.part.description,
               quantity: Value(q),
-              unitPrice: entry.part.sellPrice,
-              unitCost: Value(entry.part.cost),
+              unitPrice: entry.part.sellPrice,   // int cents → int cents
+              unitCost: Value(entry.part.cost),  // int cents → int cents
               inventoryPartId: Value(entry.part.id),
               parentLaborId: Value(newId),
               approvalStatus: const Value('approved'),
@@ -930,7 +948,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
               linkedParts: _isLabor
                   ? _linkedTemplateParts
                       .map((e) => (
-                            sellPrice: e.part.sellPrice,
+                            sellPrice: fromCents(e.part.sellPrice),
                             qtyController: e.qtyController,
                           ))
                       .toList()

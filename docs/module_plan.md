@@ -329,6 +329,14 @@ The heart of the app. Everything else depends on this.
 - ✅ "Add Parts" confirm button in template picker replaced with list-row style
 - ✅ Patch naming convention: patches inherit parent minor/major version name
 
+### Data Integrity & Infrastructure (v0.10.3 Buttoned Up)
+- ✅ MIT LICENSE file added (ShopRag Labs)
+- ✅ analysis_options.yaml — production-strict lint rules added on top of flutter_lints
+- ✅ Money columns converted from REAL (float) to INTEGER (cents) — schema v26; migration converts existing data with ROUND(col * 100); all UI screens use fromCents()/toCents() helpers
+- ✅ lib/core/utils/money.dart — toCents(), fromCents(), formatMoney(), formatMoneyFull() helpers
+- ✅ Foreign key constraints — .references() annotations on all FK columns; PRAGMA foreign_keys = ON at DB open
+- ✅ Transaction wrapping on cascade-delete DAO methods (deleteCustomer, deleteVehicle, deleteEstimate, deleteServiceTemplate, clearAllCustomerData)
+
 ### Audit & Bug Fixes (v0.10.2 Buttoned Up)
 - ✅ Cascade deletes — deleting a customer removes all linked vehicles, estimates, line items, and ROs; deleting a vehicle removes its estimates, line items, and ROs; deleting an estimate removes its line items; deleting a service template removes its linked parts
 - ✅ Archive vendors — soft-delete with isArchived flag (schema v25); archived vendors hidden from lists and pickers but records preserved

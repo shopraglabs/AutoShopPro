@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/money.dart';
 import '../../database/database.dart';
 import '../../widgets/context_menu.dart';
 import '../customers/customers_provider.dart';
@@ -185,12 +186,8 @@ class _PartListScreenState extends ConsumerState<PartListScreen> {
                                               if (part.partNumber != null &&
                                                   part.partNumber!.isNotEmpty)
                                                 part.partNumber!,
-                                              () {
-                                                final p = part.sellPrice;
-                                                return p % 1 == 0
-                                                    ? '\$${p.toInt()}'
-                                                    : '\$${p.toStringAsFixed(2)}';
-                                              }(),
+                                              // sellPrice is int cents — format as dollars
+                                              formatMoney(part.sellPrice),
                                               '${part.stockQty} in stock',
                                             ].join(' · '),
                                             style: const TextStyle(

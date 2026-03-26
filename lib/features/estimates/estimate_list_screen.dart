@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/money.dart';
 import '../../database/database.dart';
 import '../../widgets/context_menu.dart';
 import 'estimates_provider.dart';
@@ -20,7 +21,7 @@ String _estimateNumber(int id) => 'EST-${id.toString().padLeft(4, '0')}';
 
 // Calculates the grand total of an estimate's line items.
 double _calcTotal(List<EstimateLineItem> items, double taxRate) {
-  final subtotal = items.fold(0.0, (s, i) => s + i.quantity * i.unitPrice);
+  final subtotal = items.fold(0.0, (s, i) => s + i.quantity * fromCents(i.unitPrice));
   return subtotal + subtotal * (taxRate / 100);
 }
 

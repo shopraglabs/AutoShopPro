@@ -11,6 +11,10 @@ part 'database.g.dart';
 // ─── Table Definitions ───────────────────────────────────────────────────────
 // Each class below is one database table. The class name becomes the table
 // name (in snake_case). Each field is a column.
+//
+// MONEY COLUMNS — stored as INTEGER cents (e.g. $120.00 → 12000).
+// Use toCents() before writing and fromCents() after reading.
+// See lib/core/utils/money.dart.
 
 class Customers extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -25,7 +29,8 @@ class Customers extends Table {
 class Vehicles extends Table {
   IntColumn get id => integer().autoIncrement()();
   // Which customer owns this vehicle
-  IntColumn get customerId => integer()();
+  IntColumn get customerId =>
+      integer().references(Customers, #id, onDelete: KeyAction.cascade)();
   IntColumn get year => integer().nullable()();
   TextColumn get make => text().nullable()();
   TextColumn get model => text().nullable()();
@@ -38,16 +43,18 @@ class Vehicles extends Table {
 class Estimates extends Table {
   IntColumn get id => integer().autoIncrement()();
   // Which customer this estimate is for
-  IntColumn get customerId => integer()();
+  IntColumn get customerId =>
+      integer().references(Customers, #id, onDelete: KeyAction.cascade)();
   // Which vehicle (optional — can be added later)
-  IntColumn get vehicleId => integer().nullable()();
+  IntColumn get vehicleId => integer().nullable()
+      .references(Vehicles, #id, onDelete: KeyAction.setNull)();
   // What the customer says is wrong — captured at write-up
   TextColumn get customerComplaint => text().nullable()();
   // Optional internal note
   TextColumn get note => text().nullable()();
   // 'draft' | 'approved' | 'declined'
   TextColumn get status => text().withDefault(const Constant('draft'))();
-  // Tax rate as a percentage, e.g. 8.5 means 8.5%
+  // Tax rate as a percentage, e.g. 8.5 means 8.5%  (REAL — not money)
   RealColumn get taxRate => real().withDefault(const Constant(0.0))();
   // The date shown on the estimate (editable). Null = use createdAt for display.
   DateTimeColumn get estimateDate => dateTime().nullable()();
@@ -57,18 +64,21 @@ class Estimates extends Table {
 class EstimateLineItems extends Table {
   IntColumn get id => integer().autoIncrement()();
   // Which estimate this line belongs to
-  IntColumn get estimateId => integer()();
-  // 'labor' or 'part'
+  IntColumn get estimateId =>
+      integer().references(Estimates, #id, onDelete: KeyAction.cascade)();
+  // 'labor' | 'part' | 'other'
   TextColumn get type => text()();
   TextColumn get description => text()();
-  // Hours for labor, units for parts
+  // Hours for labor, units for parts (REAL — not money)
   RealColumn get quantity => real().withDefault(const Constant(1.0))();
-  // What the shop charges the customer (rate/hr for labor, list price for parts)
-  RealColumn get unitPrice => real()();
-  // What the shop paid for the part (parts only, optional)
-  RealColumn get unitCost => real().nullable()();
+  // What the shop charges the customer — INTEGER CENTS
+  // (rate/hr for labor, list price for parts/other)
+  IntColumn get unitPrice => integer()();
+  // What the shop paid for the part — INTEGER CENTS (parts only, optional)
+  IntColumn get unitCost => integer().nullable()();
   // Which vendor this part came from (parts only, optional)
-  IntColumn get vendorId => integer().nullable()();
+  IntColumn get vendorId => integer().nullable()
+      .references(Vendors, #id, onDelete: KeyAction.setNull)();
   // Which labor line this part is associated with (parts only, optional)
   IntColumn get parentLaborId => integer().nullable()();
   // Whether this item has been marked done on the repair order (null = not done)
@@ -76,7 +86,8 @@ class EstimateLineItems extends Table {
   // Customer approval status: null = pending, 'approved', 'declined'
   TextColumn get approvalStatus => text().nullable()();
   // Which inventory part this line item was sourced from (null = not from catalog)
-  IntColumn get inventoryPartId => integer().nullable()();
+  IntColumn get inventoryPartId => integer().nullable()
+      .references(InventoryParts, #id, onDelete: KeyAction.setNull)();
   // Short name for a labor line (e.g. "Oil Change"). Separate from description
   // which holds the detailed operation text. Null on old rows and parts.
   TextColumn get laborName => text().nullable()();
@@ -102,17 +113,21 @@ class Vendors extends Table {
 class RepairOrders extends Table {
   IntColumn get id => integer().autoIncrement()();
   // Which estimate this RO was created from (null if created directly)
-  IntColumn get estimateId => integer().nullable()();
+  IntColumn get estimateId => integer().nullable()
+      .references(Estimates, #id, onDelete: KeyAction.setNull)();
   // Which customer
-  IntColumn get customerId => integer()();
+  IntColumn get customerId =>
+      integer().references(Customers, #id, onDelete: KeyAction.cascade)();
   // Which vehicle (optional)
-  IntColumn get vehicleId => integer().nullable()();
+  IntColumn get vehicleId => integer().nullable()
+      .references(Vehicles, #id, onDelete: KeyAction.setNull)();
   // Short description of the work, carried over from the estimate
   TextColumn get note => text().nullable()();
   // 'open' | 'closed'
   TextColumn get status => text().withDefault(const Constant('open'))();
   // Which technician is assigned to this RO (optional)
-  IntColumn get technicianId => integer().nullable()();
+  IntColumn get technicianId => integer().nullable()
+      .references(Technicians, #id, onDelete: KeyAction.setNull)();
   // The actual date the work was performed — separate from createdAt (entry date).
   // Null means not set; defaults to createdAt for display purposes.
   DateTimeColumn get serviceDate => dateTime().nullable()();
@@ -130,10 +145,10 @@ class InventoryParts extends Table {
   TextColumn get description => text()();
   // Category: "Part", "Fluid", "Filter", "Chemical" — null treated as "Part"
   TextColumn get category => text().nullable()();
-  // What the shop paid for this part
-  RealColumn get cost => real().withDefault(const Constant(0.0))();
-  // What the shop charges the customer for this part
-  RealColumn get sellPrice => real().withDefault(const Constant(0.0))();
+  // What the shop paid for this part — INTEGER CENTS
+  IntColumn get cost => integer().withDefault(const Constant(0))();
+  // What the shop charges the customer for this part — INTEGER CENTS
+  IntColumn get sellPrice => integer().withDefault(const Constant(0))();
   // How many are currently on the shelf
   IntColumn get stockQty => integer().withDefault(const Constant(0))();
   // Quantity at or below which we show a "Low Stock" warning (default 2)
@@ -146,10 +161,12 @@ class InventoryParts extends Table {
 class ServiceTemplateParts extends Table {
   IntColumn get id => integer().autoIncrement()();
   // The template this part belongs to
-  IntColumn get templateId => integer()();
+  IntColumn get templateId =>
+      integer().references(ServiceTemplates, #id, onDelete: KeyAction.cascade)();
   // The inventory part being linked
-  IntColumn get inventoryPartId => integer()();
-  // How many of this part are needed for the job (default 1)
+  IntColumn get inventoryPartId =>
+      integer().references(InventoryParts, #id, onDelete: KeyAction.cascade)();
+  // How many of this part are needed for the job (default 1)  (REAL — not money)
   RealColumn get quantity => real().withDefault(const Constant(1.0))();
 }
 
@@ -172,14 +189,15 @@ class ShopSettings extends Table {
   IntColumn get id => integer().autoIncrement()();
   // The shop's name — shown on invoices and reports
   TextColumn get shopName => text().nullable()();
-  // Default hourly labor rate charged to customers, e.g. 120.0
-  RealColumn get defaultLaborRate =>
-      real().withDefault(const Constant(120.0))();
-  // Default parts markup as a percentage, e.g. 30.0 means 30%
+  // Default hourly labor rate charged to customers — INTEGER CENTS
+  // e.g. 12000 = $120.00 / hr
+  IntColumn get defaultLaborRate =>
+      integer().withDefault(const Constant(12000))();
+  // Default parts markup as a percentage, e.g. 30.0 means 30%  (REAL — not money)
   // Kept for backwards compatibility — markup rules take precedence when set
   RealColumn get defaultPartsMarkup =>
       real().withDefault(const Constant(30.0))();
-  // Default tax rate applied to new estimates, e.g. 8.5 means 8.5%
+  // Default tax rate applied to new estimates, e.g. 8.5 means 8.5%  (REAL — not money)
   RealColumn get defaultTaxRate => real().withDefault(const Constant(0.0))();
 }
 
@@ -191,10 +209,11 @@ class ServiceTemplates extends Table {
   TextColumn get name => text()();
   // The labor line description added to the estimate, e.g. "Oil and Filter Change"
   TextColumn get laborDescription => text()();
-  // Default number of hours for this job
+  // Default number of hours for this job  (REAL — not money)
   RealColumn get defaultHours => real().withDefault(const Constant(1.0))();
   // Optional override rate — null means use the shop's default labor rate
-  RealColumn get defaultRate => real().nullable()();
+  // INTEGER CENTS, e.g. 9500 = $95.00 / hr
+  IntColumn get defaultRate => integer().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -202,11 +221,13 @@ class ServiceTemplates extends Table {
 // Rows are ordered by minCost. The first matching rule wins.
 class MarkupRules extends Table {
   IntColumn get id => integer().autoIncrement()();
-  // Lower bound of the part cost range (inclusive), e.g. 0.0
-  RealColumn get minCost => real()();
-  // Upper bound of the part cost range (exclusive). Null = no upper limit.
-  RealColumn get maxCost => real().nullable()();
-  // Markup percentage to apply, e.g. 50.0 means 50%
+  // Lower bound of the part cost range (inclusive) — INTEGER CENTS
+  // e.g. 0 = $0.00
+  IntColumn get minCost => integer()();
+  // Upper bound of the part cost range (exclusive) — INTEGER CENTS
+  // Null = no upper limit.
+  IntColumn get maxCost => integer().nullable()();
+  // Markup percentage to apply, e.g. 50.0 means 50%  (REAL — not money)
   RealColumn get markupPercent => real()();
 }
 
@@ -258,11 +279,18 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
   // Drift runs this when it finds an older database on the device.
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    beforeOpen: (details) async {
+      // Enable SQLite foreign key enforcement.
+      // This enforces FK constraints on tables created with REFERENCES clauses.
+      // Fresh installs get full FK enforcement. Existing tables get it on
+      // recreation. Manual Dart cascade-deletes remain as a safety net.
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         await m.drop(customers);
@@ -316,20 +344,19 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 10) {
         // Added in v10: unit_cost and parent_labor_id on estimate_line_items.
-        // Using from < 10 (not from == 9) so devices jumping from any older
-        // version to v11+ still get these columns. PRAGMA guards make it safe
-        // to run even if the column was already added in a prior partial run.
         final costCol = await m.database.customSelect(
             "SELECT name FROM pragma_table_info('estimate_line_items') WHERE name='unit_cost'")
             .get();
         if (costCol.isEmpty) {
-          await m.addColumn(estimateLineItems, estimateLineItems.unitCost);
+          await m.database.customStatement(
+              'ALTER TABLE estimate_line_items ADD COLUMN unit_cost REAL');
         }
         final laborCol = await m.database.customSelect(
             "SELECT name FROM pragma_table_info('estimate_line_items') WHERE name='parent_labor_id'")
             .get();
         if (laborCol.isEmpty) {
-          await m.addColumn(estimateLineItems, estimateLineItems.parentLaborId);
+          await m.database.customStatement(
+              'ALTER TABLE estimate_line_items ADD COLUMN parent_labor_id INTEGER');
         }
       }
       if (from < 11) {
@@ -385,7 +412,8 @@ class AppDatabase extends _$AppDatabase {
             "SELECT name FROM pragma_table_info('estimate_line_items') WHERE name='inventory_part_id'")
             .get();
         if (col.isEmpty) {
-          await m.addColumn(estimateLineItems, estimateLineItems.inventoryPartId);
+          await m.database.customStatement(
+              'ALTER TABLE estimate_line_items ADD COLUMN inventory_part_id INTEGER');
         }
       }
       if (from < 17) {
@@ -478,6 +506,145 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(technicians, technicians.isArchived);
         }
       }
+      if (from < 26) {
+        // v26: Convert money columns from REAL (dollars) to INTEGER (cents).
+        // Multiply existing values × 100 during copy.
+        // Five tables are recreated: estimate_line_items, inventory_parts,
+        // shop_settings, service_templates, markup_rules.
+        //
+        // We temporarily disable FK checks for the recreation (they don't
+        // exist on the old tables anyway) then re-enable after.
+        await m.database.customStatement('PRAGMA foreign_keys = OFF');
+
+        // ── estimate_line_items ──────────────────────────────────────────
+        await m.database.customStatement('''
+          CREATE TABLE estimate_line_items_v26 (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            estimate_id INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            description TEXT NOT NULL,
+            quantity REAL NOT NULL DEFAULT 1.0,
+            unit_price INTEGER NOT NULL,
+            unit_cost INTEGER,
+            vendor_id INTEGER,
+            parent_labor_id INTEGER,
+            is_done INTEGER,
+            approval_status TEXT,
+            inventory_part_id INTEGER,
+            labor_name TEXT,
+            part_number TEXT
+          )
+        ''');
+        await m.database.customStatement('''
+          INSERT INTO estimate_line_items_v26
+            SELECT id, estimate_id, type, description, quantity,
+              CAST(ROUND(unit_price * 100) AS INTEGER),
+              CASE WHEN unit_cost IS NULL THEN NULL
+                   ELSE CAST(ROUND(unit_cost * 100) AS INTEGER) END,
+              vendor_id, parent_labor_id, is_done, approval_status,
+              inventory_part_id, labor_name, part_number
+            FROM estimate_line_items
+        ''');
+        await m.database
+            .customStatement('DROP TABLE estimate_line_items');
+        await m.database.customStatement(
+            'ALTER TABLE estimate_line_items_v26 RENAME TO estimate_line_items');
+
+        // ── inventory_parts ──────────────────────────────────────────────
+        await m.database.customStatement('''
+          CREATE TABLE inventory_parts_v26 (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            part_number TEXT,
+            description TEXT NOT NULL,
+            category TEXT,
+            cost INTEGER NOT NULL DEFAULT 0,
+            sell_price INTEGER NOT NULL DEFAULT 0,
+            stock_qty INTEGER NOT NULL DEFAULT 0,
+            low_stock_threshold INTEGER NOT NULL DEFAULT 2,
+            created_at INTEGER NOT NULL
+          )
+        ''');
+        await m.database.customStatement('''
+          INSERT INTO inventory_parts_v26
+            SELECT id, part_number, description, category,
+              CAST(ROUND(cost * 100) AS INTEGER),
+              CAST(ROUND(sell_price * 100) AS INTEGER),
+              stock_qty, low_stock_threshold, created_at
+            FROM inventory_parts
+        ''');
+        await m.database.customStatement('DROP TABLE inventory_parts');
+        await m.database.customStatement(
+            'ALTER TABLE inventory_parts_v26 RENAME TO inventory_parts');
+
+        // ── shop_settings ────────────────────────────────────────────────
+        await m.database.customStatement('''
+          CREATE TABLE shop_settings_v26 (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            shop_name TEXT,
+            default_labor_rate INTEGER NOT NULL DEFAULT 12000,
+            default_parts_markup REAL NOT NULL DEFAULT 30.0,
+            default_tax_rate REAL NOT NULL DEFAULT 0.0
+          )
+        ''');
+        await m.database.customStatement('''
+          INSERT INTO shop_settings_v26
+            SELECT id, shop_name,
+              CAST(ROUND(default_labor_rate * 100) AS INTEGER),
+              default_parts_markup,
+              default_tax_rate
+            FROM shop_settings
+        ''');
+        await m.database.customStatement('DROP TABLE shop_settings');
+        await m.database.customStatement(
+            'ALTER TABLE shop_settings_v26 RENAME TO shop_settings');
+
+        // ── service_templates ────────────────────────────────────────────
+        await m.database.customStatement('''
+          CREATE TABLE service_templates_v26 (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            labor_description TEXT NOT NULL,
+            default_hours REAL NOT NULL DEFAULT 1.0,
+            default_rate INTEGER,
+            created_at INTEGER NOT NULL
+          )
+        ''');
+        await m.database.customStatement('''
+          INSERT INTO service_templates_v26
+            SELECT id, name, labor_description, default_hours,
+              CASE WHEN default_rate IS NULL THEN NULL
+                   ELSE CAST(ROUND(default_rate * 100) AS INTEGER) END,
+              created_at
+            FROM service_templates
+        ''');
+        await m.database.customStatement('DROP TABLE service_templates');
+        await m.database.customStatement(
+            'ALTER TABLE service_templates_v26 RENAME TO service_templates');
+
+        // ── markup_rules ─────────────────────────────────────────────────
+        await m.database.customStatement('''
+          CREATE TABLE markup_rules_v26 (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            min_cost INTEGER NOT NULL,
+            max_cost INTEGER,
+            markup_percent REAL NOT NULL
+          )
+        ''');
+        await m.database.customStatement('''
+          INSERT INTO markup_rules_v26
+            SELECT id,
+              CAST(ROUND(min_cost * 100) AS INTEGER),
+              CASE WHEN max_cost IS NULL THEN NULL
+                   ELSE CAST(ROUND(max_cost * 100) AS INTEGER) END,
+              markup_percent
+            FROM markup_rules
+        ''');
+        await m.database.customStatement('DROP TABLE markup_rules');
+        await m.database.customStatement(
+            'ALTER TABLE markup_rules_v26 RENAME TO markup_rules');
+
+        await m.database.customStatement('PRAGMA foreign_keys = ON');
+      }
     },
   );
 
@@ -504,9 +671,9 @@ class AppDatabase extends _$AppDatabase {
       update(customers).replace(customer);
 
   // Permanently removes a customer and all related records (vehicles, estimates,
-  // line items, and repair orders).
-  Future<void> deleteCustomer(int id) async {
-    // Delete line items for all of this customer's estimates
+  // line items, and repair orders). Wrapped in a transaction so the whole
+  // operation succeeds or fails together.
+  Future<void> deleteCustomer(int id) => transaction(() async {
     final ests = await (select(estimates)
           ..where((e) => e.customerId.equals(id)))
         .get();
@@ -519,7 +686,7 @@ class AppDatabase extends _$AppDatabase {
     await (delete(estimates)..where((e) => e.customerId.equals(id))).go();
     await (delete(vehicles)..where((v) => v.customerId.equals(id))).go();
     await (delete(customers)..where((c) => c.id.equals(id))).go();
-  }
+  });
 
   // ─── Vehicle Queries ────────────────────────────────────────────────────────
 
@@ -544,7 +711,7 @@ class AppDatabase extends _$AppDatabase {
       update(vehicles).replace(vehicle);
 
   // Permanently removes a vehicle and all linked estimates, line items, and ROs.
-  Future<void> deleteVehicle(int id) async {
+  Future<void> deleteVehicle(int id) => transaction(() async {
     final ests = await (select(estimates)
           ..where((e) => e.vehicleId.equals(id)))
         .get();
@@ -556,7 +723,7 @@ class AppDatabase extends _$AppDatabase {
     await (delete(repairOrders)..where((r) => r.vehicleId.equals(id))).go();
     await (delete(estimates)..where((e) => e.vehicleId.equals(id))).go();
     await (delete(vehicles)..where((v) => v.id.equals(id))).go();
-  }
+  });
 
   // ─── Estimate Queries ────────────────────────────────────────────────────────
 
@@ -594,12 +761,12 @@ class AppDatabase extends _$AppDatabase {
       update(estimates).replace(estimate);
 
   // Permanently removes an estimate and all its line items.
-  Future<void> deleteEstimate(int id) async {
+  Future<void> deleteEstimate(int id) => transaction(() async {
     await (delete(estimateLineItems)
           ..where((l) => l.estimateId.equals(id)))
         .go();
     await (delete(estimates)..where((e) => e.id.equals(id))).go();
-  }
+  });
 
   // ─── Line Item Queries ───────────────────────────────────────────────────────
 
@@ -879,12 +1046,12 @@ class AppDatabase extends _$AppDatabase {
       update(serviceTemplates).replace(t);
 
   // Permanently removes a service template and its linked parts.
-  Future<void> deleteServiceTemplate(int id) async {
+  Future<void> deleteServiceTemplate(int id) => transaction(() async {
     await (delete(serviceTemplateParts)
           ..where((p) => p.templateId.equals(id)))
         .go();
     await (delete(serviceTemplates)..where((t) => t.id.equals(id))).go();
-  }
+  });
 
   // ─── Service Template Part Queries ────────────────────────────────────────
 
@@ -988,13 +1155,13 @@ class AppDatabase extends _$AppDatabase {
   /// Deletes all customer-facing records: customers, vehicles, estimates,
   /// line items, and repair orders. Preserves shop config: settings,
   /// vendors, technicians, inventory, templates, and markup rules.
-  Future<void> clearAllCustomerData() async {
+  Future<void> clearAllCustomerData() => transaction(() async {
     await delete(estimateLineItems).go();
     await delete(estimates).go();
     await delete(repairOrders).go();
     await delete(vehicles).go();
     await delete(customers).go();
-  }
+  });
 
   /// One-shot fetch of all ROs joined with customer + vehicle, for CSV export.
   Future<List<RepairOrderWithDetails>> getAllRepairOrdersForExport() {

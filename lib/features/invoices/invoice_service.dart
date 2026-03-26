@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import '../../core/utils/money.dart';
 import '../../database/database.dart';
 import '../../widgets/context_menu.dart';
 
@@ -46,7 +47,7 @@ Future<Uint8List> buildInvoicePdf({
   final labor = lineItems.where((l) => l.type == 'labor').toList();
   final parts = lineItems.where((l) => l.type == 'part').toList();
   final otherItems = lineItems.where((l) => l.type == 'other').toList();
-  final subtotal = lineItems.fold(0.0, (s, l) => s + l.quantity * l.unitPrice);
+  final subtotal = lineItems.fold(0.0, (s, l) => s + l.quantity * fromCents(l.unitPrice));
   final taxAmount = subtotal * (taxRate / 100);
   final total = subtotal + taxAmount;
 
@@ -249,8 +250,8 @@ Future<Uint8List> buildInvoicePdf({
                 description: l.laborName ?? l.description,
                 subtitle: l.laborName != null ? l.description : null,
                 qty: '${_qty(l.quantity)} hr',
-                unit: _money(l.unitPrice),
-                total: _money(l.quantity * l.unitPrice),
+                unit: _money(fromCents(l.unitPrice)),
+                total: _money(l.quantity * fromCents(l.unitPrice)),
                 isLabor: true,
                 dark: dark,
                 mid: mid,
@@ -260,8 +261,8 @@ Future<Uint8List> buildInvoicePdf({
                     typeLabel: 'Part',
                     description: p.description,
                     qty: _qty(p.quantity),
-                    unit: _money(p.unitPrice),
-                    total: _money(p.quantity * p.unitPrice),
+                    unit: _money(fromCents(p.unitPrice)),
+                    total: _money(p.quantity * fromCents(p.unitPrice)),
                     isLabor: false,
                     dark: dark,
                     mid: mid,
@@ -276,8 +277,8 @@ Future<Uint8List> buildInvoicePdf({
                     typeLabel: 'Part',
                     description: p.description,
                     qty: _qty(p.quantity),
-                    unit: _money(p.unitPrice),
-                    total: _money(p.quantity * p.unitPrice),
+                    unit: _money(fromCents(p.unitPrice)),
+                    total: _money(p.quantity * fromCents(p.unitPrice)),
                     isLabor: false,
                     dark: dark,
                     mid: mid,
@@ -295,8 +296,8 @@ Future<Uint8List> buildInvoicePdf({
                 description: o.laborName ?? o.description,
                 subtitle: o.laborName != null ? o.description : null,
                 qty: _qty(o.quantity),
-                unit: _money(o.unitPrice),
-                total: _money(o.quantity * o.unitPrice),
+                unit: _money(fromCents(o.unitPrice)),
+                total: _money(o.quantity * fromCents(o.unitPrice)),
                 isLabor: true,
                 dark: dark,
                 mid: mid,
@@ -357,7 +358,7 @@ Future<Uint8List> buildInvoicePdf({
                     ),
                   ),
                   pw.Text(
-                    _money(d.quantity * d.unitPrice),
+                    _money(d.quantity * fromCents(d.unitPrice)),
                     style: pw.TextStyle(
                       fontSize: 10,
                       color: mid,
@@ -659,8 +660,8 @@ Future<Uint8List> buildSimpleInvoicePdf({
       <({String typeLabel, String description, String? subtitle, double total})>[];
   for (final l in labor) {
     final linked = parts.where((p) => p.parentLaborId == l.id).toList();
-    final partsTotal = linked.fold(0.0, (s, p) => s + p.quantity * p.unitPrice);
-    final laborTotal = l.quantity * l.unitPrice;
+    final partsTotal = linked.fold(0.0, (s, p) => s + p.quantity * fromCents(p.unitPrice));
+    final laborTotal = l.quantity * fromCents(l.unitPrice);
     rows.add((
       typeLabel: linked.isNotEmpty ? 'Parts / Labor' : 'Labor',
       description: l.laborName ?? l.description,
@@ -674,7 +675,7 @@ Future<Uint8List> buildSimpleInvoicePdf({
       typeLabel: 'Part',
       description: p.description,
       subtitle: null,
-      total: p.quantity * p.unitPrice,
+      total: p.quantity * fromCents(p.unitPrice),
     ));
   }
   // Other items (fees, sublet, misc) — listed on their own
@@ -683,7 +684,7 @@ Future<Uint8List> buildSimpleInvoicePdf({
       typeLabel: 'Other',
       description: o.laborName ?? o.description,
       subtitle: o.laborName != null ? o.description : null,
-      total: o.quantity * o.unitPrice,
+      total: o.quantity * fromCents(o.unitPrice),
     ));
   }
 
@@ -965,7 +966,7 @@ Future<Uint8List> buildSimpleInvoicePdf({
                     ),
                   ),
                   pw.Text(
-                    _money(d.quantity * d.unitPrice),
+                    _money(d.quantity * fromCents(d.unitPrice)),
                     style: pw.TextStyle(
                       fontSize: 10,
                       color: mid,
@@ -1288,11 +1289,11 @@ Future<Uint8List> buildEstimatePdf({
   final declinedItems =
       lineItems.where((l) => l.approvalStatus == 'declined').toList();
   final subtotal =
-      activeItems.fold(0.0, (s, l) => s + l.quantity * l.unitPrice);
+      activeItems.fold(0.0, (s, l) => s + l.quantity * fromCents(l.unitPrice));
   final taxAmount = subtotal * (estimate.taxRate / 100);
   final total = subtotal + taxAmount;
   final declinedTotal =
-      declinedItems.fold(0.0, (s, l) => s + l.quantity * l.unitPrice);
+      declinedItems.fold(0.0, (s, l) => s + l.quantity * fromCents(l.unitPrice));
 
   const accent = PdfColor.fromInt(0xFF007AFF);
   const dark = PdfColor.fromInt(0xFF1C1C1E);
@@ -1452,8 +1453,8 @@ Future<Uint8List> buildEstimatePdf({
                 description: l.laborName ?? l.description,
                 subtitle: l.laborName != null ? l.description : null,
                 qty: '${_qty(l.quantity)} hr',
-                unit: _money(l.unitPrice),
-                total: _money(l.quantity * l.unitPrice),
+                unit: _money(fromCents(l.unitPrice)),
+                total: _money(l.quantity * fromCents(l.unitPrice)),
                 isLabor: true,
                 dark: dark,
                 mid: mid,
@@ -1465,8 +1466,8 @@ Future<Uint8List> buildEstimatePdf({
                         typeLabel: 'Part',
                         description: p.description,
                         qty: _qty(p.quantity),
-                        unit: _money(p.unitPrice),
-                        total: _money(p.quantity * p.unitPrice),
+                        unit: _money(fromCents(p.unitPrice)),
+                        total: _money(p.quantity * fromCents(p.unitPrice)),
                         isLabor: false,
                         dark: dark,
                         mid: mid,
@@ -1481,8 +1482,8 @@ Future<Uint8List> buildEstimatePdf({
                     typeLabel: 'Part',
                     description: p.description,
                     qty: _qty(p.quantity),
-                    unit: _money(p.unitPrice),
-                    total: _money(p.quantity * p.unitPrice),
+                    unit: _money(fromCents(p.unitPrice)),
+                    total: _money(p.quantity * fromCents(p.unitPrice)),
                     isLabor: false,
                     dark: dark,
                     mid: mid,

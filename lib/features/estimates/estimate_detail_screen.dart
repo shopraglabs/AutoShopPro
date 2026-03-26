@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/money.dart';
 import '../../database/database.dart';
 import '../../widgets/context_menu.dart';
 import 'estimates_provider.dart';
@@ -96,7 +97,8 @@ class _EstimateDetailView extends ConsumerWidget {
     );
     if (picked == null || !context.mounted) return;
     final db = ref.read(dbProvider);
-    double rate = picked.defaultRate ??
+    // defaultRate and defaultLaborRate are now int cents — copy directly to unitPrice
+    final rate = picked.defaultRate ??
         (await db.getOrCreateSettings()).defaultLaborRate;
     // Insert the labor line and capture its new id so parts can link to it.
     final laborId = await db.insertLineItem(EstimateLineItemsCompanion.insert(
@@ -105,7 +107,7 @@ class _EstimateDetailView extends ConsumerWidget {
       laborName: Value(picked.name),
       description: picked.laborDescription,
       quantity: Value(picked.defaultHours),
-      unitPrice: rate,
+      unitPrice: rate,  // int cents → int cents
       approvalStatus: const Value('approved'),
     ));
 
@@ -138,8 +140,8 @@ class _EstimateDetailView extends ConsumerWidget {
         type: 'part',
         description: part.description,
         quantity: Value(s.qty),
-        unitPrice: part.sellPrice,
-        unitCost: Value(part.cost),
+        unitPrice: part.sellPrice,    // int cents → int cents
+        unitCost: Value(part.cost),   // int cents → int cents
         inventoryPartId: Value(part.id),
         parentLaborId: Value(laborId),
         approvalStatus: const Value('approved'),
@@ -299,10 +301,11 @@ class _EstimateDetailView extends ConsumerWidget {
         lineItems.where((l) => l.approvalStatus == 'declined').toList();
     final activeItems =
         lineItems.where((l) => l.approvalStatus != 'declined').toList();
-    final subtotal =
-        activeItems.fold(0.0, (s, l) => s + l.quantity * l.unitPrice);
-    final declinedTotal =
-        declinedItems.fold(0.0, (s, l) => s + l.quantity * l.unitPrice);
+    // unitPrice is int cents — convert to dollars before multiplying by quantity
+    final subtotal = activeItems.fold(
+        0.0, (s, l) => s + l.quantity * fromCents(l.unitPrice));
+    final declinedTotal = declinedItems.fold(
+        0.0, (s, l) => s + l.quantity * fromCents(l.unitPrice));
     final tax = subtotal * (estimate.taxRate / 100);
     final total = subtotal + tax;
 
@@ -935,12 +938,14 @@ class _LineItemRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lineTotal = item.quantity * item.unitPrice;
+    // unitPrice is int cents — convert to dollars for display and calculation
+    final unitPriceDollars = fromCents(item.unitPrice);
+    final lineTotal = item.quantity * unitPriceDollars;
     final qtyLabel = item.type == 'labor'
-        ? '${_qty(item.quantity)} hr @ \$${item.unitPrice.toStringAsFixed(2)}/hr'
+        ? '${_qty(item.quantity)} hr @ \$${unitPriceDollars.toStringAsFixed(2)}/hr'
         : item.type == 'other'
-            ? '\$${item.unitPrice.toStringAsFixed(2)}'
-            : '${_qty(item.quantity)} × \$${item.unitPrice.toStringAsFixed(2)}';
+            ? '\$${unitPriceDollars.toStringAsFixed(2)}'
+            : '${_qty(item.quantity)} × \$${unitPriceDollars.toStringAsFixed(2)}';
 
     final isDeclined = item.approvalStatus == 'declined';
     final isApproved = item.approvalStatus == 'approved';
@@ -1058,7 +1063,8 @@ class _LineItemRow extends ConsumerWidget {
                             style: TextStyle(fontSize: 13, color: subColor)),
                       if (item.unitCost != null)
                         Text(
-                          'Cost \$${item.unitCost!.toStringAsFixed(2)}',
+                          // unitCost is int cents — convert to dollars for display
+                          'Cost \$${fromCents(item.unitCost!).toStringAsFixed(2)}',
                           style: TextStyle(
                               fontSize: 12,
                               color: isDeclined

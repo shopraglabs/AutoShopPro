@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/money.dart';
 import '../../database/database.dart';
 import '../customers/customers_provider.dart';
 import '../settings/markup_rules_provider.dart';
@@ -41,11 +42,12 @@ class _PartFormScreenState extends ConsumerState<PartFormScreen> {
     final p = widget.part;
     _partNumberCtrl = TextEditingController(text: p?.partNumber ?? '');
     _descriptionCtrl = TextEditingController(text: p?.description ?? '');
+    // cost and sellPrice are int cents — convert to dollars for display
     _costCtrl = TextEditingController(
-        text: p != null ? p.cost.toStringAsFixed(2) : '');
+        text: p != null ? fromCents(p.cost).toStringAsFixed(2) : '');
     _markupPercentCtrl = TextEditingController();
     _sellPriceCtrl = TextEditingController(
-        text: p != null ? p.sellPrice.toStringAsFixed(2) : '');
+        text: p != null ? fromCents(p.sellPrice).toStringAsFixed(2) : '');
     _stockQtyCtrl =
         TextEditingController(text: p != null ? '${p.stockQty}' : '0');
     _lowStockCtrl = TextEditingController(
@@ -53,8 +55,11 @@ class _PartFormScreenState extends ConsumerState<PartFormScreen> {
     _category = p?.category ?? 'Part';
 
     // Derive markup % from existing cost/sell price when editing.
+    // cost and sellPrice are int cents — convert to dollars first.
     if (p != null && p.cost > 0) {
-      final pct = (p.sellPrice - p.cost) / p.cost * 100;
+      final costDollars = fromCents(p.cost);
+      final sellDollars = fromCents(p.sellPrice);
+      final pct = (sellDollars - costDollars) / costDollars * 100;
       _markupPercentCtrl.text = pct.toStringAsFixed(1);
     }
 
@@ -116,12 +121,14 @@ class _PartFormScreenState extends ConsumerState<PartFormScreen> {
   // Looks up the markup rules for the current cost and sets Markup %
   // if a matching tier is found.
   void _applyMarkupTier() {
-    final cost = double.tryParse(_costCtrl.text);
-    if (cost == null) return;
+    final costDollars = double.tryParse(_costCtrl.text);
+    if (costDollars == null) return;
+    // Convert text-field dollars to cents for comparison with int-cents rules
+    final costCents = toCents(costDollars);
     final rules = ref.read(markupRulesProvider).value ?? [];
     for (final rule in rules) {
-      final withinMax = rule.maxCost == null || cost < rule.maxCost!;
-      if (cost >= rule.minCost && withinMax) {
+      final withinMax = rule.maxCost == null || costCents < rule.maxCost!;
+      if (costCents >= rule.minCost && withinMax) {
         final newPct = rule.markupPercent.toStringAsFixed(1);
         if (_markupPercentCtrl.text != newPct) {
           _syncing = true;
@@ -206,8 +213,9 @@ class _PartFormScreenState extends ConsumerState<PartFormScreen> {
     setState(() => _saving = true);
     final db = ref.read(dbProvider);
 
-    final cost = double.tryParse(_costCtrl.text) ?? 0.0;
-    final sellPrice = double.tryParse(_sellPriceCtrl.text) ?? 0.0;
+    // Text fields contain dollar amounts — convert to int cents for the DB
+    final costCents = toCents(double.tryParse(_costCtrl.text) ?? 0.0);
+    final sellPriceCents = toCents(double.tryParse(_sellPriceCtrl.text) ?? 0.0);
     final stockQty = int.tryParse(_stockQtyCtrl.text) ?? 0;
     final lowStock = int.tryParse(_lowStockCtrl.text) ?? 2;
     final partNumber = _partNumberCtrl.text.trim();
@@ -217,8 +225,8 @@ class _PartFormScreenState extends ConsumerState<PartFormScreen> {
         partNumber: Value(partNumber.isEmpty ? null : partNumber),
         description: description,
         category: Value(_category),
-        cost: cost,
-        sellPrice: sellPrice,
+        cost: costCents,
+        sellPrice: sellPriceCents,
         stockQty: stockQty,
         lowStockThreshold: lowStock,
       ));
@@ -227,8 +235,8 @@ class _PartFormScreenState extends ConsumerState<PartFormScreen> {
         partNumber: Value(partNumber.isEmpty ? null : partNumber),
         description: Value(description),
         category: Value(_category),
-        cost: Value(cost),
-        sellPrice: Value(sellPrice),
+        cost: Value(costCents),
+        sellPrice: Value(sellPriceCents),
         stockQty: Value(stockQty),
         lowStockThreshold: Value(lowStock),
       ));

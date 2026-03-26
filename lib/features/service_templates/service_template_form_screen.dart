@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/money.dart';
 import '../../database/database.dart';
 import '../customers/customers_provider.dart' show dbProvider;
 
@@ -29,7 +30,7 @@ class _ServiceTemplateFormScreenState
   late final TextEditingController _rate;
   late final TextEditingController _total;
   bool _saving = false;
-  double? _defaultRate;
+  int? _defaultRate; // stored as int cents, same as DB
   bool _syncing = false;
 
   // Linked parts — managed locally, written to DB on Save.
@@ -45,12 +46,16 @@ class _ServiceTemplateFormScreenState
     _laborDesc = TextEditingController(text: t?.laborDescription ?? '');
     _hours = TextEditingController(
         text: t != null ? _fmtNum(t.defaultHours) : '1');
+    // defaultRate is int cents — convert to dollars for display
     _rate = TextEditingController(
-        text: t?.defaultRate != null ? t!.defaultRate!.toStringAsFixed(2) : '');
+        text: t?.defaultRate != null
+            ? fromCents(t!.defaultRate!).toStringAsFixed(2)
+            : '');
     _total = TextEditingController();
 
     if (t != null && t.defaultRate != null) {
-      final tot = t.defaultHours * t.defaultRate!;
+      final rateDollars = fromCents(t.defaultRate!);
+      final tot = t.defaultHours * rateDollars;
       _total.text = tot % 1 == 0 ? tot.toInt().toString() : tot.toStringAsFixed(2);
     }
 
@@ -66,9 +71,10 @@ class _ServiceTemplateFormScreenState
   Future<void> _loadDefaultRate() async {
     final settings = await ref.read(dbProvider).getOrCreateSettings();
     if (!mounted) return;
-    setState(() => _defaultRate = settings.defaultLaborRate);
+    setState(() => _defaultRate = settings.defaultLaborRate); // int cents
     if (_rate.text.isEmpty) {
-      _rate.text = settings.defaultLaborRate.toStringAsFixed(2);
+      // Convert int cents to dollars for display
+      _rate.text = fromCents(settings.defaultLaborRate).toStringAsFixed(2);
     }
   }
 
@@ -166,7 +172,9 @@ class _ServiceTemplateFormScreenState
     if (laborDesc.isEmpty) { _err('Please enter a labor line description.'); return; }
     if (hours == null || hours <= 0) { _err('Please enter a valid number of hours.'); return; }
 
-    final rate = double.tryParse(_rate.text);
+    // Rate is entered as dollars — convert to int cents for the DB
+    final rateDollars = double.tryParse(_rate.text);
+    final rateCents = rateDollars != null ? toCents(rateDollars) : null;
     setState(() => _saving = true);
     final db = ref.read(dbProvider);
 
@@ -176,7 +184,7 @@ class _ServiceTemplateFormScreenState
         name: name,
         laborDescription: laborDesc,
         defaultHours: hours,
-        defaultRate: Value(rate),
+        defaultRate: Value(rateCents),
       ));
       templateId = widget.template!.id;
       // Replace all linked parts.
@@ -186,7 +194,7 @@ class _ServiceTemplateFormScreenState
         name: name,
         laborDescription: laborDesc,
         defaultHours: Value(hours),
-        defaultRate: Value(rate),
+        defaultRate: Value(rateCents),
       ));
     }
 
