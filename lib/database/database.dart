@@ -776,6 +776,13 @@ class AppDatabase extends _$AppDatabase {
             ..where((l) => l.estimateId.equals(estimateId)))
           .watch();
 
+  // Fetches all line items for one estimate (one-time read, not streamed).
+  // Used by the dashboard to calculate revenue totals without a live subscription.
+  Future<List<EstimateLineItem>> getLineItemsForEstimate(int estimateId) =>
+      (select(estimateLineItems)
+            ..where((l) => l.estimateId.equals(estimateId)))
+          .get();
+
   // Fetches a single line item by id.
   Future<EstimateLineItem?> getLineItem(int id) =>
       (select(estimateLineItems)..where((l) => l.id.equals(id))).getSingleOrNull();

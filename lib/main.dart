@@ -149,7 +149,7 @@ Future<void> _showAboutDialog() async {
         padding: EdgeInsets.only(top: 6),
         child: Column(
           children: [
-            Text('Version 0.5.0', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text('Version 0.10.3', style: TextStyle(fontWeight: FontWeight.w600)),
             SizedBox(height: 4),
             Text(
               'Professional shop management for independent automotive repair shops.',
@@ -242,7 +242,7 @@ class _AppShellState extends State<AppShell> {
   final List<_NavItem> _navItems = const [
     _NavItem(label: 'Repair Orders', icon: CupertinoIcons.wrench),
     _NavItem(label: 'Parts', icon: CupertinoIcons.cube_box),
-    _NavItem(label: 'Payments', icon: CupertinoIcons.creditcard),
+    _NavItem(label: 'Invoices', icon: CupertinoIcons.doc_text),
     _NavItem(label: 'Dashboard', icon: CupertinoIcons.chart_bar),
     _NavItem(label: 'Accounting', icon: CupertinoIcons.book),
   ];

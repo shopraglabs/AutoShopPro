@@ -29,6 +29,8 @@ import 'features/settings/settings_screen.dart';
 import 'features/service_templates/service_template_list_screen.dart';
 import 'features/service_templates/service_template_form_screen.dart';
 import 'features/search/search_screen.dart';
+import 'features/invoices/invoice_list_screen.dart';
+import 'features/dashboard/dashboard_screen.dart';
 
 // The router defines every screen address in the app.
 // Think of each GoRoute as a page in a book — the 'path' is its page number,
@@ -321,18 +323,16 @@ final appRouter = GoRouter(
           builder: (context, state) => const SearchScreen(),
         ),
 
-        // ── Module 3: Payments ────────────────────────────────────────────────
+        // ── Module 3: Payments / Invoices ─────────────────────────────────────
         GoRoute(
           path: '/payments',
-          builder: (context, state) =>
-              const PlaceholderScreen(title: 'Payments'),
+          builder: (context, state) => const InvoiceListScreen(),
         ),
 
         // ── Module 4: Dashboard ───────────────────────────────────────────────
         GoRoute(
           path: '/dashboard',
-          builder: (context, state) =>
-              const PlaceholderScreen(title: 'Dashboard'),
+          builder: (context, state) => const DashboardScreen(),
         ),
 
         // ── Module 5: Accounting ──────────────────────────────────────────────

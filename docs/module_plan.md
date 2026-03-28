@@ -117,10 +117,10 @@ The heart of the app. Everything else depends on this.
 ## Module 3 — Payments
 
 ### Invoice Generation
-- ⬜ Invoice model (derived from closed RO)
-- ⬜ Invoice PDF generation (pdf package)
-- ⬜ Invoice detail screen
-- ⬜ Invoice list screen
+- ✅ Invoice model (derived from closed RO)
+- ✅ Invoice PDF generation (pdf package)
+- ⬜ Invoice detail screen (standalone, separate from RO detail)
+- ✅ Invoice list screen
 
 ### Payment Processing
 - ⬜ Stripe integration
@@ -135,14 +135,14 @@ The heart of the app. Everything else depends on this.
 ## Module 4 — Owner Dashboards
 
 ### KPI Metrics
-- ⬜ Average Repair Order (ARO) calculation
+- ✅ Average Repair Order (ARO) calculation
 - ⬜ Gross Profit (GP) per job
 - ⬜ Technician utilization rate
 - ⬜ Car count (daily / weekly / monthly)
-- ⬜ Revenue (daily / weekly / monthly)
+- ✅ Revenue (this month / all time)
 
 ### Dashboard Screens
-- ⬜ Main dashboard screen with KPI cards
+- ✅ Main dashboard screen with KPI cards (Open ROs, Invoices This Month, Revenue, ARO)
 - ⬜ Date range picker (today / this week / this month / custom)
 - ⬜ Technician performance screen
 - ⬜ Job profitability screen
@@ -328,6 +328,14 @@ The heart of the app. Everything else depends on this.
 - ✅ Hover cursors added to vehicle tiles and history rows on customer detail
 - ✅ "Add Parts" confirm button in template picker replaced with list-row style
 - ✅ Patch naming convention: patches inherit parent minor/major version name
+
+### Invoice List & Dashboard (v0.11.0 On the Books)
+- ✅ Invoice list screen — "Invoices" sidebar item shows all closed ROs as invoices (number, customer, vehicle, date, searchable); tapping opens RO detail
+- ✅ Dashboard screen — KPI cards: Open ROs, Invoices This Month, Revenue This Month, ARO all time, Total Invoices, Total Revenue
+- ✅ dashboard_provider.dart — FutureProvider.autoDispose calculates KPIs from closed ROs + line items
+- ✅ getLineItemsForEstimate() DB method — one-time fetch of line items per estimate (used by dashboard revenue calculation)
+- ✅ About dialog version fixed (was still showing v0.5.0)
+- ✅ Sidebar "Payments" renamed to "Invoices" with doc icon
 
 ### Data Integrity & Infrastructure (v0.10.3 Buttoned Up)
 - ✅ MIT LICENSE file added (ShopRag Labs)

@@ -60,6 +60,8 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **Declined items on invoices** — "DECLINED — NOT BILLED" section in both Itemized and Simple Invoice PDFs after totals; gray strikethrough; not included in any totals or tax
 - **Money helpers** — `lib/core/utils/money.dart`: `toCents()`, `fromCents()`, `formatMoney()` (UI, omits .00), `formatMoneyFull()` (PDFs, always 2 decimals); all price/cost/rate values stored as integer cents in the DB
 - **Database** — Drift/SQLite, schema v26, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts; FK constraints enforced via PRAGMA foreign_keys = ON
+- **Invoice list** — "Invoices" sidebar item shows all closed ROs as invoices (INV-XXXX number, customer, vehicle, service date); searchable; tapping opens RO detail with PDF generation
+- **Dashboard** — KPI screen with Live Status (open RO count), This Month (invoices closed + revenue), and All Time (total invoices, total revenue, ARO); refresh button recalculates on demand
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
@@ -239,4 +241,4 @@ onTap: () => controller.selection = TextSelection(
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.10.3 Buttoned Up
+v0.11.0 On the Books
