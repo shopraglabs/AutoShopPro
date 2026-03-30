@@ -55,7 +55,7 @@ class RepairOrdersScreen extends StatelessWidget {
                   _MenuRow(
                     icon: CupertinoIcons.money_dollar_circle_fill,
                     label: 'Invoices',
-                    onTap: () => context.go('/payments'),
+                    onTap: () => context.push('/repair-orders/invoices'),
                   ),
                   Container(
                     height: 0.5,

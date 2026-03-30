@@ -271,6 +271,21 @@ final appRouter = GoRouter(
           ],
         ),
 
+        // ── Invoices (inside Records) ─────────────────────────────────────────
+        GoRoute(
+          path: '/repair-orders/invoices',
+          builder: (context, state) => const InvoiceListScreen(),
+          routes: [
+            GoRoute(
+              path: ':roId',
+              builder: (context, state) {
+                final id = int.parse(state.pathParameters['roId']!);
+                return InvoiceDetailScreen(roId: id);
+              },
+            ),
+          ],
+        ),
+
         // ── Module 2: Parts ───────────────────────────────────────────────────
         GoRoute(
           path: '/parts',
