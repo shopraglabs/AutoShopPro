@@ -57,7 +57,7 @@ Future<Uint8List> buildInvoicePdf({
   final labor = lineItems.where((l) => l.type == 'labor').toList();
   final parts = lineItems.where((l) => l.type == 'part').toList();
   final otherItems = lineItems.where((l) => l.type == 'other').toList();
-  final subtotalCents = lineItems.fold(0, (s, l) => s + (l.quantity * l.unitPrice).round());
+  final subtotalCents = lineItems.fold<int>(0, (s, l) => s + (l.quantity * l.unitPrice).round());
   final taxCents = (subtotalCents * taxRate / 100).round();
   final totalCents = subtotalCents + taxCents;
   final subtotal = fromCents(subtotalCents);
@@ -1354,14 +1354,14 @@ Future<Uint8List> buildEstimatePdf({
   final declinedItems =
       lineItems.where((l) => l.approvalStatus == 'declined').toList();
   final subtotalCents =
-      activeItems.fold(0, (s, l) => s + (l.quantity * l.unitPrice).round());
+      activeItems.fold<int>(0, (s, l) => s + (l.quantity * l.unitPrice).round());
   final taxCents = (subtotalCents * estimate.taxRate / 100).round();
   final totalCents = subtotalCents + taxCents;
   final subtotal = fromCents(subtotalCents);
   final taxAmount = fromCents(taxCents);
   final total = fromCents(totalCents);
   final declinedTotal = fromCents(
-      declinedItems.fold(0, (s, l) => s + (l.quantity * l.unitPrice).round()));
+      declinedItems.fold<int>(0, (s, l) => s + (l.quantity * l.unitPrice).round()));
 
   const accent = PdfColor.fromInt(0xFF007AFF);
   const dark = PdfColor.fromInt(0xFF1C1C1E);

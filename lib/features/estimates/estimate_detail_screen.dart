@@ -351,9 +351,9 @@ class _EstimateDetailView extends ConsumerWidget {
     final activeItems =
         lineItems.where((l) => l.approvalStatus != 'declined').toList();
     // Stay in integer cents throughout to avoid floating-point rounding errors.
-    final subtotalCents = activeItems.fold(
+    final subtotalCents = activeItems.fold<int>(
         0, (s, l) => s + (l.quantity * l.unitPrice).round());
-    final declinedTotalCents = declinedItems.fold(
+    final declinedTotalCents = declinedItems.fold<int>(
         0, (s, l) => s + (l.quantity * l.unitPrice).round());
     final taxCents = (subtotalCents * estimate.taxRate / 100).round();
     final totalCents = subtotalCents + taxCents;

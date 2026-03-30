@@ -169,7 +169,7 @@ class _InvoiceDetailView extends ConsumerWidget {
     final other = approved.where((i) => i.type == 'other').toList();
 
     // Totals — stay in integer cents to avoid floating-point rounding errors.
-    final subtotalCents = approved.fold(0, (s, i) => s + (i.quantity * i.unitPrice).round());
+    final subtotalCents = approved.fold<int>(0, (s, i) => s + (i.quantity * i.unitPrice).round());
     final taxCents = (subtotalCents * taxRate / 100).round();
     final totalCents = subtotalCents + taxCents;
     final subtotal = fromCents(subtotalCents);
@@ -182,7 +182,7 @@ class _InvoiceDetailView extends ConsumerWidget {
     final hasCostData = approved.any((i) => i.unitCost != null && i.unitCost! > 0);
     final totalCostCents = approved
         .where((i) => i.unitCost != null && i.unitCost! > 0)
-        .fold(0, (s, i) => s + (i.quantity * i.unitCost!).round());
+        .fold<int>(0, (s, i) => s + (i.quantity * i.unitCost!).round());
     final grossProfit = fromCents(subtotalCents - totalCostCents);
     final gpPct = subtotal > 0 ? (grossProfit / subtotal * 100) : 0.0;
 

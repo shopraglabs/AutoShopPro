@@ -88,7 +88,7 @@ final customerStatsProvider =
     final items = itemsByEstimate[ro.estimateId!] ?? [];
     totalCents += items
         .where((i) => i.approvalStatus != 'declined')
-        .fold(0, (sum, i) => sum + (i.quantity * i.unitPrice).round());
+        .fold<int>(0, (sum, i) => sum + (i.quantity * i.unitPrice).round());
   }
 
   // Most recent service date (or createdAt if no serviceDate)

@@ -452,7 +452,7 @@ class _RoDetailView extends ConsumerWidget {
     final otherLines = lineItems.where((l) => l.type == 'other').toList();
 
     final subtotalCents =
-        lineItems.fold(0, (s, l) => s + (l.quantity * l.unitPrice).round());
+        lineItems.fold<int>(0, (s, l) => s + (l.quantity * l.unitPrice).round());
     final taxCents = (subtotalCents * taxRate / 100).round();
     final totalCents = subtotalCents + taxCents;
     final subtotal = fromCents(subtotalCents);

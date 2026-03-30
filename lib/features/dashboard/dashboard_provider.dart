@@ -194,9 +194,9 @@ final dashboardStatsProvider =
 
     // Only count approved/pending items — not declined.
     final roRevenueCents = approved
-        .fold(0, (sum, i) => sum + (i.quantity * i.unitPrice).round());
+        .fold<int>(0, (sum, i) => sum + (i.quantity * i.unitPrice).round());
     final roCostCents = approved
-        .fold(0, (sum, i) => sum + (i.quantity * (i.unitCost ?? i.unitPrice)).round());
+        .fold<int>(0, (sum, i) => sum + (i.quantity * (i.unitCost ?? i.unitPrice)).round());
 
     revenueAllCents += roRevenueCents;
 
@@ -205,7 +205,7 @@ final dashboardStatsProvider =
     // we don't track technician wages so labor is shown as pure revenue.
     final roKnownCostCents = approved
         .where((i) => i.unitCost != null && i.unitCost! > 0)
-        .fold(0, (sum, i) => sum + (i.quantity * i.unitCost!).round());
+        .fold<int>(0, (sum, i) => sum + (i.quantity * i.unitCost!).round());
     final roGpCents = roRevenueCents - roKnownCostCents;
 
     gpAllCents += roGpCents;

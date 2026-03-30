@@ -54,7 +54,7 @@ final invoiceTotalsProvider =
     final items = itemsByEstimate[ro.estimateId!] ?? [];
     totals[ro.id] = items
         .where((i) => i.approvalStatus != 'declined')
-        .fold(0, (sum, i) => sum + (i.quantity * i.unitPrice).round());
+        .fold<int>(0, (sum, i) => sum + (i.quantity * i.unitPrice).round());
   }
   return totals;
 });
