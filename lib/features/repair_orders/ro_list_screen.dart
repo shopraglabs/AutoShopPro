@@ -229,8 +229,9 @@ class _RoRow extends StatelessWidget {
     final color = _statusColor(ro.status);
     final label = _statusLabel(ro.status);
     final date = ro.serviceDate ?? ro.createdAt;
-    final dateLabel =
-        '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}';
+    final dateLabel = (date.year < 1900 || date.year > 2100)
+        ? '—'
+        : '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}';
 
     return Column(
       mainAxisSize: MainAxisSize.min,

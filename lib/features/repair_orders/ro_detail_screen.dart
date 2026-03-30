@@ -195,16 +195,20 @@ class _RoDetailView extends ConsumerWidget {
     );
     if (confirmed != true) return;
     final db = ref.read(dbProvider);
-    for (final item in undone) {
-      await db.updateLineItem(item.copyWith(isDone: const Value(true)));
-      if (item.type == 'part' && item.inventoryPartId != null) {
-        final part = await db.getPart(item.inventoryPartId!);
-        if (part != null) {
-          final newStock = (part.stockQty - item.quantity.round()).clamp(0, 999999);
-          await db.updatePart(part.copyWith(stockQty: newStock));
+    // All line item updates and stock deductions in one atomic transaction.
+    await db.transaction(() async {
+      for (final item in undone) {
+        await db.updateLineItem(item.copyWith(isDone: const Value(true)));
+        if (item.type == 'part' && item.inventoryPartId != null) {
+          final part = await db.getPart(item.inventoryPartId!);
+          if (part != null) {
+            // No floor clamp — negative stock is accurate (see _toggleDone).
+            final newStock = part.stockQty - item.quantity.round();
+            await db.updatePart(part.copyWith(stockQty: newStock));
+          }
         }
       }
-    }
+    });
   }
 
   Future<void> _generateInvoice(BuildContext context, WidgetRef ref,
@@ -254,8 +258,60 @@ class _RoDetailView extends ConsumerWidget {
     );
   }
 
-  Future<void> _advanceStatus(WidgetRef ref, String nextStatus) async {
+  Future<void> _advanceStatus(BuildContext context, WidgetRef ref, String nextStatus) async {
     final db = ref.read(dbProvider);
+
+    // When closing, check for items that were never marked done.
+    // Unchecked parts haven't had their stock deducted yet — we need to handle
+    // them before closing so inventory stays accurate.
+    if (nextStatus == 'closed') {
+      final allItems = lineItemsAsync.value ?? [];
+      final activeItems =
+          allItems.where((l) => l.approvalStatus != 'declined').toList();
+      final undone = activeItems
+          .where((l) => l.type == 'part' && !(l.isDone ?? false))
+          .toList();
+
+      if (undone.isNotEmpty && context.mounted) {
+        final confirmed = await showCupertinoDialog<bool>(
+          context: context,
+          builder: (dialogCtx) => CupertinoAlertDialog(
+            title: const Text('Unchecked Items'),
+            content: Text(
+              '${undone.length} part${undone.length == 1 ? '' : 's'} not marked done. '
+              'Mark them complete and deduct stock before closing?',
+            ),
+            actions: [
+              CupertinoDialogAction(
+                onPressed: () => Navigator.pop(dialogCtx, false),
+                child: const Text('Close Anyway'),
+              ),
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                onPressed: () => Navigator.pop(dialogCtx, true),
+                child: const Text('Complete & Close'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed == true) {
+          await db.transaction(() async {
+            for (final item in undone) {
+              await db.updateLineItem(item.copyWith(isDone: const Value(true)));
+              if (item.inventoryPartId != null) {
+                final part = await db.getPart(item.inventoryPartId!);
+                if (part != null) {
+                  await db.updatePart(part.copyWith(
+                      stockQty: part.stockQty - item.quantity.round()));
+                }
+              }
+            }
+          });
+        }
+      }
+    }
+
     // When closing the RO, stamp serviceDate with today so the record reflects
     // when work was actually completed, not when it was first opened.
     final updatedRo = nextStatus == 'closed'
@@ -395,10 +451,13 @@ class _RoDetailView extends ConsumerWidget {
     final partLines = lineItems.where((l) => l.type == 'part').toList();
     final otherLines = lineItems.where((l) => l.type == 'other').toList();
 
-    final subtotal =
-        lineItems.fold(0.0, (s, l) => s + l.quantity * fromCents(l.unitPrice));
-    final tax = subtotal * (taxRate / 100);
-    final total = subtotal + tax;
+    final subtotalCents =
+        lineItems.fold(0, (s, l) => s + (l.quantity * l.unitPrice).round());
+    final taxCents = (subtotalCents * taxRate / 100).round();
+    final totalCents = subtotalCents + taxCents;
+    final subtotal = fromCents(subtotalCents);
+    final tax = fromCents(taxCents);
+    final total = fromCents(totalCents);
 
     final next = _nextStep(ro.status);
     final statusColor = _statusColor(ro.status);
@@ -746,7 +805,7 @@ class _RoDetailView extends ConsumerWidget {
                           color: const Color(0xFFE5E5EA),
                           margin: const EdgeInsets.only(left: 46)),
                       GestureDetector(
-                        onTap: () => _advanceStatus(ref, next.nextStatus),
+                        onTap: () => _advanceStatus(context, ref, next.nextStatus),
                         child: Container(
                           color: CupertinoColors.white,
                           padding: const EdgeInsets.symmetric(
@@ -1489,21 +1548,24 @@ class _LineItemRow extends StatelessWidget {
     final nowDone = !wasDone;
     final db = ref.read(dbProvider);
 
-    await db.updateLineItem(item.copyWith(isDone: Value(nowDone)));
+    // Wrap both writes in a transaction so a crash between them can't leave
+    // the line item marked done but the stock not deducted (or vice versa).
+    await db.transaction(() async {
+      await db.updateLineItem(item.copyWith(isDone: Value(nowDone)));
 
-    // Adjust inventory stock when a parts line item is checked/unchecked.
-    // Only parts linked to the catalog (inventoryPartId != null) are tracked.
-    if (item.type == 'part' && item.inventoryPartId != null) {
-      final part = await db.getPart(item.inventoryPartId!);
-      if (part != null) {
-        final qty = item.quantity.round();
-        // Checking off → deduct stock. Unchecking → restore stock.
-        final newStock = nowDone
-            ? (part.stockQty - qty).clamp(0, 999999)
-            : part.stockQty + qty;
-        await db.updatePart(part.copyWith(stockQty: newStock));
+      // Adjust inventory stock when a parts line item is checked/unchecked.
+      // Only parts linked to the catalog (inventoryPartId != null) are tracked.
+      // No floor clamp — negative stock is accurate (ordered more than on-hand).
+      // check+uncheck must be a no-op; clamping at 0 would break that symmetry.
+      if (item.type == 'part' && item.inventoryPartId != null) {
+        final part = await db.getPart(item.inventoryPartId!);
+        if (part != null) {
+          final qty = item.quantity.round();
+          final newStock = nowDone ? part.stockQty - qty : part.stockQty + qty;
+          await db.updatePart(part.copyWith(stockQty: newStock));
+        }
       }
-    }
+    });
   }
 
   @override

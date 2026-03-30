@@ -333,8 +333,11 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(vendors, vendors.contactName);
         }
       }
-      if (from < 8) {
+      if (from == 7) {
         // Rename supplier_id → vendor_id to match the vendors table rename.
+        // Must use from == 7 (not from < 8) — RENAME runs exactly once.
+        // Using from < 8 would re-run on devices upgrading from v1–v5,
+        // trying to rename a column that doesn't exist yet and crashing.
         await m.database.customStatement(
             'ALTER TABLE estimate_line_items RENAME COLUMN supplier_id TO vendor_id');
       }

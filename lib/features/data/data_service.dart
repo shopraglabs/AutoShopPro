@@ -488,11 +488,13 @@ class DataService {
       index < cols.length ? cols[index] : '';
 
   /// Parses a date string in various formats → DateTime, or null.
+  /// Returns null for any date whose year falls outside 1900–2100
+  /// so corrupted CSV values never reach the database.
   DateTime? _parseDate(String s) {
     if (s.isEmpty) return null;
     // Try ISO format: 2026-01-20
     final iso = DateTime.tryParse(s);
-    if (iso != null) return iso;
+    if (iso != null) return _validYear(iso);
     // Try M/D/YYYY or MM/DD/YYYY
     final parts = s.split(RegExp(r'[/\-]'));
     if (parts.length == 3) {
@@ -500,12 +502,16 @@ class DataService {
       final b = int.tryParse(parts[1]);
       final c = int.tryParse(parts[2]);
       if (a != null && b != null && c != null) {
-        if (c > 1000) return DateTime(c, a, b);   // M/D/YYYY
-        if (a > 1000) return DateTime(a, b, c);   // YYYY-M-D (already caught above)
+        if (c > 1000) return _validYear(DateTime(c, a, b));   // M/D/YYYY
+        if (a > 1000) return _validYear(DateTime(a, b, c));   // YYYY-M-D (already caught above)
       }
     }
     return null;
   }
+
+  /// Returns [dt] if its year is in the range 1900–2100, otherwise null.
+  DateTime? _validYear(DateTime dt) =>
+      (dt.year >= 1900 && dt.year <= 2100) ? dt : null;
 
   /// Parses vendor groups from a services string formatted as:
   ///   (VENDOR - item1, item2) (VENDOR2 - item3)

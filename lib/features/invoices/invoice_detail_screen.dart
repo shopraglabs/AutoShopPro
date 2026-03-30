@@ -168,19 +168,22 @@ class _InvoiceDetailView extends ConsumerWidget {
     final parts = approved.where((i) => i.type == 'part').toList();
     final other = approved.where((i) => i.type == 'other').toList();
 
-    // Totals
-    final subtotal = approved.fold(0.0, (s, i) => s + i.quantity * fromCents(i.unitPrice));
-    final taxAmount = subtotal * (taxRate / 100);
-    final total = subtotal + taxAmount;
+    // Totals — stay in integer cents to avoid floating-point rounding errors.
+    final subtotalCents = approved.fold(0, (s, i) => s + (i.quantity * i.unitPrice).round());
+    final taxCents = (subtotalCents * taxRate / 100).round();
+    final totalCents = subtotalCents + taxCents;
+    final subtotal = fromCents(subtotalCents);
+    final taxAmount = fromCents(taxCents);
+    final total = fromCents(totalCents);
 
-    // Gross Profit — only calculated when at least one item has a cost stored.
-    // GP = revenue − cost. Parts and other items carry cost; labor usually doesn't.
+    // Gross Profit — only deduct items that have a known cost (unitCost > 0).
+    // Labor without unitCost is treated as 100% margin; using unitPrice instead
+    // would incorrectly zero out labor revenue from the GP calculation.
     final hasCostData = approved.any((i) => i.unitCost != null && i.unitCost! > 0);
-    final totalCost = approved.fold(
-      0.0,
-      (s, i) => s + i.quantity * fromCents(i.unitCost ?? i.unitPrice),
-    );
-    final grossProfit = subtotal - totalCost;
+    final totalCostCents = approved
+        .where((i) => i.unitCost != null && i.unitCost! > 0)
+        .fold(0, (s, i) => s + (i.quantity * i.unitCost!).round());
+    final grossProfit = fromCents(subtotalCents - totalCostCents);
     final gpPct = subtotal > 0 ? (grossProfit / subtotal * 100) : 0.0;
 
     return CupertinoPageScaffold(

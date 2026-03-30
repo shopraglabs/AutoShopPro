@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -26,6 +27,15 @@ String _qty(double q) =>
 
 String _roNumber(int id) => 'RO-${id.toString().padLeft(4, '0')}';
 
+// Loads Arial TTF from bundled assets and returns a PDF theme.
+// Arial supports Latin Extended characters (é, ñ, ü, etc.) — the default
+// Helvetica/Times built into the pdf package only covers basic ASCII.
+Future<pw.ThemeData> _loadPdfTheme() async {
+  final regular = pw.Font.ttf(await rootBundle.load('assets/fonts/Arial.ttf'));
+  final bold = pw.Font.ttf(await rootBundle.load('assets/fonts/Arial Bold.ttf'));
+  return pw.ThemeData.withFont(base: regular, bold: bold);
+}
+
 // ─── PDF builder ──────────────────────────────────────────────────────────────
 
 /// Builds invoice PDF bytes from RO data.
@@ -41,15 +51,18 @@ Future<Uint8List> buildInvoicePdf({
   String? comment,
   List<EstimateLineItem> declinedItems = const [],
 }) async {
-  final doc = pw.Document();
+  final doc = pw.Document(theme: await _loadPdfTheme());
 
   // Only approved/pending items (declined already excluded at RO level)
   final labor = lineItems.where((l) => l.type == 'labor').toList();
   final parts = lineItems.where((l) => l.type == 'part').toList();
   final otherItems = lineItems.where((l) => l.type == 'other').toList();
-  final subtotal = lineItems.fold(0.0, (s, l) => s + l.quantity * fromCents(l.unitPrice));
-  final taxAmount = subtotal * (taxRate / 100);
-  final total = subtotal + taxAmount;
+  final subtotalCents = lineItems.fold(0, (s, l) => s + (l.quantity * l.unitPrice).round());
+  final taxCents = (subtotalCents * taxRate / 100).round();
+  final totalCents = subtotalCents + taxCents;
+  final subtotal = fromCents(subtotalCents);
+  final taxAmount = fromCents(taxCents);
+  final total = fromCents(totalCents);
 
   // ── Colour palette ────────────────────────────────────────────────────────
   const accent = PdfColor.fromInt(0xFF007AFF); // system blue
@@ -607,6 +620,14 @@ Future<void> openInPreview(String filePath) async {
   await Process.run('open', [filePath]);
 }
 
+/// Escapes a string for safe interpolation inside an AppleScript double-quoted
+/// string literal. Neutralizes backslashes, double quotes, and newlines.
+String _escapeForAppleScript(String s) => s
+    .replaceAll('\\', '\\\\')
+    .replaceAll('"', '\\"')
+    .replaceAll('\n', ' ')
+    .replaceAll('\r', ' ');
+
 /// Opens Mail.app with the PDF attached as a new draft using AppleScript.
 Future<void> openInMailWithAttachment({
   required String filePath,
@@ -614,19 +635,22 @@ Future<void> openInMailWithAttachment({
   required String customerName,
   String? customerEmail,
 }) async {
-  final to = customerEmail?.isNotEmpty == true ? customerEmail! : '';
-  final subject = 'Invoice $roNumber';
-  final body = 'Please find your invoice attached.';
+  final rawTo = customerEmail?.isNotEmpty == true ? customerEmail! : '';
+  final safeEmail = _escapeForAppleScript(rawTo);
+  final safePath = _escapeForAppleScript(filePath);
+  final safeSubject = _escapeForAppleScript('Invoice $roNumber');
+  final safeBody = _escapeForAppleScript('Please find your invoice attached.');
 
-  final toLine =
-      to.isNotEmpty ? 'make new to recipient with properties {address:"$to"}' : '';
+  final toLine = safeEmail.isNotEmpty
+      ? 'make new to recipient with properties {address:"$safeEmail"}'
+      : '';
   final script = '''
 tell application "Mail"
   activate
-  set newMsg to make new outgoing message with properties {subject:"$subject", content:"$body", visible:true}
+  set newMsg to make new outgoing message with properties {subject:"$safeSubject", content:"$safeBody", visible:true}
   tell newMsg
     $toLine
-    make new attachment with properties {file name:POSIX file "$filePath"}
+    make new attachment with properties {file name:POSIX file "$safePath"}
   end tell
 end tell
 ''';
@@ -649,7 +673,7 @@ Future<Uint8List> buildSimpleInvoicePdf({
   String? comment,
   List<EstimateLineItem> declinedItems = const [],
 }) async {
-  final doc = pw.Document();
+  final doc = pw.Document(theme: await _loadPdfTheme());
 
   final labor = lineItems.where((l) => l.type == 'labor').toList();
   final parts = lineItems.where((l) => l.type == 'part').toList();
@@ -1320,7 +1344,7 @@ Future<Uint8List> buildEstimatePdf({
   required List<EstimateLineItem> lineItems,
   required String? shopName,
 }) async {
-  final doc = pw.Document();
+  final doc = pw.Document(theme: await _loadPdfTheme());
 
   final labor = lineItems.where((l) => l.type == 'labor').toList();
   final parts = lineItems.where((l) => l.type == 'part').toList();
@@ -1329,12 +1353,15 @@ Future<Uint8List> buildEstimatePdf({
       lineItems.where((l) => l.approvalStatus != 'declined').toList();
   final declinedItems =
       lineItems.where((l) => l.approvalStatus == 'declined').toList();
-  final subtotal =
-      activeItems.fold(0.0, (s, l) => s + l.quantity * fromCents(l.unitPrice));
-  final taxAmount = subtotal * (estimate.taxRate / 100);
-  final total = subtotal + taxAmount;
-  final declinedTotal =
-      declinedItems.fold(0.0, (s, l) => s + l.quantity * fromCents(l.unitPrice));
+  final subtotalCents =
+      activeItems.fold(0, (s, l) => s + (l.quantity * l.unitPrice).round());
+  final taxCents = (subtotalCents * estimate.taxRate / 100).round();
+  final totalCents = subtotalCents + taxCents;
+  final subtotal = fromCents(subtotalCents);
+  final taxAmount = fromCents(taxCents);
+  final total = fromCents(totalCents);
+  final declinedTotal = fromCents(
+      declinedItems.fold(0, (s, l) => s + (l.quantity * l.unitPrice).round()));
 
   const accent = PdfColor.fromInt(0xFF007AFF);
   const dark = PdfColor.fromInt(0xFF1C1C1E);

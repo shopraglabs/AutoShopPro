@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/money.dart';
 import '../../database/database.dart';
 import 'customers_provider.dart';
 
@@ -158,6 +159,11 @@ class _CustomerDetail extends ConsumerWidget {
               ],
               emptyMessage: 'No contact info saved',
             ),
+
+            const SizedBox(height: 20),
+
+            // Lifetime financial summary
+            _CustomerStatsSection(customer: customer),
 
             const SizedBox(height: 20),
 
@@ -376,6 +382,144 @@ class _VehicleTile extends StatelessWidget {
           ],
         ),
       ),
+      ),
+    );
+  }
+}
+
+// ── Customer Stats Section ────────────────────────────────────────────────────
+
+/// Shows total spent, visit count, and last visit date for a customer.
+/// Loaded asynchronously — shows a spinner while calculating.
+class _CustomerStatsSection extends ConsumerWidget {
+  final Customer customer;
+  const _CustomerStatsSection({required this.customer});
+
+  String _fmtDate(DateTime d) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return '${months[d.month - 1]} ${d.day}, ${d.year}';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(customerStatsProvider(customer.id));
+
+    return statsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (stats) {
+        // Don't show the section if the customer has no closed ROs yet
+        if (stats.visitCount == 0) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'LIFETIME',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF8E8E93),
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                color: CupertinoColors.white,
+                child: Column(
+                  children: [
+                    // Total spent
+                    _StatRow(
+                      icon: CupertinoIcons.money_dollar_circle_fill,
+                      iconColor: const Color(0xFF34C759),
+                      label: 'Total Spent',
+                      value: formatMoneyFromDouble(stats.totalSpent),
+                      valueBold: true,
+                    ),
+                    _statDivider(),
+                    // Visit count
+                    _StatRow(
+                      icon: CupertinoIcons.wrench_fill,
+                      iconColor: const Color(0xFF007AFF),
+                      label: 'Total Visits',
+                      value: stats.visitCount.toString(),
+                    ),
+                    _statDivider(),
+                    // Last visit
+                    _StatRow(
+                      icon: CupertinoIcons.calendar,
+                      iconColor: const Color(0xFF8E8E93),
+                      label: 'Last Visit',
+                      value: _fmtDate(stats.lastVisit!),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _statDivider() => Container(
+        height: 0.5,
+        color: const Color(0xFFE5E5EA),
+        margin: const EdgeInsets.only(left: 52),
+      );
+}
+
+class _StatRow extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String value;
+  final bool valueBold;
+
+  const _StatRow({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+    this.valueBold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 18, color: iconColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 15, color: Color(0xFF1C1C1E)),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: valueBold ? FontWeight.w600 : FontWeight.w500,
+              color: const Color(0xFF1C1C1E),
+            ),
+          ),
+        ],
       ),
     );
   }

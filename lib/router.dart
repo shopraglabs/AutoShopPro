@@ -30,6 +30,7 @@ import 'features/service_templates/service_template_list_screen.dart';
 import 'features/service_templates/service_template_form_screen.dart';
 import 'features/search/search_screen.dart';
 import 'features/invoices/invoice_list_screen.dart';
+import 'features/invoices/invoice_detail_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
 
 // The router defines every screen address in the app.
@@ -327,6 +328,15 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/payments',
           builder: (context, state) => const InvoiceListScreen(),
+          routes: [
+            GoRoute(
+              path: ':roId',
+              builder: (context, state) {
+                final id = int.parse(state.pathParameters['roId']!);
+                return InvoiceDetailScreen(roId: id);
+              },
+            ),
+          ],
         ),
 
         // ── Module 4: Dashboard ───────────────────────────────────────────────

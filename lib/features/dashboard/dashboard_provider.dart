@@ -157,7 +157,19 @@ final dashboardStatsProvider =
       .toSet()
       .length;
 
-  // Calculate revenue, cost, and GP by loading line items for each closed RO.
+  // Bulk-fetch all line items for every closed RO in one query (avoids N+1).
+  final closedEstimateIds = closedROs
+      .where((r) => r.ro.estimateId != null)
+      .map((r) => r.ro.estimateId!)
+      .toList();
+  final allLineItems = await db.getLineItemsForEstimates(closedEstimateIds);
+  // Build a lookup map so each RO can find its items in O(1).
+  final itemsByEstimate = <int, List<dynamic>>{};
+  for (final item in allLineItems) {
+    itemsByEstimate.putIfAbsent(item.estimateId, () => []).add(item);
+  }
+
+  // Calculate revenue, cost, and GP from the pre-fetched line item map.
   // Line item unitPrice is stored as INTEGER cents. quantity is a double.
   int revenueAllCents = 0;
   int revenueMonthCents = 0;
@@ -177,7 +189,7 @@ final dashboardStatsProvider =
     final ro = roDetail.ro;
     if (ro.estimateId == null) continue;
 
-    final items = await db.getLineItemsForEstimate(ro.estimateId!);
+    final items = itemsByEstimate[ro.estimateId!] ?? [];
     final approved = items.where((i) => i.approvalStatus != 'declined').toList();
 
     // Only count approved/pending items — not declined.

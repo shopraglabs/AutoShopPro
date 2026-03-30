@@ -372,6 +372,20 @@ The heart of the app. Everything else depends on this.
 - ✅ Records hub screen order: Customers → Estimates → Repair Orders → Invoices → Vendors
 - ✅ README v0.10.2 entry backfilled
 
+### Phase 1 Audit Fixes (v0.12.1 Full Picture)
+- ✅ AppleScript injection — escape email and file path before osascript interpolation
+- ✅ Estimate locking — ADD ITEMS hidden and rows read-only when linked RO is closed; open ROs still editable
+- ✅ N+1 query elimination — dashboard, invoiceTotals, and customerStats providers bulk-fetch line items once
+- ✅ Integer-cents subtotals — all 4 total-calculation sites stay in integer cents; no floating-point rounding
+- ✅ GP formula fix — invoice detail only deducts items with unitCost > 0; labor not falsely zeroed
+- ✅ Convert-to-RO transaction — updateEstimate + insertRepairOrder wrapped in db.transaction()
+- ✅ Double-tap guard on Convert to RO — _converting bool prevents duplicate ROs
+- ✅ Stock deduction transactions — _toggleDone and _completeAll wrapped in db.transaction()
+- ✅ Stock clamp removed — negative stock accurate; check/uncheck is a no-op
+- ✅ Close-RO unchecked-item warning — dialog prompts "Complete & Close" to deduct remaining stock
+- ✅ TTF font in PDFs — Arial loaded from assets; accented characters (José, García) render correctly
+- ✅ Migration v8 guard — from < 8 changed to from == 7 for RENAME operation
+
 ---
 
 ### Backend (Go — planned)

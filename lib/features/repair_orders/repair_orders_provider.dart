@@ -23,3 +23,38 @@ final roForEstimateProvider =
     StreamProvider.family<RepairOrder?, int>((ref, estimateId) {
   return ref.watch(dbProvider).watchRoForEstimate(estimateId);
 });
+
+// Computes a total (in cents) for every closed RO.
+// Returns Map<roId, totalCents> — used by the invoice list to show amounts on rows.
+// autoDispose so it refreshes when the screen is re-entered.
+final invoiceTotalsProvider =
+    FutureProvider.autoDispose<Map<int, int>>((ref) async {
+  final db = ref.watch(dbProvider);
+  final allRos = await db.watchAllRepairOrders().first;
+  final closedROs = allRos.where((r) => r.ro.status == 'closed').toList();
+
+  // Bulk-fetch all line items for closed ROs in one query (avoids N+1).
+  final estimateIds = closedROs
+      .where((r) => r.ro.estimateId != null)
+      .map((r) => r.ro.estimateId!)
+      .toList();
+  final allItems = await db.getLineItemsForEstimates(estimateIds);
+  final itemsByEstimate = <int, List<dynamic>>{};
+  for (final item in allItems) {
+    itemsByEstimate.putIfAbsent(item.estimateId, () => []).add(item);
+  }
+
+  final totals = <int, int>{};
+  for (final roDetail in closedROs) {
+    final ro = roDetail.ro;
+    if (ro.estimateId == null) {
+      totals[ro.id] = 0;
+      continue;
+    }
+    final items = itemsByEstimate[ro.estimateId!] ?? [];
+    totals[ro.id] = items
+        .where((i) => i.approvalStatus != 'declined')
+        .fold(0, (sum, i) => sum + (i.quantity * i.unitPrice).round());
+  }
+  return totals;
+});

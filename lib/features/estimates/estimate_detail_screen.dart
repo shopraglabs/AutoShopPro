@@ -331,6 +331,12 @@ class _EstimateDetailView extends ConsumerWidget {
     // Without this, ref.read() in _applyTemplate finds no data on first tap.
     ref.watch(serviceTemplatesProvider);
 
+    // Locked only when the linked Repair Order is closed — open ROs can still
+    // have their estimate edited. Once closed, line items are part of a final
+    // invoice and must not change.
+    final roAsync = ref.watch(roForEstimateProvider(estimate.id));
+    final locked = roAsync.value?.status == 'closed';
+
     final lineItems = lineItemsAsync.value ?? [];
     final laborLines =
         lineItems.where((l) => l.type == 'labor').toList();
@@ -344,13 +350,17 @@ class _EstimateDetailView extends ConsumerWidget {
         lineItems.where((l) => l.approvalStatus == 'declined').toList();
     final activeItems =
         lineItems.where((l) => l.approvalStatus != 'declined').toList();
-    // unitPrice is int cents — convert to dollars before multiplying by quantity
-    final subtotal = activeItems.fold(
-        0.0, (s, l) => s + l.quantity * fromCents(l.unitPrice));
-    final declinedTotal = declinedItems.fold(
-        0.0, (s, l) => s + l.quantity * fromCents(l.unitPrice));
-    final tax = subtotal * (estimate.taxRate / 100);
-    final total = subtotal + tax;
+    // Stay in integer cents throughout to avoid floating-point rounding errors.
+    final subtotalCents = activeItems.fold(
+        0, (s, l) => s + (l.quantity * l.unitPrice).round());
+    final declinedTotalCents = declinedItems.fold(
+        0, (s, l) => s + (l.quantity * l.unitPrice).round());
+    final taxCents = (subtotalCents * estimate.taxRate / 100).round();
+    final totalCents = subtotalCents + taxCents;
+    final subtotal = fromCents(subtotalCents);
+    final declinedTotal = fromCents(declinedTotalCents);
+    final tax = fromCents(taxCents);
+    final total = fromCents(totalCents);
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
@@ -562,19 +572,21 @@ class _EstimateDetailView extends ConsumerWidget {
                     item: labor,
                     laborLines: const [],
                     onDelete: (id) => ref.read(dbProvider).deleteLineItem(id),
+                    locked: locked,
                   ),
                 ),
-                // Indented "Add Part" row — pre-links the new part to this labor line
-                Padding(
-                  padding: const EdgeInsets.only(left: 20.0),
-                  child: _ActionRow(
-                    icon: CupertinoIcons.cube_box_fill,
-                    label: 'Add Part',
-                    onTap: () => context.push(
-                      '/repair-orders/estimates/${estimate.id}/line-items/part?parentLaborId=${labor.id}',
+                // Indented "Add Part" row — hidden when estimate is locked
+                if (!locked)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20.0),
+                    child: _ActionRow(
+                      icon: CupertinoIcons.cube_box_fill,
+                      label: 'Add Part',
+                      onTap: () => context.push(
+                        '/repair-orders/estimates/${estimate.id}/line-items/part?parentLaborId=${labor.id}',
+                      ),
                     ),
                   ),
-                ),
                 const SizedBox(height: 6),
               ],
               const SizedBox(height: 14),
@@ -587,6 +599,7 @@ class _EstimateDetailView extends ConsumerWidget {
                 items: partLines,
                 laborLines: laborLines,
                 onDelete: (id) => ref.read(dbProvider).deleteLineItem(id),
+                locked: locked,
               ),
               const SizedBox(height: 20),
             ],
@@ -604,6 +617,7 @@ class _EstimateDetailView extends ConsumerWidget {
                         laborLines: const [],
                         onDelete: (id) =>
                             ref.read(dbProvider).deleteLineItem(id),
+                        locked: locked,
                       ),
                       if (i < otherLines.length - 1)
                         Container(
@@ -634,43 +648,61 @@ class _EstimateDetailView extends ConsumerWidget {
                 ),
               ),
 
-            // ── Add items ─────────────────────────────────────────────────
-            _sectionHeader('ADD ITEMS'),
-            Container(
-              color: CupertinoColors.white,
-              child: Column(
-                children: [
-                  _ActionRow(
-                    icon: CupertinoIcons.wrench_fill,
-                    label: 'Add Labor',
-                    onTap: () => context.push(
-                        '/repair-orders/estimates/${estimate.id}/line-items/labor'),
-                  ),
-                  Container(
-                    height: 0.5,
-                    color: const Color(0xFFE5E5EA),
-                    margin: const EdgeInsets.only(left: 46),
-                  ),
-                  _ActionRow(
-                    icon: CupertinoIcons.cube_box_fill,
-                    label: 'Add Part',
-                    onTap: () => context.push(
-                        '/repair-orders/estimates/${estimate.id}/line-items/part'),
-                  ),
-                  Container(
-                    height: 0.5,
-                    color: const Color(0xFFE5E5EA),
-                    margin: const EdgeInsets.only(left: 46),
-                  ),
-                  _ActionRow(
-                    icon: CupertinoIcons.ellipsis_circle_fill,
-                    label: 'Add Other',
-                    onTap: () => context.push(
-                        '/repair-orders/estimates/${estimate.id}/line-items/other'),
-                  ),
-                ],
+            // ── Add items (hidden when RO exists) ─────────────────────────
+            if (locked)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: const [
+                    Icon(CupertinoIcons.lock_fill,
+                        size: 13, color: Color(0xFFAEAEB2)),
+                    SizedBox(width: 6),
+                    Text(
+                      'Locked — this estimate\'s Repair Order is closed.',
+                      style: TextStyle(
+                          fontSize: 13, color: Color(0xFFAEAEB2)),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              _sectionHeader('ADD ITEMS'),
+              Container(
+                color: CupertinoColors.white,
+                child: Column(
+                  children: [
+                    _ActionRow(
+                      icon: CupertinoIcons.wrench_fill,
+                      label: 'Add Labor',
+                      onTap: () => context.push(
+                          '/repair-orders/estimates/${estimate.id}/line-items/labor'),
+                    ),
+                    Container(
+                      height: 0.5,
+                      color: const Color(0xFFE5E5EA),
+                      margin: const EdgeInsets.only(left: 46),
+                    ),
+                    _ActionRow(
+                      icon: CupertinoIcons.cube_box_fill,
+                      label: 'Add Part',
+                      onTap: () => context.push(
+                          '/repair-orders/estimates/${estimate.id}/line-items/part'),
+                    ),
+                    Container(
+                      height: 0.5,
+                      color: const Color(0xFFE5E5EA),
+                      margin: const EdgeInsets.only(left: 46),
+                    ),
+                    _ActionRow(
+                      icon: CupertinoIcons.ellipsis_circle_fill,
+                      label: 'Add Other',
+                      onTap: () => context.push(
+                          '/repair-orders/estimates/${estimate.id}/line-items/other'),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
 
             // ── Totals ────────────────────────────────────────────────────
             if (lineItems.isNotEmpty) ...[
@@ -851,11 +883,13 @@ class _LineItemSection extends StatelessWidget {
   final List<EstimateLineItem> items;
   final List<EstimateLineItem> laborLines;
   final Future<int> Function(int id) onDelete;
+  final bool locked;
 
   const _LineItemSection({
     required this.items,
     required this.laborLines,
     required this.onDelete,
+    this.locked = false,
   });
 
   @override
@@ -928,7 +962,8 @@ class _LineItemSection extends StatelessWidget {
             _LineItemRow(
                 item: groupItems[i],
                 laborLines: laborLines,
-                onDelete: onDelete),
+                onDelete: onDelete,
+                locked: locked),
             if (i < groupItems.length - 1)
               Container(
                 height: 0.5,
@@ -947,11 +982,13 @@ class _LineItemRow extends ConsumerWidget {
   final EstimateLineItem item;
   final List<EstimateLineItem> laborLines;
   final Future<int> Function(int id) onDelete;
+  final bool locked;
 
   const _LineItemRow({
     required this.item,
     required this.laborLines,
     required this.onDelete,
+    this.locked = false,
   });
 
   // Opens the approval picker for this line item.
@@ -1070,39 +1107,8 @@ class _LineItemRow extends ConsumerWidget {
     final decoration =
         isDeclined ? TextDecoration.lineThrough : TextDecoration.none;
 
-    return Dismissible(
-      key: ValueKey(item.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        color: CupertinoColors.destructiveRed,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(CupertinoIcons.trash, color: CupertinoColors.white),
-      ),
-      onDismissed: (_) => onDelete(item.id),
-      child: GestureDetector(
-        onTap: () => context.push(
-            '/repair-orders/estimates/${item.estimateId}/line-items/${item.id}/edit'),
-        onSecondaryTapUp: (details) => showContextMenu(
-          context: context,
-          position: details.globalPosition,
-          items: [
-            ContextMenuAction(
-              label: 'Edit',
-              icon: CupertinoIcons.pencil,
-              onTap: () => context.push(
-                  '/repair-orders/estimates/${item.estimateId}/line-items/${item.id}/edit'),
-            ),
-            contextMenuDivider,
-            ContextMenuAction(
-              label: 'Delete',
-              icon: CupertinoIcons.trash,
-              isDestructive: true,
-              onTap: () => onDelete(item.id),
-            ),
-          ],
-        ),
-        child: Container(
+    // Extract the row content so it can be reused with or without Dismissible.
+    final rowContent = Container(
           color: CupertinoColors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
@@ -1201,7 +1207,45 @@ class _LineItemRow extends ConsumerWidget {
                   size: 16, color: Color(0xFFC7C7CC)),
             ],
           ),
+        );
+
+    // When locked (RO exists), show the row as read-only — no swipe-to-delete
+    // and no tap-to-edit, so closed invoice line items cannot be mutated.
+    if (locked) return rowContent;
+
+    return Dismissible(
+      key: ValueKey(item.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: CupertinoColors.destructiveRed,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: const Icon(CupertinoIcons.trash, color: CupertinoColors.white),
+      ),
+      onDismissed: (_) => onDelete(item.id),
+      child: GestureDetector(
+        onTap: () => context.push(
+            '/repair-orders/estimates/${item.estimateId}/line-items/${item.id}/edit'),
+        onSecondaryTapUp: (details) => showContextMenu(
+          context: context,
+          position: details.globalPosition,
+          items: [
+            ContextMenuAction(
+              label: 'Edit',
+              icon: CupertinoIcons.pencil,
+              onTap: () => context.push(
+                  '/repair-orders/estimates/${item.estimateId}/line-items/${item.id}/edit'),
+            ),
+            contextMenuDivider,
+            ContextMenuAction(
+              label: 'Delete',
+              icon: CupertinoIcons.trash,
+              isDestructive: true,
+              onTap: () => onDelete(item.id),
+            ),
+          ],
         ),
+        child: rowContent,
       ),
     );
   }
@@ -1278,26 +1322,46 @@ class _RoBanner extends ConsumerWidget {
 // ─── Convert Row ──────────────────────────────────────────────────────────────
 // Shows "Convert to Repair Order" only when no RO exists for this estimate.
 // Placed inside the ACTIONS section at the bottom of the estimate detail page.
-class _ConvertRow extends ConsumerWidget {
+class _ConvertRow extends ConsumerStatefulWidget {
   final Estimate estimate;
   const _ConvertRow({required this.estimate});
 
-  Future<void> _convert(BuildContext context, WidgetRef ref) async {
-    final db = ref.read(dbProvider);
-    await db.updateEstimate(estimate.copyWith(status: 'approved'));
-    final roId = await db.insertRepairOrder(RepairOrdersCompanion(
-      estimateId: Value(estimate.id),
-      customerId: Value(estimate.customerId),
-      vehicleId: Value(estimate.vehicleId),
-      note: Value(estimate.note),
-      serviceDate: Value(estimate.createdAt),
-    ));
-    if (context.mounted) context.push('/repair-orders/ros/$roId');
+  @override
+  ConsumerState<_ConvertRow> createState() => _ConvertRowState();
+}
+
+class _ConvertRowState extends ConsumerState<_ConvertRow> {
+  // Guard against double-taps: a second tap while conversion is in-flight would
+  // create a duplicate RO and crash with "too many results" on the stream.
+  bool _converting = false;
+
+  Future<void> _convert() async {
+    if (_converting) return;
+    setState(() => _converting = true);
+    try {
+      final db = ref.read(dbProvider);
+      // Wrap both writes in a transaction so a crash between them can't leave
+      // the estimate approved but without a Repair Order (or vice versa).
+      int roId = 0;
+      await db.transaction(() async {
+        await db.updateEstimate(widget.estimate.copyWith(status: 'approved'));
+        roId = await db.insertRepairOrder(RepairOrdersCompanion(
+          estimateId: Value(widget.estimate.id),
+          customerId: Value(widget.estimate.customerId),
+          vehicleId: Value(widget.estimate.vehicleId),
+          note: Value(widget.estimate.note),
+          serviceDate: Value(widget.estimate.createdAt),
+        ));
+      });
+      if (mounted) context.push('/repair-orders/ros/$roId');
+    } finally {
+      if (mounted) setState(() => _converting = false);
+    }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final roAsync = ref.watch(roForEstimateProvider(estimate.id));
+  Widget build(BuildContext context) {
+    final roAsync = ref.watch(roForEstimateProvider(widget.estimate.id));
     return roAsync.when(
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
@@ -1310,8 +1374,8 @@ class _ConvertRow extends ConsumerWidget {
               color: CupertinoColors.white,
               child: _ActionRow(
                 icon: CupertinoIcons.arrow_right_square_fill,
-                label: 'Convert to Repair Order',
-                onTap: () => _convert(context, ref),
+                label: _converting ? 'Converting…' : 'Convert to Repair Order',
+                onTap: _converting ? null : _convert,
               ),
             ),
           ],
