@@ -52,7 +52,7 @@ A cross-platform automotive shop management app built with Flutter. One codebase
 
 | Layer | Technology |
 |---|---|
-| Framework | Flutter beta 3.43.0 / Dart |
+| Framework | Flutter stable 3.41.5 / Dart 3.11.3 |
 | State Management | Riverpod |
 | Local Database | Drift (SQLite, offline-first) |
 | Navigation | go_router |
@@ -79,7 +79,7 @@ A cross-platform automotive shop management app built with Flutter. One codebase
 | Machine | MacBook Neo |
 | Chip | Apple A18 Pro |
 | OS | macOS Tahoe 26.3.2 |
-| Flutter | beta 3.43.0 |
+| Flutter | stable 3.41.5 |
 | Project Location | ~/Documents/autoshoppro |
 
 ---
