@@ -607,8 +607,11 @@ Future<String> saveInvoiceToDownloads(Uint8List bytes, int roId) async {
 }
 
 /// Saves PDF bytes to a temp file and returns the path.
+/// Creates the directory first — on macOS sandbox, getTemporaryDirectory()
+/// can return a bundle-scoped Caches path that may not exist yet.
 Future<String> saveInvoiceToTemp(Uint8List bytes, int roId) async {
   final dir = await getTemporaryDirectory();
+  await Directory(dir.path).create(recursive: true);
   final fileName = 'Invoice-${_roNumber(roId)}.pdf';
   final file = File('${dir.path}/$fileName');
   await file.writeAsBytes(bytes);
