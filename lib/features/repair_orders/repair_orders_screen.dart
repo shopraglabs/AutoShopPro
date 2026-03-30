@@ -11,7 +11,7 @@ class RepairOrdersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
-        middle: Text('Repair Orders'),
+        middle: Text('Records'),
       ),
       child: SafeArea(
         child: ListView(
@@ -33,6 +33,16 @@ class RepairOrdersScreen extends StatelessWidget {
                     margin: const EdgeInsets.only(left: 62),
                   ),
                   _MenuRow(
+                    icon: CupertinoIcons.doc_fill,
+                    label: 'Estimates',
+                    onTap: () => context.go('/repair-orders/estimates'),
+                  ),
+                  Container(
+                    height: 0.5,
+                    color: const Color(0xFFE5E5EA),
+                    margin: const EdgeInsets.only(left: 62),
+                  ),
+                  _MenuRow(
                     icon: CupertinoIcons.doc_text_fill,
                     label: 'Repair Orders',
                     onTap: () => context.go('/repair-orders/ros'),
@@ -43,10 +53,9 @@ class RepairOrdersScreen extends StatelessWidget {
                     margin: const EdgeInsets.only(left: 62),
                   ),
                   _MenuRow(
-                    icon: CupertinoIcons.doc_fill,
-                    label: 'Estimates',
-                    onTap: () =>
-                        context.go('/repair-orders/estimates'),
+                    icon: CupertinoIcons.money_dollar_circle_fill,
+                    label: 'Invoices',
+                    onTap: () => context.go('/payments'),
                   ),
                   Container(
                     height: 0.5,

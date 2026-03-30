@@ -12,6 +12,23 @@ String _monthLabel(DateTime d) {
   return '${months[d.month - 1]} ${d.year}';
 }
 
+// Formats a short date like "Mar 24"
+String _shortDate(DateTime d) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  return '${months[d.month - 1]} ${d.day}';
+}
+
+// Returns "Mar 24 – Mar 30" for the week containing [d]
+String _weekLabel(DateTime d) {
+  final offset = d.weekday - 1;
+  final monday = DateTime(d.year, d.month, d.day - offset);
+  final sunday = monday.add(const Duration(days: 6));
+  return '${_shortDate(monday)} – ${_shortDate(sunday)}';
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 class DashboardScreen extends ConsumerWidget {
@@ -35,11 +52,13 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ),
       ),
-      child: statsAsync.when(
-        loading: () =>
-            const Center(child: CupertinoActivityIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (stats) => _DashboardBody(stats: stats),
+      child: SafeArea(
+        child: statsAsync.when(
+          loading: () =>
+              const Center(child: CupertinoActivityIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (stats) => _DashboardBody(stats: stats),
+        ),
       ),
     );
   }
@@ -55,6 +74,7 @@ class _DashboardBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final monthLabel = _monthLabel(now);
+    final weekLabel = _weekLabel(now);
 
     return CustomScrollView(
       slivers: [
@@ -85,6 +105,84 @@ class _DashboardBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
 
+                // ── Today ───────────────────────────────────────────────────
+                _sectionHeader('TODAY — ${_shortDate(now).toUpperCase()}'),
+                Container(
+                  color: CupertinoColors.white,
+                  child: Column(
+                    children: [
+                      _KpiRow(
+                        icon: CupertinoIcons.doc_text_fill,
+                        iconColor: const Color(0xFFFF9500),
+                        label: 'Invoices Closed',
+                        value: stats.closedToday.toString(),
+                      ),
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 52)),
+                      _KpiRow(
+                        icon: CupertinoIcons.money_dollar_circle_fill,
+                        iconColor: const Color(0xFFFF9500),
+                        label: 'Revenue',
+                        value: formatMoneyFromDouble(stats.revenueToday),
+                        valueBold: true,
+                      ),
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 52)),
+                      _KpiRow(
+                        icon: CupertinoIcons.arrow_up_right_circle_fill,
+                        iconColor: const Color(0xFFFF9500),
+                        label: 'Gross Profit',
+                        value: formatMoneyFromDouble(stats.grossProfitToday),
+                        valueBold: true,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // ── This week ───────────────────────────────────────────────
+                _sectionHeader('THIS WEEK — $weekLabel'.toUpperCase()),
+                Container(
+                  color: CupertinoColors.white,
+                  child: Column(
+                    children: [
+                      _KpiRow(
+                        icon: CupertinoIcons.doc_text_fill,
+                        iconColor: const Color(0xFF007AFF),
+                        label: 'Invoices Closed',
+                        value: stats.closedThisWeek.toString(),
+                      ),
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 52)),
+                      _KpiRow(
+                        icon: CupertinoIcons.money_dollar_circle_fill,
+                        iconColor: const Color(0xFF007AFF),
+                        label: 'Revenue',
+                        value: formatMoneyFromDouble(stats.revenueThisWeek),
+                        valueBold: true,
+                      ),
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 52)),
+                      _KpiRow(
+                        icon: CupertinoIcons.arrow_up_right_circle_fill,
+                        iconColor: const Color(0xFF007AFF),
+                        label: 'Gross Profit',
+                        value: formatMoneyFromDouble(stats.grossProfitThisWeek),
+                        valueBold: true,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+
                 // ── This month ──────────────────────────────────────────────
                 _sectionHeader(monthLabel.toUpperCase()),
                 Container(
@@ -107,6 +205,76 @@ class _DashboardBody extends StatelessWidget {
                         label: 'Revenue',
                         value: formatMoneyFromDouble(stats.revenueThisMonth),
                         valueBold: true,
+                      ),
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 52)),
+                      _KpiRow(
+                        icon: CupertinoIcons.arrow_up_right_circle_fill,
+                        iconColor: const Color(0xFF34C759),
+                        label: 'Gross Profit',
+                        value: formatMoneyFromDouble(stats.grossProfitThisMonth),
+                        valueBold: true,
+                      ),
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 52)),
+                      _KpiRow(
+                        icon: CupertinoIcons.car_fill,
+                        iconColor: const Color(0xFF34C759),
+                        label: 'Car Count',
+                        value: stats.carCountThisMonth.toString(),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // ── This year ───────────────────────────────────────────────
+                _sectionHeader('${now.year}'),
+                Container(
+                  color: CupertinoColors.white,
+                  child: Column(
+                    children: [
+                      _KpiRow(
+                        icon: CupertinoIcons.doc_text_fill,
+                        iconColor: const Color(0xFF5856D6),
+                        label: 'Invoices Closed',
+                        value: stats.closedThisYear.toString(),
+                      ),
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 52)),
+                      _KpiRow(
+                        icon: CupertinoIcons.money_dollar_circle_fill,
+                        iconColor: const Color(0xFF5856D6),
+                        label: 'Revenue',
+                        value: formatMoneyFromDouble(stats.revenueThisYear),
+                        valueBold: true,
+                      ),
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 52)),
+                      _KpiRow(
+                        icon: CupertinoIcons.arrow_up_right_circle_fill,
+                        iconColor: const Color(0xFF5856D6),
+                        label: 'Gross Profit',
+                        value: formatMoneyFromDouble(stats.grossProfitThisYear),
+                        valueBold: true,
+                      ),
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 52)),
+                      _KpiRow(
+                        icon: CupertinoIcons.car_fill,
+                        iconColor: const Color(0xFF5856D6),
+                        label: 'Car Count',
+                        value: stats.carCountThisYear.toString(),
                       ),
                     ],
                   ),
@@ -141,6 +309,17 @@ class _DashboardBody extends StatelessWidget {
                           color: const Color(0xFFE5E5EA),
                           margin: const EdgeInsets.only(left: 52)),
                       _KpiRow(
+                        icon: CupertinoIcons.arrow_up_right_circle_fill,
+                        iconColor: const Color(0xFF8E8E93),
+                        label: 'Total Gross Profit',
+                        value: formatMoneyFromDouble(stats.grossProfitAllTime),
+                        valueBold: true,
+                      ),
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 52)),
+                      _KpiRow(
                         icon: CupertinoIcons.chart_bar_fill,
                         iconColor: const Color(0xFF8E8E93),
                         label: 'Avg. Repair Order (ARO)',
@@ -151,6 +330,21 @@ class _DashboardBody extends StatelessWidget {
                             ? 'No closed invoices yet'
                             : null,
                       ),
+                      // Avg GP — only shown when cost data exists on any line items
+                      if (stats.avgGpPctAllTime >= 0) ...[
+                        Container(
+                            height: 0.5,
+                            color: const Color(0xFFE5E5EA),
+                            margin: const EdgeInsets.only(left: 52)),
+                        _KpiRow(
+                          icon: CupertinoIcons.percent,
+                          iconColor: const Color(0xFF34C759),
+                          label: 'Avg. Gross Profit',
+                          value:
+                              '${stats.avgGpPctAllTime.toStringAsFixed(1)}%',
+                          valueColor: const Color(0xFF34C759),
+                        ),
+                      ],
                     ],
                   ),
                 ),

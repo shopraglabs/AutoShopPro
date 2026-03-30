@@ -136,14 +136,16 @@ The heart of the app. Everything else depends on this.
 
 ### KPI Metrics
 - ✅ Average Repair Order (ARO) calculation
-- ⬜ Gross Profit (GP) per job
+- ✅ Gross Profit (GP) per job (revenue minus known part costs; labor treated as 100% margin)
 - ⬜ Technician utilization rate
-- ⬜ Car count (daily / weekly / monthly)
-- ✅ Revenue (this month / all time)
+- ✅ Car count (monthly / yearly)
+- ✅ Revenue (today / this week / this month / this year / all time)
+- ✅ Avg GP % all time (only shown when cost data exists on any line item)
 
 ### Dashboard Screens
-- ✅ Main dashboard screen with KPI cards (Open ROs, Invoices This Month, Revenue, ARO)
-- ⬜ Date range picker (today / this week / this month / custom)
+- ✅ Main dashboard screen — Live Status, Today, This Week, This Month, This Year, All Time sections
+- ✅ Gross profit dollar amounts in every time-period section
+- ⬜ Date range picker (custom)
 - ⬜ Technician performance screen
 - ⬜ Job profitability screen
 
@@ -358,6 +360,17 @@ The heart of the app. Everything else depends on this.
 - ✅ Search enhancements — vehicle year included in search; RO search supports RO number lookup
 - ✅ Router edit loaders fixed — futures cached in initState (no re-fire on rebuild)
 - ✅ Schema v25 — isArchived column on vendors and technicians tables
+
+### Dashboard Expansion, PDF View & Navigation (v0.12.0 Full Picture)
+- ✅ Service date bug fix — Drift stores DateTimes as UNIX seconds; prior migrations wrote milliseconds causing year ~58,023 display; fixed in schema v31 with correct local-timezone second values
+- ✅ Service date read-only on RO detail; editable from within estimate detail via roForEstimateProvider
+- ✅ Dashboard "This Year" section added (invoices closed, revenue, gross profit, car count) using Apple indigo color
+- ✅ Gross profit dollar amounts added to every dashboard section (Today, This Week, This Month, This Year, All Time)
+- ✅ Dashboard "Today" and "This Week" sections added
+- ✅ "View PDF" option added to invoice action sheet (isDefaultAction) and right-click context menu — opens PDF directly in Preview without a dialog
+- ✅ Sidebar "Repair Orders" renamed to "Records"; Invoices moved inside Records hub screen (alongside Customers, Estimates, Repair Orders, Vendors); "Payments" item added to sidebar
+- ✅ Records hub screen order: Customers → Estimates → Repair Orders → Invoices → Vendors
+- ✅ README v0.10.2 entry backfilled
 
 ---
 

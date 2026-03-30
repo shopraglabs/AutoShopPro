@@ -1,14 +1,17 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/money.dart';
 import '../../database/database.dart';
 import '../repair_orders/repair_orders_provider.dart';
 
 // Formats an RO id as an invoice number: 42 → "INV-0042"
 String _invNumber(int id) => 'INV-${id.toString().padLeft(4, '0')}';
 
-// Formats a DateTime as e.g. "Jan 15, 2026"
+// Formats a DateTime as e.g. "Jan 15, 2026".
+// Returns "—" for corrupted years outside 1900–2100.
 String _fmtDate(DateTime d) {
+  if (d.year < 1900 || d.year > 2100) return '—';
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -48,12 +51,15 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
   @override
   Widget build(BuildContext context) {
     final allAsync = ref.watch(repairOrdersProvider);
+    // Load totals for all closed ROs — null while loading (rows just show no amount)
+    final totals = ref.watch(invoiceTotalsProvider).value;
 
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
         middle: Text('Invoices'),
       ),
-      child: allAsync.when(
+      child: SafeArea(
+        child: allAsync.when(
         loading: () =>
             const Center(child: CupertinoActivityIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
@@ -145,7 +151,10 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                     child: Column(
                       children: [
                         for (int i = 0; i < filtered.length; i++) ...[
-                          _InvoiceRow(details: filtered[i]),
+                          _InvoiceRow(
+                            details: filtered[i],
+                            totalCents: totals?[filtered[i].ro.id],
+                          ),
                           if (i < filtered.length - 1)
                             Container(
                               height: 0.5,
@@ -163,6 +172,7 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
           );
         },
       ),
+      ),
     );
   }
 }
@@ -171,7 +181,9 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
 
 class _InvoiceRow extends StatefulWidget {
   final RepairOrderWithDetails details;
-  const _InvoiceRow({required this.details});
+  /// Total amount in cents — null while the totals provider is still loading.
+  final int? totalCents;
+  const _InvoiceRow({required this.details, this.totalCents});
 
   @override
   State<_InvoiceRow> createState() => _InvoiceRowState();
@@ -188,12 +200,17 @@ class _InvoiceRowState extends State<_InvoiceRow> {
     final date = ro.serviceDate ?? ro.createdAt;
     final vehicleLabel = _vehicleLabel(vehicle);
 
+    // Format the total for display, or show nothing while loading
+    final totalLabel = widget.totalCents != null
+        ? formatMoney(widget.totalCents!)
+        : null;
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTap: () => context.push('/repair-orders/ros/${ro.id}'),
+        onTap: () => context.push('/payments/${ro.id}'),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 100),
           color: _hovered
@@ -217,12 +234,14 @@ class _InvoiceRowState extends State<_InvoiceRow> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Invoice number + customer + vehicle
+              // Invoice number + customer + vehicle + total
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
                           _invNumber(ro.id),
@@ -233,6 +252,29 @@ class _InvoiceRowState extends State<_InvoiceRow> {
                           ),
                         ),
                         const Spacer(),
+                        if (totalLabel != null)
+                          Text(
+                            totalLabel,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1C1C1E),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            customer?.name ?? 'Unknown Customer',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF3C3C43),
+                            ),
+                          ),
+                        ),
                         Text(
                           _fmtDate(date),
                           style: const TextStyle(
@@ -241,14 +283,6 @@ class _InvoiceRowState extends State<_InvoiceRow> {
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      customer?.name ?? 'Unknown Customer',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF3C3C43),
-                      ),
                     ),
                     if (vehicleLabel != null) ...[
                       const SizedBox(height: 1),

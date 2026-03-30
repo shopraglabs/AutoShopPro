@@ -220,7 +220,10 @@ class _EstimateDetailView extends ConsumerWidget {
   }
 
   void _pickEstimateDate(BuildContext context, WidgetRef ref) {
-    final initial = estimate.estimateDate ?? estimate.createdAt;
+    final raw = estimate.estimateDate ?? estimate.createdAt;
+    // Guard against corrupted imported dates (e.g. year 58023) which crash
+    // CupertinoDatePicker when initialDateTime > maximumDate.
+    final initial = (raw.year >= 1900 && raw.year <= 2100) ? raw : DateTime.now();
     DateTime picked = initial;
     showCupertinoModalPopup<void>(
       context: context,
@@ -248,6 +251,46 @@ class _EstimateDetailView extends ConsumerWidget {
                 mode: CupertinoDatePickerMode.date,
                 initialDateTime: initial,
                 maximumDate: DateTime.now().add(const Duration(days: 365)),
+                onDateTimeChanged: (dt) => picked = dt,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Opens a date picker that saves to the linked RO's serviceDate.
+  void _pickServiceDate(BuildContext context, WidgetRef ref, RepairOrder ro) {
+    final raw = ro.serviceDate ?? ro.createdAt;
+    final initial = (raw.year >= 1900 && raw.year <= 2100) ? raw : DateTime.now();
+    DateTime picked = initial;
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (ctx) => Container(
+        height: 300,
+        color: CupertinoColors.systemBackground,
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                CupertinoButton(
+                  onPressed: () async {
+                    await ref.read(dbProvider).updateRepairOrder(
+                          ro.copyWith(serviceDate: Value(picked)),
+                        );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+            Expanded(
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: initial,
+                maximumDate: DateTime.now().add(const Duration(days: 365 * 2)),
                 onDateTimeChanged: (dt) => picked = dt,
               ),
             ),
@@ -354,6 +397,7 @@ class _EstimateDetailView extends ConsumerWidget {
                     Text(
                       () {
                         final d = estimate.estimateDate ?? estimate.createdAt;
+                        if (d.year < 1900 || d.year > 2100) return '—';
                         return '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}/${d.year}';
                       }(),
                       style: const TextStyle(
@@ -368,6 +412,62 @@ class _EstimateDetailView extends ConsumerWidget {
                 ),
               ),
             ),
+
+            // ── Service date (shown + editable when a linked RO exists) ───
+            Builder(builder: (context) {
+              final roAsync = ref.watch(roForEstimateProvider(estimate.id));
+              return roAsync.when(
+                data: (ro) {
+                  if (ro == null) return const SizedBox.shrink();
+                  final d = ro.serviceDate ?? ro.createdAt;
+                  final label = (d.year >= 1900 && d.year <= 2100)
+                      ? '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}/${d.year}'
+                      : '—';
+                  return Column(
+                    children: [
+                      Container(
+                          height: 0.5,
+                          color: const Color(0xFFE5E5EA),
+                          margin: const EdgeInsets.only(left: 42)),
+                      GestureDetector(
+                        onTap: () => _pickServiceDate(context, ref, ro),
+                        child: Container(
+                          color: CupertinoColors.systemBackground,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 13),
+                          child: Row(
+                            children: [
+                              const Icon(CupertinoIcons.calendar_badge_plus,
+                                  size: 17, color: Color(0xFF8E8E93)),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Service Date',
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    color: CupertinoColors.secondaryLabel),
+                              ),
+                              const Spacer(),
+                              Text(
+                                label,
+                                style: const TextStyle(
+                                    fontSize: 15,
+                                    color: Color(0xFF007AFF),
+                                    fontWeight: FontWeight.w500),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(CupertinoIcons.chevron_right,
+                                  size: 14, color: Color(0xFFC7C7CC)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              );
+            }),
 
             const SizedBox(height: 8),
 

@@ -6,9 +6,13 @@ A cross-platform automotive shop management app built with Flutter. One codebase
 
 ## Project Status
 
+**v0.12.0 — Full Picture** — Dashboard expanded with Today, This Week, This Year sections and gross profit in every period. "View PDF" added to invoice action sheet (opens in Preview instantly). Service date bug fixed (Drift ms-vs-seconds root cause). Navigation restructured: "Repair Orders" renamed to "Records"; Invoices moved inside the Records hub alongside Customers, Estimates, Repair Orders, and Vendors; Payments added as a sidebar item for future use.
+
 **v0.11.0 — On the Books** — Invoice list screen (Invoices sidebar item shows all closed ROs with number, customer, vehicle, date, and search) and Dashboard KPI screen (Open ROs, revenue and invoice count this month, all-time ARO and totals).
 
 **v0.10.3 — Buttoned Up** — Data integrity overhaul: all price/cost/rate values now stored as integer cents (eliminating floating-point rounding errors), foreign key constraints enforced at the database level, multi-step deletes wrapped in transactions, new money utility helpers, and production-strict lint rules.
+
+**v0.10.2 — Buttoned Up** — Performance fix: all 8 edit-loader widgets now cache their database future in `initState` instead of rebuilding it on every render. Search enhancements: vehicle year included in vehicle search, and typing an RO number (e.g. "RO 42") finds the matching repair order.
 
 **v0.10.1 — Buttoned Up** — Bug fix: left-clicking invoice/estimate/approval/category buttons now opens a proper action sheet instead of a context menu dropdown; "Show in Finder" replaced with "Open" on save dialogs; hover cursors and list-row style button fixes throughout.
 

@@ -1031,6 +1031,13 @@ Future<void> showInvoiceActions({
       position: position,
       items: [
         ContextMenuAction(
+          label: 'View PDF',
+          icon: CupertinoIcons.eye,
+          onTap: () => _handleView(context, ro, customer, vehicle, lineItems,
+              taxRate, shopName, customerComplaint, simple,
+              comment: comment, declinedItems: declinedItems),
+        ),
+        ContextMenuAction(
           label: 'Save as PDF',
           icon: CupertinoIcons.arrow_down_doc,
           onTap: () => _handleSave(context, ro, customer, vehicle, lineItems,
@@ -1061,6 +1068,16 @@ Future<void> showInvoiceActions({
       title: Text(simple ? 'Simple Invoice' : 'Itemized Invoice'),
       message: Text('${_roNumber(ro.id)} — ${customer.name}'),
       actions: [
+        CupertinoActionSheetAction(
+          isDefaultAction: true,
+          onPressed: () async {
+            Navigator.pop(sheetCtx);
+            await _handleView(context, ro, customer, vehicle, lineItems,
+                taxRate, shopName, customerComplaint, simple,
+                comment: comment, declinedItems: declinedItems);
+          },
+          child: const Text('View PDF'),
+        ),
         CupertinoActionSheetAction(
           onPressed: () async {
             Navigator.pop(sheetCtx);
@@ -1133,6 +1150,30 @@ Future<Uint8List> _buildBytes(
             comment: comment,
             declinedItems: declinedItems,
           );
+
+Future<void> _handleView(
+  BuildContext context,
+  RepairOrder ro,
+  Customer customer,
+  Vehicle? vehicle,
+  List<EstimateLineItem> lineItems,
+  double taxRate,
+  String? shopName,
+  String? customerComplaint,
+  bool simple, {
+  String? comment,
+  List<EstimateLineItem> declinedItems = const [],
+}) async {
+  try {
+    final bytes = await _buildBytes(
+        ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple,
+        comment: comment, declinedItems: declinedItems);
+    final path = await saveInvoiceToTemp(bytes, ro.id);
+    await openInPreview(path);
+  } catch (e) {
+    if (context.mounted) _showError(context, e);
+  }
+}
 
 Future<void> _handleSave(
   BuildContext context,

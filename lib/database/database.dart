@@ -279,7 +279,7 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 31;
 
   // Drift runs this when it finds an older database on the device.
   @override
@@ -644,6 +644,247 @@ class AppDatabase extends _$AppDatabase {
             'ALTER TABLE markup_rules_v26 RENAME TO markup_rules');
 
         await m.database.customStatement('PRAGMA foreign_keys = ON');
+      }
+      if (from < 30) {
+        // v30: Clear corrupted service dates on all imported ROs (IDs 1–12).
+        // The original import had a year-parsing bug (year 58023). Every prior
+        // migration attempt to recover the month/day also produced wrong values.
+        // The exported Numbers file dates were equally corrupted.
+        // Solution: NULL service_date so each RO shows "—" and the user can
+        // tap in to set the correct date manually.
+        // created_at is set to 2026-01-01 (ms=1767225600000) as a neutral
+        // placeholder so the record is sortable and the year guard passes.
+        await m.database.customStatement('UPDATE repair_orders SET service_date = NULL, created_at = 1767225600000 WHERE id IN (1,2,3,4,5,6,7,8,9,10,11,12)');
+        await m.database.customStatement('UPDATE estimates SET created_at = 1767225600000 WHERE id IN (SELECT estimate_id FROM repair_orders WHERE id IN (1,2,3,4,5,6,7,8,9,10,11,12) AND estimate_id IS NOT NULL)');
+      }
+      if (from == 28) {
+        // v29: Directly stamp each known RO with its correct service date.
+        // Values are ms-since-epoch (UTC) from AutoShopPro_Export_2026-03-27.numbers.
+        // No safety-net logic — just targeted per-row updates.
+        const roFixes = [
+          [1,  1790553600000],  // 2026-09-28
+          [2,  1794182400000],  // 2026-11-09
+          [3,  1792627200000],  // 2026-10-22
+          [4,  1797897600000],  // 2026-12-22
+          [5,  1779840000000],  // 2026-05-27
+          [6,  1778371200000],  // 2026-05-10
+          [7,  1793318400000],  // 2026-10-30
+          [8,  1775260800000],  // 2026-04-04
+          [9,  1775260800000],  // 2026-04-04
+          [10, 1773705600000],  // 2026-03-17
+          [11, 1773878400000],  // 2026-03-19
+          [12, 1774224000000],  // 2026-03-23
+        ];
+        for (final pair in roFixes) {
+          final roId = pair[0];
+          final ms   = pair[1];
+          await m.database.customStatement(
+            'UPDATE repair_orders SET service_date = $ms, created_at = $ms WHERE id = $roId',
+          );
+          await m.database.customStatement(
+            'UPDATE estimates SET created_at = $ms WHERE id = (SELECT estimate_id FROM repair_orders WHERE id = $roId)',
+          );
+        }
+      }
+      if (from == 27) {
+        // v28: Set exact correct service dates sourced from the shop's export file.
+        // The v27 migration failed to preserve month/day because Dart's DateTime
+        // round-trip is unreliable for year-58023 ms values on macOS.
+        // All values below are ms-since-epoch (UTC) computed directly from the
+        // AutoShopPro_Export_2026-03-27.numbers file — no Dart DateTime involved.
+        //
+        //  RO-0001  2026-09-28  1790553600000
+        //  RO-0002  2026-11-09  1794182400000
+        //  RO-0003  2026-10-22  1792627200000
+        //  RO-0004  2026-12-22  1797897600000
+        //  RO-0005  2026-05-27  1779840000000
+        //  RO-0006  2026-05-10  1778371200000
+        //  RO-0007  2026-10-30  1793318400000
+        //  RO-0008  2026-04-04  1775260800000
+        //  RO-0009  2026-04-04  1775260800000
+        //  RO-0010  2026-03-17  1773705600000
+        //  RO-0011  2026-03-19  1773878400000
+        //  RO-0012  2026-03-23  1774224000000
+
+        final roDateMs = {
+           1: 1790553600000,
+           2: 1794182400000,
+           3: 1792627200000,
+           4: 1797897600000,
+           5: 1779840000000,
+           6: 1778371200000,
+           7: 1793318400000,
+           8: 1775260800000,
+           9: 1775260800000,
+          10: 1773705600000,
+          11: 1773878400000,
+          12: 1774224000000,
+        };
+
+        for (final entry in roDateMs.entries) {
+          final roId = entry.key;
+          final ms   = entry.value;
+          // Fix service_date and created_at on the repair order.
+          await m.database.customStatement(
+            'UPDATE repair_orders SET service_date = $ms, created_at = $ms WHERE id = $roId',
+          );
+          // Fix created_at on the linked estimate so its display date also matches.
+          await m.database.customStatement('''
+            UPDATE estimates
+            SET created_at = $ms
+            WHERE id = (SELECT estimate_id FROM repair_orders WHERE id = $roId)
+          ''');
+        }
+
+        // Safety net: NULL any remaining service_dates still outside 1900-2100,
+        // and set created_at to Jan 1, 2026 for any other corrupted rows.
+        const minMs   = -2208988800000;
+        const maxMs   =  4102444800000;
+        const jan2026 =  1767225600000;
+
+        await m.database.customStatement('''
+          UPDATE repair_orders SET service_date = NULL
+          WHERE service_date IS NOT NULL AND (service_date < $minMs OR service_date > $maxMs)
+        ''');
+        await m.database.customStatement('''
+          UPDATE repair_orders SET created_at = $jan2026
+          WHERE created_at < $minMs OR created_at > $maxMs
+        ''');
+        await m.database.customStatement('''
+          UPDATE estimates SET estimate_date = NULL
+          WHERE estimate_date IS NOT NULL AND (estimate_date < $minMs OR estimate_date > $maxMs)
+        ''');
+        await m.database.customStatement('''
+          UPDATE estimates SET created_at = $jan2026
+          WHERE created_at < $minMs OR created_at > $maxMs
+        ''');
+      }
+      if (from == 26) {
+        // v27: Fix imported records whose dates have a corrupted year (e.g. 58023).
+        // The month and day are correct — only the year needs to be set to 2026.
+        // Drift stores DateTimes as INTEGER milliseconds since epoch, so we read
+        // each bad value in Dart, extract month + day, rebuild as 2026-MM-DD,
+        // and write the corrected milliseconds back.
+        const minMs = -2208988800000; // ~year 1900
+        const maxMs =  4102444800000; // ~year 2100
+
+        // ── repair_orders.service_date ────────────────────────────────────
+        final badRoServiceDates = await m.database.customSelect(
+          'SELECT id, service_date FROM repair_orders '
+          'WHERE service_date IS NOT NULL '
+          '  AND (service_date < $minMs OR service_date > $maxMs)',
+        ).get();
+        for (final row in badRoServiceDates) {
+          final id  = row.read<int>('id');
+          final ms  = row.read<int>('service_date');
+          final dt  = DateTime.fromMillisecondsSinceEpoch(ms);
+          final fix = DateTime(2026, dt.month, dt.day).millisecondsSinceEpoch;
+          await m.database.customStatement(
+            'UPDATE repair_orders SET service_date = $fix WHERE id = $id',
+          );
+        }
+
+        // ── repair_orders.created_at ──────────────────────────────────────
+        final badRoCreatedAt = await m.database.customSelect(
+          'SELECT id, created_at FROM repair_orders '
+          'WHERE created_at < $minMs OR created_at > $maxMs',
+        ).get();
+        for (final row in badRoCreatedAt) {
+          final id  = row.read<int>('id');
+          final ms  = row.read<int>('created_at');
+          final dt  = DateTime.fromMillisecondsSinceEpoch(ms);
+          final fix = DateTime(2026, dt.month, dt.day).millisecondsSinceEpoch;
+          await m.database.customStatement(
+            'UPDATE repair_orders SET created_at = $fix WHERE id = $id',
+          );
+        }
+
+        // ── estimates.estimate_date ───────────────────────────────────────
+        final badEstDates = await m.database.customSelect(
+          'SELECT id, estimate_date FROM estimates '
+          'WHERE estimate_date IS NOT NULL '
+          '  AND (estimate_date < $minMs OR estimate_date > $maxMs)',
+        ).get();
+        for (final row in badEstDates) {
+          final id  = row.read<int>('id');
+          final ms  = row.read<int>('estimate_date');
+          final dt  = DateTime.fromMillisecondsSinceEpoch(ms);
+          final fix = DateTime(2026, dt.month, dt.day).millisecondsSinceEpoch;
+          await m.database.customStatement(
+            'UPDATE estimates SET estimate_date = $fix WHERE id = $id',
+          );
+        }
+
+        // ── estimates.created_at ──────────────────────────────────────────
+        final badEstCreatedAt = await m.database.customSelect(
+          'SELECT id, created_at FROM estimates '
+          'WHERE created_at < $minMs OR created_at > $maxMs',
+        ).get();
+        for (final row in badEstCreatedAt) {
+          final id  = row.read<int>('id');
+          final ms  = row.read<int>('created_at');
+          final dt  = DateTime.fromMillisecondsSinceEpoch(ms);
+          final fix = DateTime(2026, dt.month, dt.day).millisecondsSinceEpoch;
+          await m.database.customStatement(
+            'UPDATE estimates SET created_at = $fix WHERE id = $id',
+          );
+        }
+      }
+      if (from < 31) {
+        // v31: ROOT-CAUSE FIX for all prior date migrations (v27–v30).
+        //
+        // The bug: every previous migration wrote DateTime values as INTEGER
+        // MILLISECONDS (e.g. 1767225600000), but Drift reads DateTimeColumn as
+        // UNIX SECONDS and multiplies × 1000 to get ms.  So Drift computed:
+        //   1767225600000 × 1000 = 1,767,225,600,000,000 ms  →  year ~58,023
+        // which made every fixed date display as "—".
+        //
+        // Fix: write UNIX SECONDS (e.g. 1767225600) so Drift reads back
+        //   1767225600 × 1000 = 1,767,225,600,000 ms  →  2026-01-01  ✓
+        //
+        // Each imported RO (IDs 1–12) gets its actual service date from the
+        // original export, corrected to 2026.  created_at on both the RO and
+        // its linked estimate is set to the same date.
+        // Values produced by: DateTime(year, month, day).millisecondsSinceEpoch ~/ 1000
+        // in the local timezone (UTC-7) so Drift round-trips correctly.
+        const roFixesSecs = [
+          [1,  1790568000],  // RO-0001  2026-09-28
+          [2,  1794200400],  // RO-0002  2026-11-09
+          [3,  1792641600],  // RO-0003  2026-10-22
+          [4,  1797915600],  // RO-0004  2026-12-22
+          [5,  1779854400],  // RO-0005  2026-05-27
+          [6,  1778385600],  // RO-0006  2026-05-10
+          [7,  1793332800],  // RO-0007  2026-10-30
+          [8,  1775275200],  // RO-0008  2026-04-04
+          [9,  1775275200],  // RO-0009  2026-04-04
+          [10, 1773720000],  // RO-0010  2026-03-17
+          [11, 1773892800],  // RO-0011  2026-03-19
+          [12, 1774238400],  // RO-0012  2026-03-23
+        ];
+        for (final pair in roFixesSecs) {
+          final roId = pair[0];
+          final secs = pair[1];
+          await m.database.customStatement(
+            'UPDATE repair_orders SET service_date = $secs, created_at = $secs WHERE id = $roId',
+          );
+          await m.database.customStatement(
+            'UPDATE estimates SET created_at = $secs WHERE id = (SELECT estimate_id FROM repair_orders WHERE id = $roId)',
+          );
+        }
+        // Safety net: NULL any service_date still way out of valid range
+        // (> year-2100 in seconds = 4102444800).  This catches any rows where
+        // an old ms-based migration wrote a value that was not in IDs 1–12.
+        const maxValidSecs = 4102444800;   // ~year 2100 in seconds
+        const jan2026Secs  = 1767243600;   // 2026-01-01 local midnight
+        await m.database.customStatement(
+          'UPDATE repair_orders SET service_date = NULL WHERE service_date IS NOT NULL AND service_date > $maxValidSecs',
+        );
+        await m.database.customStatement(
+          'UPDATE repair_orders SET created_at = $jan2026Secs WHERE created_at > $maxValidSecs',
+        );
+        await m.database.customStatement(
+          'UPDATE estimates SET created_at = $jan2026Secs WHERE created_at > $maxValidSecs',
+        );
       }
     },
   );

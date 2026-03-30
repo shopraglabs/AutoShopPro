@@ -12,7 +12,9 @@ import 'repair_orders_provider.dart';
 String _roNumber(int id) => 'RO-${id.toString().padLeft(4, '0')}';
 
 // Formats a DateTime as a readable date string, e.g. "Jan 20, 2026".
+// Returns "—" for dates with obviously corrupted years (outside 1900–2100).
 String _fmtDate(DateTime d) {
+  if (d.year < 1900 || d.year > 2100) return '—';
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -306,7 +308,9 @@ class _RoDetailView extends ConsumerWidget {
   }
 
   void _pickServiceDate(BuildContext context, WidgetRef ref, RepairOrder ro) {
-    final initial = ro.serviceDate ?? ro.createdAt;
+    final raw = ro.serviceDate ?? ro.createdAt;
+    // Guard against corrupted imported dates which crash CupertinoDatePicker.
+    final initial = (raw.year >= 1900 && raw.year <= 2100) ? raw : DateTime.now();
     DateTime picked = initial;
     showCupertinoModalPopup<void>(
       context: context,
@@ -458,7 +462,7 @@ class _RoDetailView extends ConsumerWidget {
 
             const SizedBox(height: 12),
 
-            // ── Service date (read-only — edit via Edit Repair Order) ─────
+            // ── Service date (read-only — edit via Edit Record → estimate) ──
             Container(
               color: CupertinoColors.systemBackground,
               padding: const EdgeInsets.symmetric(
@@ -646,7 +650,7 @@ class _RoDetailView extends ConsumerWidget {
                 color: CupertinoColors.white,
                 child: Column(
                   children: [
-                    // Edit Repair Order — opens the linked estimate
+                    // Edit Repair Order — opens the linked estimate to edit line items
                     if (ro.estimateId != null) ...[
                       GestureDetector(
                         onTap: () => context
@@ -777,7 +781,35 @@ class _RoDetailView extends ConsumerWidget {
                 color: CupertinoColors.white,
                 child: Column(
                   children: [
-                    // Edit Record — opens the linked estimate to correct line items
+                    // View Invoice — opens the standalone invoice detail screen
+                    GestureDetector(
+                      onTap: () => context.push('/payments/${ro.id}'),
+                      child: Container(
+                        color: CupertinoColors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        child: const Row(
+                          children: [
+                            Icon(CupertinoIcons.doc_text_fill,
+                                size: 18, color: Color(0xFF34C759)),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text('View Invoice',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF007AFF))),
+                            ),
+                            Icon(CupertinoIcons.chevron_right,
+                                size: 16, color: Color(0xFFC7C7CC)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Container(
+                        height: 0.5,
+                        color: const Color(0xFFE5E5EA),
+                        margin: const EdgeInsets.only(left: 46)),
+                    // Edit Record — opens the linked estimate to edit line items
                     if (ro.estimateId != null) ...[
                       GestureDetector(
                         onTap: () => context

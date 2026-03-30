@@ -240,9 +240,9 @@ class _AppShellState extends State<AppShell> {
   ];
 
   final List<_NavItem> _navItems = const [
-    _NavItem(label: 'Repair Orders', icon: CupertinoIcons.wrench),
+    _NavItem(label: 'Records', icon: CupertinoIcons.wrench),
     _NavItem(label: 'Parts', icon: CupertinoIcons.cube_box),
-    _NavItem(label: 'Invoices', icon: CupertinoIcons.doc_text),
+    _NavItem(label: 'Payments', icon: CupertinoIcons.creditcard),
     _NavItem(label: 'Dashboard', icon: CupertinoIcons.chart_bar),
     _NavItem(label: 'Accounting', icon: CupertinoIcons.book),
   ];

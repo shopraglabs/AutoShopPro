@@ -17,7 +17,7 @@ My name is Jim. I am a complete beginner at coding. I am building AutoShopPro, a
 AutoShopPro is a cross-platform automotive shop management app inspired by Tekmetric, Shopmonkey, and AutoLeap. Built with Flutter targeting Windows, macOS, Android, and iOS from a single codebase.
 
 ## Tech Stack
-- Flutter beta 3.43.0 / Dart
+- Flutter stable 3.41.5 / Dart 3.11.3
 - State management: Riverpod
 - Local DB: Drift (offline-first, SQLite)
 - Navigation: go_router
@@ -59,9 +59,10 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **Declined items on RO** — DECLINED section below TOTALS on RO detail; red X icon, gray strikethrough text; not counted in totals
 - **Declined items on invoices** — "DECLINED — NOT BILLED" section in both Itemized and Simple Invoice PDFs after totals; gray strikethrough; not included in any totals or tax
 - **Money helpers** — `lib/core/utils/money.dart`: `toCents()`, `fromCents()`, `formatMoney()` (UI, omits .00), `formatMoneyFull()` (PDFs, always 2 decimals); all price/cost/rate values stored as integer cents in the DB
-- **Database** — Drift/SQLite, schema v26, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts; FK constraints enforced via PRAGMA foreign_keys = ON
-- **Invoice list** — "Invoices" sidebar item shows all closed ROs as invoices (INV-XXXX number, customer, vehicle, service date); searchable; tapping opens RO detail with PDF generation
-- **Dashboard** — KPI screen with Live Status (open RO count), This Month (invoices closed + revenue), and All Time (total invoices, total revenue, ARO); refresh button recalculates on demand
+- **Database** — Drift/SQLite, schema v31, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts; FK constraints enforced via PRAGMA foreign_keys = ON
+- **Invoice list** — accessible from Records hub screen; shows all closed ROs as invoices (INV-XXXX number, customer, vehicle, service date); searchable; tapping opens RO detail with PDF generation; "View PDF" opens invoice PDF directly in Preview
+- **Dashboard** — KPI screen with Live Status, Today, This Week, This Month, This Year, and All Time sections; each period shows invoices closed, revenue, and gross profit; car count on month/year; ARO and avg GP% all time; refresh button recalculates on demand
+- **Navigation** — sidebar "Records" item goes to hub screen listing: Customers, Estimates, Repair Orders, Invoices, Vendors; "Payments" sidebar item is future placeholder; service date editable from estimate detail screen when a linked RO exists
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
@@ -241,4 +242,4 @@ onTap: () => controller.selection = TextSelection(
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.11.0 On the Books
+v0.12.0 Full Picture
