@@ -76,7 +76,7 @@ final customerStatsProvider =
       .map((r) => r.ro.estimateId!)
       .toList();
   final allItems = await db.getLineItemsForEstimates(estimateIds);
-  final itemsByEstimate = <int, List<dynamic>>{};
+  final itemsByEstimate = <int, List<EstimateLineItem>>{};
   for (final item in allItems) {
     itemsByEstimate.putIfAbsent(item.estimateId, () => []).add(item);
   }

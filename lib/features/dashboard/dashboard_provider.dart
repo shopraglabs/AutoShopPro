@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/money.dart';
+import '../../database/database.dart';
 import '../customers/customers_provider.dart';
 import '../repair_orders/repair_orders_provider.dart';
 
@@ -164,7 +165,7 @@ final dashboardStatsProvider =
       .toList();
   final allLineItems = await db.getLineItemsForEstimates(closedEstimateIds);
   // Build a lookup map so each RO can find its items in O(1).
-  final itemsByEstimate = <int, List<dynamic>>{};
+  final itemsByEstimate = <int, List<EstimateLineItem>>{};
   for (final item in allLineItems) {
     itemsByEstimate.putIfAbsent(item.estimateId, () => []).add(item);
   }
