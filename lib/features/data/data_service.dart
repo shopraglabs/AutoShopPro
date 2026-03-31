@@ -256,8 +256,11 @@ class DataService {
     for (int i = 0; i < dataLines.length; i++) {
       final rowNum = i + 2; // human-readable row number (1-indexed, skipping header)
       try {
+        // Wrap each row in a transaction so a partial failure rolls back all
+        // DB writes for that row cleanly (no orphaned customers or estimates).
+        await _db.transaction(() async {
         final cols = _parseCsvRow(dataLines[i]);
-        if (cols.length < 2) continue;
+        if (cols.length < 2) return; // skip short/empty rows
 
         final dateStr = _col(cols, 0);
         final customerName = _col(cols, 1).trim();
@@ -276,7 +279,7 @@ class DataService {
             double.tryParse(_col(cols, 12).replaceAll(RegExp(r'[^\d.]'), ''));
         final notes = _col(cols, 14).trim();
 
-        if (customerName.isEmpty) continue;
+        if (customerName.isEmpty) return; // skip rows with no customer name
 
         // Parse service date
         final serviceDate = _parseDate(dateStr);
@@ -308,7 +311,7 @@ class DataService {
           customer = await _db.getCustomer(id);
           if (customer == null) {
             errors.add('Row $rowNum: Failed to create customer $customerName');
-            continue;
+            return; // abort this row's transaction — nothing else to insert
           }
           customersCreated++;
         }
@@ -338,7 +341,7 @@ class DataService {
           // exact RO date already exists to avoid duplicate imports
           // (simple heuristic: same customer + same service date = duplicate)
           duplicatesSkipped++;
-          continue;
+          return; // skip duplicate — no DB writes made yet, safe to return
         }
 
         // ── Create estimate + RO ───────────────────────────────────────────
@@ -431,6 +434,7 @@ class DataService {
         ));
 
         recordsCreated++;
+        }); // end transaction
       } catch (e) {
         errors.add('Row $rowNum: $e');
       }

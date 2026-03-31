@@ -19,8 +19,14 @@ class ServiceTemplateFormScreen extends ConsumerStatefulWidget {
 }
 
 // A linked part row — held in local state until Save is tapped.
-// Quantity is set at estimate time, not here.
-typedef _LinkedPart = ({int inventoryPartId, String description, String? partNumber, String? category});
+// qtyController holds the default quantity for this part in the template.
+typedef _LinkedPart = ({
+  int inventoryPartId,
+  String description,
+  String? partNumber,
+  String? category,
+  TextEditingController qtyController,
+});
 
 class _ServiceTemplateFormScreenState
     extends ConsumerState<ServiceTemplateFormScreen> {
@@ -85,11 +91,16 @@ class _ServiceTemplateFormScreenState
     for (final link in links) {
       final part = await db.getPart(link.inventoryPartId);
       if (part != null) {
+        // Show qty as integer if it's a whole number, e.g. "5" not "5.0"
+        final qtyText = link.quantity % 1 == 0
+            ? link.quantity.toInt().toString()
+            : link.quantity.toStringAsFixed(1);
         rows.add((
           inventoryPartId: link.inventoryPartId,
           description: part.description,
           partNumber: part.partNumber,
           category: part.category,
+          qtyController: TextEditingController(text: qtyText),
         ));
       }
     }
@@ -103,6 +114,7 @@ class _ServiceTemplateFormScreenState
     _hours.dispose();
     _rate.dispose();
     _total.dispose();
+    for (final p in _linkedParts) p.qtyController.dispose();
     super.dispose();
   }
 
@@ -159,6 +171,7 @@ class _ServiceTemplateFormScreenState
         description: picked.description,
         partNumber: picked.partNumber,
         category: picked.category,
+        qtyController: TextEditingController(text: '1'),
       ));
     });
   }
@@ -198,12 +211,13 @@ class _ServiceTemplateFormScreenState
       ));
     }
 
-    // Write linked parts — quantity is set at estimate time, not here.
+    // Write linked parts with their default quantities.
     for (final p in _linkedParts) {
+      final qty = double.tryParse(p.qtyController.text.replaceAll(',', '')) ?? 1.0;
       await db.insertTemplatePart(ServiceTemplatePartsCompanion(
         templateId: Value(templateId),
         inventoryPartId: Value(p.inventoryPartId),
-        quantity: const Value(1.0),
+        quantity: Value(qty > 0 ? qty : 1.0),
       ));
     }
 
@@ -310,7 +324,10 @@ class _ServiceTemplateFormScreenState
                   for (int i = 0; i < _linkedParts.length; i++) ...[
                     _LinkedPartRow(
                       part: _linkedParts[i],
-                      onRemove: () => setState(() => _linkedParts.removeAt(i)),
+                      onRemove: () => setState(() {
+                        _linkedParts[i].qtyController.dispose();
+                        _linkedParts.removeAt(i);
+                      }),
                     ),
                     Container(
                       height: 0.5,
@@ -347,7 +364,7 @@ class _ServiceTemplateFormScreenState
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
               child: const Text(
-                'Linked parts appear as options when this template is applied to an estimate. Quantities are set at that time.',
+                'Linked parts appear as options when this template is applied to an estimate. Set a default quantity here — it can be adjusted at that time.',
                 style: TextStyle(fontSize: 13, color: Color(0xFF8E8E93)),
               ),
             ),
@@ -437,6 +454,16 @@ class _LinkedPartRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
+          // Minus button
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minSize: 0,
+            onPressed: onRemove,
+            child: const Icon(CupertinoIcons.minus_circle_fill,
+                size: 20, color: CupertinoColors.destructiveRed),
+          ),
+          const SizedBox(width: 10),
+          // Description + part number / category
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -451,8 +478,7 @@ class _LinkedPartRow extends StatelessWidget {
                     [
                       if (part.partNumber?.isNotEmpty == true)
                         part.partNumber!,
-                      if (part.category != null)
-                        part.category!,
+                      if (part.category != null) part.category!,
                     ].join(' · '),
                     style: const TextStyle(
                         fontSize: 13, color: Color(0xFF8E8E93)),
@@ -461,11 +487,26 @@ class _LinkedPartRow extends StatelessWidget {
               ],
             ),
           ),
-          CupertinoButton(
-            padding: EdgeInsets.zero,
-            onPressed: onRemove,
-            child: const Icon(CupertinoIcons.minus_circle_fill,
-                size: 20, color: CupertinoColors.destructiveRed),
+          const SizedBox(width: 8),
+          // Default qty field
+          SizedBox(
+            width: 52,
+            child: CupertinoTextField(
+              controller: part.qtyController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textAlign: TextAlign.center,
+              placeholder: 'Qty',
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+              style: const TextStyle(fontSize: 14),
+              onTap: () => part.qtyController.selection = TextSelection(
+                baseOffset: 0,
+                extentOffset: part.qtyController.text.length,
+              ),
+              contextMenuBuilder: (ctx, state) =>
+                  CupertinoAdaptiveTextSelectionToolbar.editableText(
+                editableTextState: state,
+              ),
+            ),
           ),
         ],
       ),

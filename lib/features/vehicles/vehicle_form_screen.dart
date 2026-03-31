@@ -176,7 +176,7 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
       ));
       if (mounted) {
         context.go(
-          '/repair-orders/customers/${widget.customerId}/vehicles/$newId',
+          '/records/customers/${widget.customerId}/vehicles/$newId',
         );
       }
       return;

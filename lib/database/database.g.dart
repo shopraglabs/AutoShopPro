@@ -3435,6 +3435,39 @@ class $ShopSettingsTable extends ShopSettings
     requiredDuringInsert: false,
     defaultValue: const Constant(0.0),
   );
+  static const VerificationMeta _shopAddressMeta = const VerificationMeta(
+    'shopAddress',
+  );
+  @override
+  late final GeneratedColumn<String> shopAddress = GeneratedColumn<String>(
+    'shop_address',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _shopPhoneMeta = const VerificationMeta(
+    'shopPhone',
+  );
+  @override
+  late final GeneratedColumn<String> shopPhone = GeneratedColumn<String>(
+    'shop_phone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _shopEmailMeta = const VerificationMeta(
+    'shopEmail',
+  );
+  @override
+  late final GeneratedColumn<String> shopEmail = GeneratedColumn<String>(
+    'shop_email',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3442,6 +3475,9 @@ class $ShopSettingsTable extends ShopSettings
     defaultLaborRate,
     defaultPartsMarkup,
     defaultTaxRate,
+    shopAddress,
+    shopPhone,
+    shopEmail,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3491,6 +3527,27 @@ class $ShopSettingsTable extends ShopSettings
         ),
       );
     }
+    if (data.containsKey('shop_address')) {
+      context.handle(
+        _shopAddressMeta,
+        shopAddress.isAcceptableOrUnknown(
+          data['shop_address']!,
+          _shopAddressMeta,
+        ),
+      );
+    }
+    if (data.containsKey('shop_phone')) {
+      context.handle(
+        _shopPhoneMeta,
+        shopPhone.isAcceptableOrUnknown(data['shop_phone']!, _shopPhoneMeta),
+      );
+    }
+    if (data.containsKey('shop_email')) {
+      context.handle(
+        _shopEmailMeta,
+        shopEmail.isAcceptableOrUnknown(data['shop_email']!, _shopEmailMeta),
+      );
+    }
     return context;
   }
 
@@ -3520,6 +3577,18 @@ class $ShopSettingsTable extends ShopSettings
         DriftSqlType.double,
         data['${effectivePrefix}default_tax_rate'],
       )!,
+      shopAddress: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}shop_address'],
+      ),
+      shopPhone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}shop_phone'],
+      ),
+      shopEmail: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}shop_email'],
+      ),
     );
   }
 
@@ -3535,12 +3604,18 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
   final int defaultLaborRate;
   final double defaultPartsMarkup;
   final double defaultTaxRate;
+  final String? shopAddress;
+  final String? shopPhone;
+  final String? shopEmail;
   const ShopSetting({
     required this.id,
     this.shopName,
     required this.defaultLaborRate,
     required this.defaultPartsMarkup,
     required this.defaultTaxRate,
+    this.shopAddress,
+    this.shopPhone,
+    this.shopEmail,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3552,6 +3627,15 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
     map['default_labor_rate'] = Variable<int>(defaultLaborRate);
     map['default_parts_markup'] = Variable<double>(defaultPartsMarkup);
     map['default_tax_rate'] = Variable<double>(defaultTaxRate);
+    if (!nullToAbsent || shopAddress != null) {
+      map['shop_address'] = Variable<String>(shopAddress);
+    }
+    if (!nullToAbsent || shopPhone != null) {
+      map['shop_phone'] = Variable<String>(shopPhone);
+    }
+    if (!nullToAbsent || shopEmail != null) {
+      map['shop_email'] = Variable<String>(shopEmail);
+    }
     return map;
   }
 
@@ -3564,6 +3648,15 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
       defaultLaborRate: Value(defaultLaborRate),
       defaultPartsMarkup: Value(defaultPartsMarkup),
       defaultTaxRate: Value(defaultTaxRate),
+      shopAddress: shopAddress == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shopAddress),
+      shopPhone: shopPhone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shopPhone),
+      shopEmail: shopEmail == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shopEmail),
     );
   }
 
@@ -3580,6 +3673,9 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
         json['defaultPartsMarkup'],
       ),
       defaultTaxRate: serializer.fromJson<double>(json['defaultTaxRate']),
+      shopAddress: serializer.fromJson<String?>(json['shopAddress']),
+      shopPhone: serializer.fromJson<String?>(json['shopPhone']),
+      shopEmail: serializer.fromJson<String?>(json['shopEmail']),
     );
   }
   @override
@@ -3591,6 +3687,9 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
       'defaultLaborRate': serializer.toJson<int>(defaultLaborRate),
       'defaultPartsMarkup': serializer.toJson<double>(defaultPartsMarkup),
       'defaultTaxRate': serializer.toJson<double>(defaultTaxRate),
+      'shopAddress': serializer.toJson<String?>(shopAddress),
+      'shopPhone': serializer.toJson<String?>(shopPhone),
+      'shopEmail': serializer.toJson<String?>(shopEmail),
     };
   }
 
@@ -3600,12 +3699,18 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
     int? defaultLaborRate,
     double? defaultPartsMarkup,
     double? defaultTaxRate,
+    Value<String?> shopAddress = const Value.absent(),
+    Value<String?> shopPhone = const Value.absent(),
+    Value<String?> shopEmail = const Value.absent(),
   }) => ShopSetting(
     id: id ?? this.id,
     shopName: shopName.present ? shopName.value : this.shopName,
     defaultLaborRate: defaultLaborRate ?? this.defaultLaborRate,
     defaultPartsMarkup: defaultPartsMarkup ?? this.defaultPartsMarkup,
     defaultTaxRate: defaultTaxRate ?? this.defaultTaxRate,
+    shopAddress: shopAddress.present ? shopAddress.value : this.shopAddress,
+    shopPhone: shopPhone.present ? shopPhone.value : this.shopPhone,
+    shopEmail: shopEmail.present ? shopEmail.value : this.shopEmail,
   );
   ShopSetting copyWithCompanion(ShopSettingsCompanion data) {
     return ShopSetting(
@@ -3620,6 +3725,11 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
       defaultTaxRate: data.defaultTaxRate.present
           ? data.defaultTaxRate.value
           : this.defaultTaxRate,
+      shopAddress: data.shopAddress.present
+          ? data.shopAddress.value
+          : this.shopAddress,
+      shopPhone: data.shopPhone.present ? data.shopPhone.value : this.shopPhone,
+      shopEmail: data.shopEmail.present ? data.shopEmail.value : this.shopEmail,
     );
   }
 
@@ -3630,7 +3740,10 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
           ..write('shopName: $shopName, ')
           ..write('defaultLaborRate: $defaultLaborRate, ')
           ..write('defaultPartsMarkup: $defaultPartsMarkup, ')
-          ..write('defaultTaxRate: $defaultTaxRate')
+          ..write('defaultTaxRate: $defaultTaxRate, ')
+          ..write('shopAddress: $shopAddress, ')
+          ..write('shopPhone: $shopPhone, ')
+          ..write('shopEmail: $shopEmail')
           ..write(')'))
         .toString();
   }
@@ -3642,6 +3755,9 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
     defaultLaborRate,
     defaultPartsMarkup,
     defaultTaxRate,
+    shopAddress,
+    shopPhone,
+    shopEmail,
   );
   @override
   bool operator ==(Object other) =>
@@ -3651,7 +3767,10 @@ class ShopSetting extends DataClass implements Insertable<ShopSetting> {
           other.shopName == this.shopName &&
           other.defaultLaborRate == this.defaultLaborRate &&
           other.defaultPartsMarkup == this.defaultPartsMarkup &&
-          other.defaultTaxRate == this.defaultTaxRate);
+          other.defaultTaxRate == this.defaultTaxRate &&
+          other.shopAddress == this.shopAddress &&
+          other.shopPhone == this.shopPhone &&
+          other.shopEmail == this.shopEmail);
 }
 
 class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
@@ -3660,12 +3779,18 @@ class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
   final Value<int> defaultLaborRate;
   final Value<double> defaultPartsMarkup;
   final Value<double> defaultTaxRate;
+  final Value<String?> shopAddress;
+  final Value<String?> shopPhone;
+  final Value<String?> shopEmail;
   const ShopSettingsCompanion({
     this.id = const Value.absent(),
     this.shopName = const Value.absent(),
     this.defaultLaborRate = const Value.absent(),
     this.defaultPartsMarkup = const Value.absent(),
     this.defaultTaxRate = const Value.absent(),
+    this.shopAddress = const Value.absent(),
+    this.shopPhone = const Value.absent(),
+    this.shopEmail = const Value.absent(),
   });
   ShopSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -3673,6 +3798,9 @@ class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
     this.defaultLaborRate = const Value.absent(),
     this.defaultPartsMarkup = const Value.absent(),
     this.defaultTaxRate = const Value.absent(),
+    this.shopAddress = const Value.absent(),
+    this.shopPhone = const Value.absent(),
+    this.shopEmail = const Value.absent(),
   });
   static Insertable<ShopSetting> custom({
     Expression<int>? id,
@@ -3680,6 +3808,9 @@ class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
     Expression<int>? defaultLaborRate,
     Expression<double>? defaultPartsMarkup,
     Expression<double>? defaultTaxRate,
+    Expression<String>? shopAddress,
+    Expression<String>? shopPhone,
+    Expression<String>? shopEmail,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3688,6 +3819,9 @@ class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
       if (defaultPartsMarkup != null)
         'default_parts_markup': defaultPartsMarkup,
       if (defaultTaxRate != null) 'default_tax_rate': defaultTaxRate,
+      if (shopAddress != null) 'shop_address': shopAddress,
+      if (shopPhone != null) 'shop_phone': shopPhone,
+      if (shopEmail != null) 'shop_email': shopEmail,
     });
   }
 
@@ -3697,6 +3831,9 @@ class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
     Value<int>? defaultLaborRate,
     Value<double>? defaultPartsMarkup,
     Value<double>? defaultTaxRate,
+    Value<String?>? shopAddress,
+    Value<String?>? shopPhone,
+    Value<String?>? shopEmail,
   }) {
     return ShopSettingsCompanion(
       id: id ?? this.id,
@@ -3704,6 +3841,9 @@ class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
       defaultLaborRate: defaultLaborRate ?? this.defaultLaborRate,
       defaultPartsMarkup: defaultPartsMarkup ?? this.defaultPartsMarkup,
       defaultTaxRate: defaultTaxRate ?? this.defaultTaxRate,
+      shopAddress: shopAddress ?? this.shopAddress,
+      shopPhone: shopPhone ?? this.shopPhone,
+      shopEmail: shopEmail ?? this.shopEmail,
     );
   }
 
@@ -3725,6 +3865,15 @@ class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
     if (defaultTaxRate.present) {
       map['default_tax_rate'] = Variable<double>(defaultTaxRate.value);
     }
+    if (shopAddress.present) {
+      map['shop_address'] = Variable<String>(shopAddress.value);
+    }
+    if (shopPhone.present) {
+      map['shop_phone'] = Variable<String>(shopPhone.value);
+    }
+    if (shopEmail.present) {
+      map['shop_email'] = Variable<String>(shopEmail.value);
+    }
     return map;
   }
 
@@ -3735,7 +3884,10 @@ class ShopSettingsCompanion extends UpdateCompanion<ShopSetting> {
           ..write('shopName: $shopName, ')
           ..write('defaultLaborRate: $defaultLaborRate, ')
           ..write('defaultPartsMarkup: $defaultPartsMarkup, ')
-          ..write('defaultTaxRate: $defaultTaxRate')
+          ..write('defaultTaxRate: $defaultTaxRate, ')
+          ..write('shopAddress: $shopAddress, ')
+          ..write('shopPhone: $shopPhone, ')
+          ..write('shopEmail: $shopEmail')
           ..write(')'))
         .toString();
   }
@@ -4256,6 +4408,17 @@ class $RepairOrdersTable extends RepairOrders
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _taxRateBpsMeta = const VerificationMeta(
+    'taxRateBps',
+  );
+  @override
+  late final GeneratedColumn<int> taxRateBps = GeneratedColumn<int>(
+    'tax_rate_bps',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -4279,6 +4442,7 @@ class $RepairOrdersTable extends RepairOrders
     technicianId,
     serviceDate,
     comment,
+    taxRateBps,
     createdAt,
   ];
   @override
@@ -4352,6 +4516,15 @@ class $RepairOrdersTable extends RepairOrders
         comment.isAcceptableOrUnknown(data['comment']!, _commentMeta),
       );
     }
+    if (data.containsKey('tax_rate_bps')) {
+      context.handle(
+        _taxRateBpsMeta,
+        taxRateBps.isAcceptableOrUnknown(
+          data['tax_rate_bps']!,
+          _taxRateBpsMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -4403,6 +4576,10 @@ class $RepairOrdersTable extends RepairOrders
         DriftSqlType.string,
         data['${effectivePrefix}comment'],
       ),
+      taxRateBps: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}tax_rate_bps'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -4426,6 +4603,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
   final int? technicianId;
   final DateTime? serviceDate;
   final String? comment;
+  final int? taxRateBps;
   final DateTime createdAt;
   const RepairOrder({
     required this.id,
@@ -4437,6 +4615,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     this.technicianId,
     this.serviceDate,
     this.comment,
+    this.taxRateBps,
     required this.createdAt,
   });
   @override
@@ -4463,6 +4642,9 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     if (!nullToAbsent || comment != null) {
       map['comment'] = Variable<String>(comment);
     }
+    if (!nullToAbsent || taxRateBps != null) {
+      map['tax_rate_bps'] = Variable<int>(taxRateBps);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -4488,6 +4670,9 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
       comment: comment == null && nullToAbsent
           ? const Value.absent()
           : Value(comment),
+      taxRateBps: taxRateBps == null && nullToAbsent
+          ? const Value.absent()
+          : Value(taxRateBps),
       createdAt: Value(createdAt),
     );
   }
@@ -4507,6 +4692,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
       technicianId: serializer.fromJson<int?>(json['technicianId']),
       serviceDate: serializer.fromJson<DateTime?>(json['serviceDate']),
       comment: serializer.fromJson<String?>(json['comment']),
+      taxRateBps: serializer.fromJson<int?>(json['taxRateBps']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -4523,6 +4709,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
       'technicianId': serializer.toJson<int?>(technicianId),
       'serviceDate': serializer.toJson<DateTime?>(serviceDate),
       'comment': serializer.toJson<String?>(comment),
+      'taxRateBps': serializer.toJson<int?>(taxRateBps),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -4537,6 +4724,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     Value<int?> technicianId = const Value.absent(),
     Value<DateTime?> serviceDate = const Value.absent(),
     Value<String?> comment = const Value.absent(),
+    Value<int?> taxRateBps = const Value.absent(),
     DateTime? createdAt,
   }) => RepairOrder(
     id: id ?? this.id,
@@ -4548,6 +4736,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     technicianId: technicianId.present ? technicianId.value : this.technicianId,
     serviceDate: serviceDate.present ? serviceDate.value : this.serviceDate,
     comment: comment.present ? comment.value : this.comment,
+    taxRateBps: taxRateBps.present ? taxRateBps.value : this.taxRateBps,
     createdAt: createdAt ?? this.createdAt,
   );
   RepairOrder copyWithCompanion(RepairOrdersCompanion data) {
@@ -4569,6 +4758,9 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
           ? data.serviceDate.value
           : this.serviceDate,
       comment: data.comment.present ? data.comment.value : this.comment,
+      taxRateBps: data.taxRateBps.present
+          ? data.taxRateBps.value
+          : this.taxRateBps,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -4585,6 +4777,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
           ..write('technicianId: $technicianId, ')
           ..write('serviceDate: $serviceDate, ')
           ..write('comment: $comment, ')
+          ..write('taxRateBps: $taxRateBps, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -4601,6 +4794,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
     technicianId,
     serviceDate,
     comment,
+    taxRateBps,
     createdAt,
   );
   @override
@@ -4616,6 +4810,7 @@ class RepairOrder extends DataClass implements Insertable<RepairOrder> {
           other.technicianId == this.technicianId &&
           other.serviceDate == this.serviceDate &&
           other.comment == this.comment &&
+          other.taxRateBps == this.taxRateBps &&
           other.createdAt == this.createdAt);
 }
 
@@ -4629,6 +4824,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
   final Value<int?> technicianId;
   final Value<DateTime?> serviceDate;
   final Value<String?> comment;
+  final Value<int?> taxRateBps;
   final Value<DateTime> createdAt;
   const RepairOrdersCompanion({
     this.id = const Value.absent(),
@@ -4640,6 +4836,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     this.technicianId = const Value.absent(),
     this.serviceDate = const Value.absent(),
     this.comment = const Value.absent(),
+    this.taxRateBps = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   RepairOrdersCompanion.insert({
@@ -4652,6 +4849,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     this.technicianId = const Value.absent(),
     this.serviceDate = const Value.absent(),
     this.comment = const Value.absent(),
+    this.taxRateBps = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : customerId = Value(customerId);
   static Insertable<RepairOrder> custom({
@@ -4664,6 +4862,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     Expression<int>? technicianId,
     Expression<DateTime>? serviceDate,
     Expression<String>? comment,
+    Expression<int>? taxRateBps,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -4676,6 +4875,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
       if (technicianId != null) 'technician_id': technicianId,
       if (serviceDate != null) 'service_date': serviceDate,
       if (comment != null) 'comment': comment,
+      if (taxRateBps != null) 'tax_rate_bps': taxRateBps,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -4690,6 +4890,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     Value<int?>? technicianId,
     Value<DateTime?>? serviceDate,
     Value<String?>? comment,
+    Value<int?>? taxRateBps,
     Value<DateTime>? createdAt,
   }) {
     return RepairOrdersCompanion(
@@ -4702,6 +4903,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
       technicianId: technicianId ?? this.technicianId,
       serviceDate: serviceDate ?? this.serviceDate,
       comment: comment ?? this.comment,
+      taxRateBps: taxRateBps ?? this.taxRateBps,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -4736,6 +4938,9 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
     if (comment.present) {
       map['comment'] = Variable<String>(comment.value);
     }
+    if (taxRateBps.present) {
+      map['tax_rate_bps'] = Variable<int>(taxRateBps.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -4754,6 +4959,7 @@ class RepairOrdersCompanion extends UpdateCompanion<RepairOrder> {
           ..write('technicianId: $technicianId, ')
           ..write('serviceDate: $serviceDate, ')
           ..write('comment: $comment, ')
+          ..write('taxRateBps: $taxRateBps, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -9281,6 +9487,9 @@ typedef $$ShopSettingsTableCreateCompanionBuilder =
       Value<int> defaultLaborRate,
       Value<double> defaultPartsMarkup,
       Value<double> defaultTaxRate,
+      Value<String?> shopAddress,
+      Value<String?> shopPhone,
+      Value<String?> shopEmail,
     });
 typedef $$ShopSettingsTableUpdateCompanionBuilder =
     ShopSettingsCompanion Function({
@@ -9289,6 +9498,9 @@ typedef $$ShopSettingsTableUpdateCompanionBuilder =
       Value<int> defaultLaborRate,
       Value<double> defaultPartsMarkup,
       Value<double> defaultTaxRate,
+      Value<String?> shopAddress,
+      Value<String?> shopPhone,
+      Value<String?> shopEmail,
     });
 
 class $$ShopSettingsTableFilterComposer
@@ -9322,6 +9534,21 @@ class $$ShopSettingsTableFilterComposer
 
   ColumnFilters<double> get defaultTaxRate => $composableBuilder(
     column: $table.defaultTaxRate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get shopAddress => $composableBuilder(
+    column: $table.shopAddress,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get shopPhone => $composableBuilder(
+    column: $table.shopPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get shopEmail => $composableBuilder(
+    column: $table.shopEmail,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -9359,6 +9586,21 @@ class $$ShopSettingsTableOrderingComposer
     column: $table.defaultTaxRate,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get shopAddress => $composableBuilder(
+    column: $table.shopAddress,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get shopPhone => $composableBuilder(
+    column: $table.shopPhone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get shopEmail => $composableBuilder(
+    column: $table.shopEmail,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ShopSettingsTableAnnotationComposer
@@ -9390,6 +9632,17 @@ class $$ShopSettingsTableAnnotationComposer
     column: $table.defaultTaxRate,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get shopAddress => $composableBuilder(
+    column: $table.shopAddress,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get shopPhone =>
+      $composableBuilder(column: $table.shopPhone, builder: (column) => column);
+
+  GeneratedColumn<String> get shopEmail =>
+      $composableBuilder(column: $table.shopEmail, builder: (column) => column);
 }
 
 class $$ShopSettingsTableTableManager
@@ -9428,12 +9681,18 @@ class $$ShopSettingsTableTableManager
                 Value<int> defaultLaborRate = const Value.absent(),
                 Value<double> defaultPartsMarkup = const Value.absent(),
                 Value<double> defaultTaxRate = const Value.absent(),
+                Value<String?> shopAddress = const Value.absent(),
+                Value<String?> shopPhone = const Value.absent(),
+                Value<String?> shopEmail = const Value.absent(),
               }) => ShopSettingsCompanion(
                 id: id,
                 shopName: shopName,
                 defaultLaborRate: defaultLaborRate,
                 defaultPartsMarkup: defaultPartsMarkup,
                 defaultTaxRate: defaultTaxRate,
+                shopAddress: shopAddress,
+                shopPhone: shopPhone,
+                shopEmail: shopEmail,
               ),
           createCompanionCallback:
               ({
@@ -9442,12 +9701,18 @@ class $$ShopSettingsTableTableManager
                 Value<int> defaultLaborRate = const Value.absent(),
                 Value<double> defaultPartsMarkup = const Value.absent(),
                 Value<double> defaultTaxRate = const Value.absent(),
+                Value<String?> shopAddress = const Value.absent(),
+                Value<String?> shopPhone = const Value.absent(),
+                Value<String?> shopEmail = const Value.absent(),
               }) => ShopSettingsCompanion.insert(
                 id: id,
                 shopName: shopName,
                 defaultLaborRate: defaultLaborRate,
                 defaultPartsMarkup: defaultPartsMarkup,
                 defaultTaxRate: defaultTaxRate,
+                shopAddress: shopAddress,
+                shopPhone: shopPhone,
+                shopEmail: shopEmail,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -9806,6 +10071,7 @@ typedef $$RepairOrdersTableCreateCompanionBuilder =
       Value<int?> technicianId,
       Value<DateTime?> serviceDate,
       Value<String?> comment,
+      Value<int?> taxRateBps,
       Value<DateTime> createdAt,
     });
 typedef $$RepairOrdersTableUpdateCompanionBuilder =
@@ -9819,6 +10085,7 @@ typedef $$RepairOrdersTableUpdateCompanionBuilder =
       Value<int?> technicianId,
       Value<DateTime?> serviceDate,
       Value<String?> comment,
+      Value<int?> taxRateBps,
       Value<DateTime> createdAt,
     });
 
@@ -9934,6 +10201,11 @@ class $$RepairOrdersTableFilterComposer
 
   ColumnFilters<String> get comment => $composableBuilder(
     column: $table.comment,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get taxRateBps => $composableBuilder(
+    column: $table.taxRateBps,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10069,6 +10341,11 @@ class $$RepairOrdersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get taxRateBps => $composableBuilder(
+    column: $table.taxRateBps,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -10192,6 +10469,11 @@ class $$RepairOrdersTableAnnotationComposer
 
   GeneratedColumn<String> get comment =>
       $composableBuilder(column: $table.comment, builder: (column) => column);
+
+  GeneratedColumn<int> get taxRateBps => $composableBuilder(
+    column: $table.taxRateBps,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -10331,6 +10613,7 @@ class $$RepairOrdersTableTableManager
                 Value<int?> technicianId = const Value.absent(),
                 Value<DateTime?> serviceDate = const Value.absent(),
                 Value<String?> comment = const Value.absent(),
+                Value<int?> taxRateBps = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => RepairOrdersCompanion(
                 id: id,
@@ -10342,6 +10625,7 @@ class $$RepairOrdersTableTableManager
                 technicianId: technicianId,
                 serviceDate: serviceDate,
                 comment: comment,
+                taxRateBps: taxRateBps,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -10355,6 +10639,7 @@ class $$RepairOrdersTableTableManager
                 Value<int?> technicianId = const Value.absent(),
                 Value<DateTime?> serviceDate = const Value.absent(),
                 Value<String?> comment = const Value.absent(),
+                Value<int?> taxRateBps = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => RepairOrdersCompanion.insert(
                 id: id,
@@ -10366,6 +10651,7 @@ class $$RepairOrdersTableTableManager
                 technicianId: technicianId,
                 serviceDate: serviceDate,
                 comment: comment,
+                taxRateBps: taxRateBps,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

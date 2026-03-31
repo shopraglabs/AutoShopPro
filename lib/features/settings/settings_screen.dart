@@ -18,6 +18,9 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _shopNameCtrl = TextEditingController();
+  final _shopAddressCtrl = TextEditingController();
+  final _shopPhoneCtrl = TextEditingController();
+  final _shopEmailCtrl = TextEditingController();
   final _laborRateCtrl = TextEditingController();
   final _taxRateCtrl = TextEditingController();
   bool _loaded = false;
@@ -32,6 +35,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void dispose() {
     _shopNameCtrl.dispose();
+    _shopAddressCtrl.dispose();
+    _shopPhoneCtrl.dispose();
+    _shopEmailCtrl.dispose();
     _laborRateCtrl.dispose();
     _taxRateCtrl.dispose();
     super.dispose();
@@ -42,6 +48,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) {
       setState(() {
         _shopNameCtrl.text = settings.shopName ?? '';
+        _shopAddressCtrl.text = settings.shopAddress ?? '';
+        _shopPhoneCtrl.text = settings.shopPhone ?? '';
+        _shopEmailCtrl.text = settings.shopEmail ?? '';
         // defaultLaborRate is int cents — convert to dollars for display
         _laborRateCtrl.text = fromCents(settings.defaultLaborRate).toStringAsFixed(2);
         _taxRateCtrl.text = settings.defaultTaxRate.toStringAsFixed(1);
@@ -60,24 +69,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final taxRate =
         double.tryParse(_taxRateCtrl.text) ?? settings.defaultTaxRate;
     final shopName = _shopNameCtrl.text.trim();
+    final shopAddress = _shopAddressCtrl.text.trim();
+    final shopPhone = _shopPhoneCtrl.text.trim();
+    final shopEmail = _shopEmailCtrl.text.trim();
 
     await db.saveSettings(ShopSettingsCompanion(
       id: const Value(1),
       shopName: Value(shopName.isEmpty ? null : shopName),
+      shopAddress: Value(shopAddress.isEmpty ? null : shopAddress),
+      shopPhone: Value(shopPhone.isEmpty ? null : shopPhone),
+      shopEmail: Value(shopEmail.isEmpty ? null : shopEmail),
       defaultLaborRate: Value(toCents(laborRateDollars)),
       defaultTaxRate: Value(taxRate),
     ));
     if (mounted) setState(() => _saving = false);
   }
 
-  Future<void> _showAddRuleDialog() => _showRuleDialog(existing: null);
+  Future<void> _showAddRuleDialog() {
+    // Auto-fill "From cost" from the last rule's maxCost so there is no gap.
+    final rules = ref.read(markupRulesProvider).value ?? [];
+    double? lastMax;
+    if (rules.isNotEmpty) {
+      final last = rules.last;
+      lastMax = last.maxCost != null ? fromCents(last.maxCost!) : null;
+    }
+    return _showRuleDialog(existing: null, prefilledMin: lastMax ?? 0.0);
+  }
 
-  Future<void> _showRuleDialog({required MarkupRule? existing}) async {
-    // minCost/maxCost are int cents — convert to dollars for display
+  Future<void> _showRuleDialog({
+    required MarkupRule? existing,
+    double? prefilledMin, // only used when adding (existing == null)
+  }) async {
+    // minCost/maxCost are int cents — convert to dollars for display.
+    // When adding a new rule, minCost is locked to prefilledMin so there are no gaps.
+    final isAdding = existing == null;
     final minCtrl = TextEditingController(
         text: existing != null
             ? fromCents(existing.minCost).toStringAsFixed(2)
-            : '');
+            : (prefilledMin ?? 0.0).toStringAsFixed(2));
     final maxCtrl = TextEditingController(
         text: existing?.maxCost != null
             ? fromCents(existing!.maxCost!).toStringAsFixed(2)
@@ -96,18 +125,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('From cost (\$)',
-                  style: TextStyle(
-                      fontSize: 12, color: Color(0xFF8E8E93),
-                      fontWeight: FontWeight.w500)),
+              Text(
+                isAdding
+                    ? 'From cost (\$) — auto-filled from previous tier'
+                    : 'From cost (\$)',
+                style: const TextStyle(
+                    fontSize: 12, color: Color(0xFF8E8E93),
+                    fontWeight: FontWeight.w500)),
               const SizedBox(height: 6),
               CupertinoTextField(
                 controller: minCtrl,
+                // Lock the "From cost" when adding so tiers stay contiguous.
+                readOnly: isAdding,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 placeholder: '0',
-                onTap: () => minCtrl.selection = TextSelection(
-                  baseOffset: 0, extentOffset: minCtrl.text.length),
+                style: TextStyle(
+                  color: isAdding
+                      ? CupertinoColors.secondaryLabel
+                      : CupertinoColors.label,
+                ),
+                onTap: isAdding
+                    ? null
+                    : () => minCtrl.selection = TextSelection(
+                        baseOffset: 0, extentOffset: minCtrl.text.length),
                 contextMenuBuilder: (ctx, s) =>
                     CupertinoAdaptiveTextSelectionToolbar.editableText(
                         editableTextState: s),
@@ -272,6 +313,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     color: CupertinoColors.systemBackground,
                     child: Column(
                       children: [
+                        // Shop Name
                         Container(
                           color: CupertinoColors.systemBackground,
                           padding:
@@ -291,6 +333,101 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   placeholder: 'My Auto Shop',
                                   textCapitalization:
                                       TextCapitalization.words,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 13),
+                                  contextMenuBuilder: (ctx, s) =>
+                                      CupertinoAdaptiveTextSelectionToolbar
+                                          .editableText(
+                                              editableTextState: s),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(height: 0.5, color: const Color(0xFFE5E5EA),
+                            margin: const EdgeInsets.only(left: 16)),
+                        // Shop Address
+                        Container(
+                          color: CupertinoColors.systemBackground,
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                          child: Row(
+                            children: [
+                              const SizedBox(
+                                width: 140,
+                                child: Text('Address',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: CupertinoColors.label)),
+                              ),
+                              Expanded(
+                                child: CupertinoTextField.borderless(
+                                  controller: _shopAddressCtrl,
+                                  placeholder: '123 Main St, City, ST 00000',
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 13),
+                                  contextMenuBuilder: (ctx, s) =>
+                                      CupertinoAdaptiveTextSelectionToolbar
+                                          .editableText(
+                                              editableTextState: s),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(height: 0.5, color: const Color(0xFFE5E5EA),
+                            margin: const EdgeInsets.only(left: 16)),
+                        // Shop Phone
+                        Container(
+                          color: CupertinoColors.systemBackground,
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                          child: Row(
+                            children: [
+                              const SizedBox(
+                                width: 140,
+                                child: Text('Phone',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: CupertinoColors.label)),
+                              ),
+                              Expanded(
+                                child: CupertinoTextField.borderless(
+                                  controller: _shopPhoneCtrl,
+                                  placeholder: '(555) 867-5309',
+                                  keyboardType: TextInputType.phone,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 13),
+                                  contextMenuBuilder: (ctx, s) =>
+                                      CupertinoAdaptiveTextSelectionToolbar
+                                          .editableText(
+                                              editableTextState: s),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(height: 0.5, color: const Color(0xFFE5E5EA),
+                            margin: const EdgeInsets.only(left: 16)),
+                        // Shop Email
+                        Container(
+                          color: CupertinoColors.systemBackground,
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                          child: Row(
+                            children: [
+                              const SizedBox(
+                                width: 140,
+                                child: Text('Email',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: CupertinoColors.label)),
+                              ),
+                              Expanded(
+                                child: CupertinoTextField.borderless(
+                                  controller: _shopEmailCtrl,
+                                  placeholder: 'shop@example.com',
+                                  keyboardType: TextInputType.emailAddress,
                                   padding: const EdgeInsets.symmetric(
                                       vertical: 13),
                                   contextMenuBuilder: (ctx, s) =>
@@ -420,7 +557,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     color: CupertinoColors.systemBackground,
                     child: GestureDetector(
                       onTap: () =>
-                          context.push('/repair-orders/technicians'),
+                          context.push('/records/technicians'),
                       child: Container(
                         color: CupertinoColors.systemBackground,
                         padding: const EdgeInsets.symmetric(
@@ -715,9 +852,10 @@ class _MarkupRuleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final from = '\$${rule.minCost.toStringAsFixed(2)}';
+    // minCost/maxCost are stored as integer cents — use fromCents() for display.
+    final from = '\$${fromCents(rule.minCost).toStringAsFixed(2)}';
     final to = rule.maxCost != null
-        ? '\$${rule.maxCost!.toStringAsFixed(2)}'
+        ? '\$${fromCents(rule.maxCost!).toStringAsFixed(2)}'
         : 'and up';
     final label = '$from – $to';
 

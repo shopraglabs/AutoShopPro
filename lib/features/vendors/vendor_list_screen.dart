@@ -17,7 +17,7 @@ class VendorListScreen extends ConsumerWidget {
         middle: const Text('Vendors'),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
-          onPressed: () => context.push('/repair-orders/vendors/new'),
+          onPressed: () => context.push('/records/vendors/new'),
           child: const Icon(CupertinoIcons.add),
         ),
       ),
@@ -97,7 +97,7 @@ class _VendorRow extends ConsumerWidget {
       children: [
         GestureDetector(
           onTap: () =>
-              context.push('/repair-orders/vendors/${vendor.id}/edit'),
+              context.push('/records/vendors/${vendor.id}/edit'),
           onSecondaryTapUp: (details) => showContextMenu(
             context: context,
             position: details.globalPosition,
@@ -106,7 +106,7 @@ class _VendorRow extends ConsumerWidget {
                 label: 'Edit Vendor',
                 icon: CupertinoIcons.pencil,
                 onTap: () => context.push(
-                    '/repair-orders/vendors/${vendor.id}/edit'),
+                    '/records/vendors/${vendor.id}/edit'),
               ),
               contextMenuDivider,
               ContextMenuAction(

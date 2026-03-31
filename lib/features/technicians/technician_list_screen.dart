@@ -17,7 +17,7 @@ class TechnicianListScreen extends ConsumerWidget {
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: () =>
-              context.push('/repair-orders/technicians/new'),
+              context.push('/records/technicians/new'),
           child: const Icon(CupertinoIcons.add, size: 22),
         ),
       ),
@@ -56,7 +56,7 @@ class TechnicianListScreen extends ConsumerWidget {
                       // Add button using list-row style
                       GestureDetector(
                         onTap: () =>
-                            context.push('/repair-orders/technicians/new'),
+                            context.push('/records/technicians/new'),
                         child: Container(
                           color: CupertinoColors.white,
                           padding: const EdgeInsets.symmetric(
@@ -89,7 +89,7 @@ class TechnicianListScreen extends ConsumerWidget {
                 return _TechRow(
                   tech: tech,
                   onTap: () => context.push(
-                      '/repair-orders/technicians/${tech.id}/edit'),
+                      '/records/technicians/${tech.id}/edit'),
                   showDivider: index < techs.length - 1,
                 );
               },

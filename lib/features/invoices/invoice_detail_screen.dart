@@ -69,11 +69,15 @@ class InvoiceDetailScreen extends ConsumerWidget {
             ? ref.watch(lineItemsProvider(ro.estimateId!))
             : const AsyncValue.data(<EstimateLineItem>[]);
 
-        // Watch estimate for tax rate + customer complaint
+        // Watch estimate for customer complaint (and tax rate fallback for pre-v33 ROs)
         final estimateAsync = ro.estimateId != null
             ? ref.watch(estimateProvider(ro.estimateId!))
             : const AsyncValue.data(null);
-        final taxRate = estimateAsync.value?.taxRate ?? 0.0;
+        // Prefer snapshotted tax rate on RO (v33+); fall back to estimate.taxRate
+        // for ROs that predate v33 where taxRateBps is null.
+        final taxRate = ro.taxRateBps != null
+            ? ro.taxRateBps! / 100.0
+            : (estimateAsync.value?.taxRate ?? 0.0);
         final complaint = estimateAsync.value?.customerComplaint;
 
         // Watch customer
@@ -147,6 +151,9 @@ class _InvoiceDetailView extends ConsumerWidget {
       declinedItems: declinedItems,
       taxRate: taxRate,
       shopName: settings.shopName,
+      shopAddress: settings.shopAddress,
+      shopPhone: settings.shopPhone,
+      shopEmail: settings.shopEmail,
       customerComplaint: customerComplaint,
       comment: ro.comment,
       simple: simple,
@@ -490,7 +497,7 @@ class _InvoiceDetailView extends ConsumerWidget {
                           icon: CupertinoIcons.wrench,
                           label: 'View Repair Order',
                           onTap: (_) =>
-                              context.push('/repair-orders/ros/${ro.id}'),
+                              context.push('/records/ros/${ro.id}'),
                         ),
                       ],
                     ),

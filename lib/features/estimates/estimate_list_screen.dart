@@ -37,7 +37,7 @@ class EstimateListScreen extends ConsumerWidget {
         middle: const Text('Estimates'),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
-          onPressed: () => context.push('/repair-orders/estimates/new'),
+          onPressed: () => context.push('/records/estimates/new'),
           child: const Icon(CupertinoIcons.add),
         ),
       ),
@@ -151,7 +151,7 @@ class _EstimateRow extends ConsumerWidget {
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
           onTap: () =>
-              context.push('/repair-orders/estimates/${item.estimate.id}'),
+              context.push('/records/estimates/${item.estimate.id}'),
           onSecondaryTapUp: (details) => showContextMenu(
             context: context,
             position: details.globalPosition,
@@ -160,20 +160,20 @@ class _EstimateRow extends ConsumerWidget {
                 label: 'Open',
                 icon: CupertinoIcons.doc_fill,
                 onTap: () => context.push(
-                    '/repair-orders/estimates/${item.estimate.id}'),
+                    '/records/estimates/${item.estimate.id}'),
               ),
               contextMenuDivider,
               ContextMenuAction(
                 label: 'Add Labor',
                 icon: CupertinoIcons.wrench_fill,
                 onTap: () => context.push(
-                    '/repair-orders/estimates/${item.estimate.id}/line-items/labor'),
+                    '/records/estimates/${item.estimate.id}/line-items/labor'),
               ),
               ContextMenuAction(
                 label: 'Add Part',
                 icon: CupertinoIcons.cube_box_fill,
                 onTap: () => context.push(
-                    '/repair-orders/estimates/${item.estimate.id}/line-items/part'),
+                    '/records/estimates/${item.estimate.id}/line-items/part'),
               ),
               contextMenuDivider,
               ContextMenuAction(

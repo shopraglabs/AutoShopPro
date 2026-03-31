@@ -43,7 +43,7 @@ final appNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
   navigatorKey: appNavigatorKey,
-  initialLocation: '/repair-orders',
+  initialLocation: '/records',
   routes: [
     ShellRoute(
       // AppShell wraps every screen with the sidebar (desktop) or tab bar (mobile)
@@ -51,7 +51,7 @@ final appRouter = GoRouter(
       routes: [
         // ── Module 1: Repair Orders ───────────────────────────────────────────
         GoRoute(
-          path: '/repair-orders',
+          path: '/records',
           builder: (context, state) => const RepairOrdersScreen(),
           routes: [
             // Repair order list + detail
@@ -273,7 +273,7 @@ final appRouter = GoRouter(
 
         // ── Invoices (inside Records) ─────────────────────────────────────────
         GoRoute(
-          path: '/repair-orders/invoices',
+          path: '/records/invoices',
           builder: (context, state) => const InvoiceListScreen(),
           routes: [
             GoRoute(
@@ -339,19 +339,10 @@ final appRouter = GoRouter(
           builder: (context, state) => const SearchScreen(),
         ),
 
-        // ── Module 3: Payments / Invoices ─────────────────────────────────────
+        // ── Module 3: Payments ────────────────────────────────────────────────
         GoRoute(
           path: '/payments',
-          builder: (context, state) => const InvoiceListScreen(),
-          routes: [
-            GoRoute(
-              path: ':roId',
-              builder: (context, state) {
-                final id = int.parse(state.pathParameters['roId']!);
-                return InvoiceDetailScreen(roId: id);
-              },
-            ),
-          ],
+          builder: (context, state) => const PlaceholderScreen(title: 'Payments'),
         ),
 
         // ── Module 4: Dashboard ───────────────────────────────────────────────

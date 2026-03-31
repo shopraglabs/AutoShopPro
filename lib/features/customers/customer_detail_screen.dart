@@ -88,7 +88,7 @@ class _CustomerDetail extends ConsumerWidget {
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: () =>
-              context.go('/repair-orders/customers/${customer.id}/edit'),
+              context.go('/records/customers/${customer.id}/edit'),
           child: const Text('Edit'),
         ),
       ),
@@ -213,7 +213,7 @@ class _CustomerDetail extends ConsumerWidget {
               Navigator.pop(dlg); // close dialog first
               await ref.read(dbProvider).deleteCustomer(customer.id);
               if (context.mounted) {
-                context.go('/repair-orders/customers');
+                context.go('/records/customers');
               }
             },
             child: const Text('Delete'),
@@ -262,7 +262,7 @@ class _VehiclesSection extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 minSize: 0,
                 onPressed: () => context.go(
-                  '/repair-orders/customers/${customer.id}/vehicles/new',
+                  '/records/customers/${customer.id}/vehicles/new',
                 ),
                 child: const Icon(
                   CupertinoIcons.add_circled,
@@ -299,7 +299,7 @@ class _VehiclesSection extends ConsumerWidget {
                     _VehicleTile(
                       vehicle: vehicleList[i],
                       onTap: () => context.go(
-                        '/repair-orders/customers/${customer.id}/vehicles/${vehicleList[i].id}',
+                        '/records/customers/${customer.id}/vehicles/${vehicleList[i].id}',
                       ),
                     ),
                     if (i < vehicleList.length - 1)
@@ -566,7 +566,7 @@ class _HistorySection extends ConsumerWidget {
                   trailing: null,
                   statusLabel: _estimateStatusLabel(est.status),
                   onTap: () => context
-                      .push('/repair-orders/estimates/${est.id}'),
+                      .push('/records/estimates/${est.id}'),
                 ),
               ));
             }
@@ -582,7 +582,7 @@ class _HistorySection extends ConsumerWidget {
                   trailing: null,
                   statusLabel: _roStatusLabel(ro.status),
                   onTap: () => context
-                      .push('/repair-orders/ros/${ro.id}'),
+                      .push('/records/ros/${ro.id}'),
                 ),
               ));
             }

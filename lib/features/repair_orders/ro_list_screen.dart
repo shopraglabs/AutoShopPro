@@ -146,7 +146,7 @@ class _RoListScreenState extends ConsumerState<RoListScreen> {
                       return _RoRow(
                         item: item,
                         onTap: () =>
-                            context.push('/repair-orders/ros/${item.ro.id}'),
+                            context.push('/records/ros/${item.ro.id}'),
                         showDivider: index < ros.length - 1,
                       );
                     },

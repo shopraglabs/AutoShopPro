@@ -22,6 +22,8 @@ class VinService {
 
   static Future<VinResult?> decode(String vin) async {
     if (vin.length != 17) return null;
+    // Legal VINs use A-H, J-N, P-R, S-Z, 0-9 only (no I, O, or Q).
+    if (!RegExp(r'^[A-HJ-NPR-Z0-9]{17}$').hasMatch(vin.toUpperCase())) return null;
     try {
       final response = await _dio.get(
         'https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/$vin',

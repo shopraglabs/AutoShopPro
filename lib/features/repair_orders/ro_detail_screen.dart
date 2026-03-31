@@ -154,7 +154,7 @@ class _RoDetailView extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(dialogCtx);
               await ref.read(dbProvider).deleteRepairOrder(ro.id);
-              if (context.mounted) context.go('/repair-orders/ros');
+              if (context.mounted) context.go('/records/ros');
             },
             child: const Text('Delete'),
           ),
@@ -249,8 +249,14 @@ class _RoDetailView extends ConsumerWidget {
       vehicle: vehicle,
       lineItems: lineItems,
       declinedItems: declinedForInvoice,
-      taxRate: estimate?.taxRate ?? 0.0,
+      // Prefer snapshotted tax rate (v33+); fall back to estimate.taxRate for older ROs.
+      taxRate: ro.taxRateBps != null
+          ? ro.taxRateBps! / 100.0
+          : (estimate?.taxRate ?? 0.0),
       shopName: settings.shopName,
+      shopAddress: settings.shopAddress,
+      shopPhone: settings.shopPhone,
+      shopEmail: settings.shopEmail,
       customerComplaint: estimate?.customerComplaint,
       comment: ro.comment,
       simple: simple,
@@ -318,6 +324,32 @@ class _RoDetailView extends ConsumerWidget {
         ? ro.copyWith(status: nextStatus, serviceDate: Value(DateTime.now()))
         : ro.copyWith(status: nextStatus);
     await db.updateRepairOrder(updatedRo);
+  }
+
+  Future<void> _reopenRO(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => CupertinoAlertDialog(
+        title: const Text('Reopen Repair Order?'),
+        content: const Text(
+          'This will set the status back to Open. The invoice will no longer be active.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Reopen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final db = ref.read(dbProvider);
+    await db.updateRepairOrder(ro.copyWith(status: 'open'));
   }
 
   Future<void> _editComment(BuildContext context, WidgetRef ref) async {
@@ -430,7 +462,7 @@ class _RoDetailView extends ConsumerWidget {
                 : null,
             onCreateNew: () {
               Navigator.pop(ctx);
-              context.push('/repair-orders/technicians/new');
+              context.push('/records/technicians/new');
             },
           );
         },
@@ -713,7 +745,7 @@ class _RoDetailView extends ConsumerWidget {
                     if (ro.estimateId != null) ...[
                       GestureDetector(
                         onTap: () => context
-                            .push('/repair-orders/estimates/${ro.estimateId}'),
+                            .push('/records/estimates/${ro.estimateId}'),
                         child: Container(
                           color: CupertinoColors.white,
                           padding: const EdgeInsets.symmetric(
@@ -872,7 +904,7 @@ class _RoDetailView extends ConsumerWidget {
                     if (ro.estimateId != null) ...[
                       GestureDetector(
                         onTap: () => context
-                            .push('/repair-orders/estimates/${ro.estimateId}'),
+                            .push('/records/estimates/${ro.estimateId}'),
                         child: Container(
                           color: CupertinoColors.white,
                           padding: const EdgeInsets.symmetric(
@@ -943,6 +975,34 @@ class _RoDetailView extends ConsumerWidget {
                             SizedBox(width: 12),
                             Expanded(
                               child: Text('Simple Invoice',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF007AFF))),
+                            ),
+                            Icon(CupertinoIcons.chevron_right,
+                                size: 16, color: Color(0xFFC7C7CC)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Container(
+                        height: 0.5,
+                        color: const Color(0xFFE5E5EA),
+                        margin: const EdgeInsets.only(left: 46)),
+                    // Reopen Repair Order
+                    GestureDetector(
+                      onTap: () => _reopenRO(context, ref),
+                      child: Container(
+                        color: CupertinoColors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        child: const Row(
+                          children: [
+                            Icon(CupertinoIcons.arrow_counterclockwise,
+                                size: 18, color: Color(0xFF007AFF)),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text('Reopen Repair Order',
                                   style: TextStyle(
                                       fontSize: 16,
                                       color: Color(0xFF007AFF))),

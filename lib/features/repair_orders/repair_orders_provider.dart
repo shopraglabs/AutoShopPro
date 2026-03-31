@@ -24,8 +24,9 @@ final roForEstimateProvider =
   return ref.watch(dbProvider).watchRoForEstimate(estimateId);
 });
 
-// Computes a total (in cents) for every closed RO.
+// Computes the post-tax total (in cents) for every closed RO.
 // Returns Map<roId, totalCents> — used by the invoice list to show amounts on rows.
+// Includes tax so the list amount matches the invoice the customer received.
 // autoDispose so it refreshes when the screen is re-entered.
 final invoiceTotalsProvider =
     FutureProvider.autoDispose<Map<int, int>>((ref) async {
@@ -44,6 +45,12 @@ final invoiceTotalsProvider =
     itemsByEstimate.putIfAbsent(item.estimateId, () => []).add(item);
   }
 
+  // Also fetch estimates to get the tax rate for each RO (avoids N+1).
+  final estimateList = await db.getEstimatesByIds(estimateIds);
+  final taxRateByEstimate = <int, double>{
+    for (final e in estimateList) e.id: e.taxRate,
+  };
+
   final totals = <int, int>{};
   for (final roDetail in closedROs) {
     final ro = roDetail.ro;
@@ -52,9 +59,15 @@ final invoiceTotalsProvider =
       continue;
     }
     final items = itemsByEstimate[ro.estimateId!] ?? [];
-    totals[ro.id] = items
+    final subtotalCents = items
         .where((i) => i.approvalStatus != 'declined')
         .fold<int>(0, (sum, i) => sum + (i.quantity * i.unitPrice).round());
+    // Prefer snapshotted tax rate (v33+); fall back to estimate.taxRate for older ROs.
+    final taxRate = ro.taxRateBps != null
+        ? ro.taxRateBps! / 100.0
+        : (taxRateByEstimate[ro.estimateId!] ?? 0.0);
+    final taxCents = (subtotalCents * taxRate / 100).round();
+    totals[ro.id] = subtotalCents + taxCents;
   }
   return totals;
 });

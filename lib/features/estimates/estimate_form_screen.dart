@@ -114,7 +114,7 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
     ));
     if (mounted) {
       // Replace this screen with the estimate detail so Back goes to the list
-      context.pushReplacement('/repair-orders/estimates/$id');
+      context.pushReplacement('/records/estimates/$id');
     }
   }
 
@@ -128,7 +128,7 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
         items: customers,
         labelFor: (c) => c.name,
         createNewLabel: 'New Customer',
-        onCreateNew: () => context.push('/repair-orders/customers/new'),
+        onCreateNew: () => context.push('/records/customers/new'),
       ),
     );
     if (picked != null && picked != _customer) {
@@ -159,7 +159,7 @@ class _EstimateFormScreenState extends ConsumerState<EstimateFormScreen> {
             : null,
         createNewLabel: 'New Vehicle',
         onCreateNew: () => context.push(
-            '/repair-orders/customers/${_customer!.id}/vehicles/new'),
+            '/records/customers/${_customer!.id}/vehicles/new'),
       ),
     );
     if (picked != null) setState(() => _vehicle = picked);

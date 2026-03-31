@@ -59,10 +59,14 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **Declined items on RO** — DECLINED section below TOTALS on RO detail; red X icon, gray strikethrough text; not counted in totals
 - **Declined items on invoices** — "DECLINED — NOT BILLED" section in both Itemized and Simple Invoice PDFs after totals; gray strikethrough; not included in any totals or tax
 - **Money helpers** — `lib/core/utils/money.dart`: `toCents()`, `fromCents()`, `formatMoney()` (UI, omits .00), `formatMoneyFull()` (PDFs, always 2 decimals); all price/cost/rate values stored as integer cents in the DB
-- **Database** — Drift/SQLite, schema v31, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts; FK constraints enforced via PRAGMA foreign_keys = ON
+- **Database** — Drift/SQLite, schema v34, tables: customers, vehicles, estimates, estimate_line_items, vendors, shop_settings, repair_orders, technicians, inventory_parts, markup_rules, service_templates, service_template_parts; FK constraints enforced via PRAGMA foreign_keys = ON; indexes on all FK columns (v34)
 - **Invoice list** — accessible from Records hub screen; shows all closed ROs as invoices (INV-XXXX number, customer, vehicle, service date); searchable; tapping opens RO detail with PDF generation; "View PDF" opens invoice PDF directly in Preview
-- **Dashboard** — KPI screen with Live Status, Today, This Week, This Month, This Year, and All Time sections; each period shows invoices closed, revenue, and gross profit; car count on month/year; ARO and avg GP% all time; refresh button recalculates on demand
+- **Dashboard** — KPI screen with Live Status, Today, This Week, This Month, This Year, and All Time sections; each period shows invoices closed, revenue (excl. tax), and gross profit; car count on month/year; ARO and avg GP% all time; refresh button recalculates on demand
 - **Navigation** — sidebar "Records" item goes to hub screen listing: Customers, Estimates, Repair Orders, Invoices, Vendors; "Payments" sidebar item is future placeholder; service date editable from estimate detail screen when a linked RO exists
+- **Shop contact info** — address, phone, email stored in ShopSettings; printed in header of all invoices and estimate PDFs
+- **Tax rate snapshot** — `taxRateBps` stored on RepairOrder at creation (schema v33); invoice reprints always use the correct rate even if the estimate is later edited
+- **Reopen RO** — "Reopen Repair Order" action (↺ icon) on closed RO ACTIONS section; confirmation dialog; sets status back to Open
+- **Audit integrity** — Phase 1+2+3 production audit complete: 30+ fixes covering security, data integrity, performance, and UX (see module_plan.md for full list)
 
 ## Core Modules (in build order)
 1. Repair Order (RO) engine — estimates, RO create/edit/close, customer & vehicle records, VIN decode
@@ -242,4 +246,4 @@ onTap: () => controller.selection = TextSelection(
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.12.1 Full Picture
+v0.12.2 Full Picture

@@ -25,7 +25,7 @@ class RepairOrdersScreen extends StatelessWidget {
                   _MenuRow(
                     icon: CupertinoIcons.person_2_fill,
                     label: 'Customers',
-                    onTap: () => context.go('/repair-orders/customers'),
+                    onTap: () => context.go('/records/customers'),
                   ),
                   Container(
                     height: 0.5,
@@ -35,7 +35,7 @@ class RepairOrdersScreen extends StatelessWidget {
                   _MenuRow(
                     icon: CupertinoIcons.doc_fill,
                     label: 'Estimates',
-                    onTap: () => context.go('/repair-orders/estimates'),
+                    onTap: () => context.go('/records/estimates'),
                   ),
                   Container(
                     height: 0.5,
@@ -45,7 +45,7 @@ class RepairOrdersScreen extends StatelessWidget {
                   _MenuRow(
                     icon: CupertinoIcons.doc_text_fill,
                     label: 'Repair Orders',
-                    onTap: () => context.go('/repair-orders/ros'),
+                    onTap: () => context.go('/records/ros'),
                   ),
                   Container(
                     height: 0.5,
@@ -55,7 +55,7 @@ class RepairOrdersScreen extends StatelessWidget {
                   _MenuRow(
                     icon: CupertinoIcons.money_dollar_circle_fill,
                     label: 'Invoices',
-                    onTap: () => context.push('/repair-orders/invoices'),
+                    onTap: () => context.push('/records/invoices'),
                   ),
                   Container(
                     height: 0.5,
@@ -65,7 +65,7 @@ class RepairOrdersScreen extends StatelessWidget {
                   _MenuRow(
                     icon: CupertinoIcons.building_2_fill,
                     label: 'Vendors',
-                    onTap: () => context.go('/repair-orders/vendors'),
+                    onTap: () => context.go('/records/vendors'),
                   ),
                 ],
               ),

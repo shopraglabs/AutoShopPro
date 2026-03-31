@@ -69,7 +69,7 @@ class _VehicleDetail extends ConsumerWidget {
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: () => context.go(
-            '/repair-orders/customers/$customerId/vehicles/${vehicle.id}/edit',
+            '/records/customers/$customerId/vehicles/${vehicle.id}/edit',
           ),
           child: const Text('Edit'),
         ),
@@ -205,7 +205,7 @@ class _VehicleDetail extends ConsumerWidget {
   // Opens the New Estimate form with customer and vehicle pre-filled.
   void _newEstimate(BuildContext context, WidgetRef ref) {
     context.push(
-      '/repair-orders/estimates/new'
+      '/records/estimates/new'
       '?customerId=$customerId&vehicleId=${vehicle.id}',
     );
   }
@@ -231,7 +231,7 @@ class _VehicleDetail extends ConsumerWidget {
               Navigator.pop(dlg); // close dialog first
               await ref.read(dbProvider).deleteVehicle(vehicle.id);
               if (context.mounted) {
-                context.go('/repair-orders/customers/$customerId');
+                context.go('/records/customers/$customerId');
               }
             },
             child: const Text('Delete'),
@@ -282,7 +282,7 @@ class _VehicleHistorySection extends ConsumerWidget {
                   label: 'EST-${est.id.toString().padLeft(4, '0')}',
                   statusLabel: _estimateStatusLabel(est.status),
                   onTap: () =>
-                      context.push('/repair-orders/estimates/${est.id}'),
+                      context.push('/records/estimates/${est.id}'),
                 ),
               ));
             }
@@ -295,7 +295,7 @@ class _VehicleHistorySection extends ConsumerWidget {
                   dot: _roDot(ro.status),
                   label: 'RO-${ro.id.toString().padLeft(4, '0')}',
                   statusLabel: _roStatusLabel(ro.status),
-                  onTap: () => context.push('/repair-orders/ros/${ro.id}'),
+                  onTap: () => context.push('/records/ros/${ro.id}'),
                 ),
               ));
             }

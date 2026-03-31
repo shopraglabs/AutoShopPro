@@ -271,6 +271,22 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     _syncingMarkup = false;
   }
 
+  // Applies the matching markup tier to a cost (in int cents) and returns
+  // the computed sell price in int cents. Used when inserting template parts
+  // so their price is always based on current tier rules, not stale stored sell price.
+  int _computeSellPriceCents(int costCents) {
+    final rules = ref.read(markupRulesProvider).value ?? [];
+    for (final rule in rules) {
+      final withinMax = rule.maxCost == null || costCents < rule.maxCost!;
+      if (costCents >= rule.minCost && withinMax) {
+        final sellCents = (costCents * (1 + rule.markupPercent / 100)).round();
+        return sellCents;
+      }
+    }
+    // No tier matched — fall back to stored sell price (caller provides fallback).
+    return -1;
+  }
+
   // Called when Markup $ changes → recalculate Markup % and List
   void _onMarkupDollarChanged() {
     if (_syncingMarkup) return;
@@ -307,7 +323,7 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
       context: context,
       builder: (_) => _VendorPickerSheet(
         vendors: vendors,
-        onCreateNew: () => context.push('/repair-orders/vendors/new'),
+        onCreateNew: () => context.push('/records/vendors/new'),
       ),
     );
     if (picked != null) {
@@ -382,23 +398,19 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
       if (picked.partNumber != null && picked.partNumber!.isNotEmpty) {
         _partNumber.text = picked.partNumber!;
       }
-      // cost/sellPrice are int cents — convert to dollars for display
-      final costDollars = fromCents(picked.cost);
-      final sellDollars = fromCents(picked.sellPrice);
-      _unitCost.text = costDollars.toStringAsFixed(2);
-      _unitList.text = sellDollars.toStringAsFixed(2);
-      // Derive markup from cost and sell price (dollar values)
-      if (picked.cost > 0) {
-        final dollar = sellDollars - costDollars;
-        final pct = dollar / costDollars * 100;
-        _markupDollar.text = dollar.toStringAsFixed(2);
-        _markupPercent.text = pct.toStringAsFixed(1);
-      }
+      // Fill cost only — markup and sell price are computed fresh from the
+      // current tier rules so they reflect any rule changes since the catalog
+      // entry was saved (instead of back-deriving from the stale stored sell price).
+      _unitCost.text = fromCents(picked.cost).toStringAsFixed(2);
 
       _unitCost.addListener(_onCostChanged);
       _markupPercent.addListener(_onMarkupPercentChanged);
       _markupDollar.addListener(_onMarkupDollarChanged);
       _unitList.addListener(_onListChanged);
+
+      // Apply the matching markup tier, then recompute dollar markup + sell price.
+      _applyMarkupTier();
+      _recalcFromCostAndPercent();
 
       setState(() {
         _catalogPartId = picked.id;
@@ -528,15 +540,24 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
 
     if (_isLabor) {
       priceDollars = double.tryParse(_laborRate.text.replaceAll(',', ''));
-      if (priceDollars == null || priceDollars < 0) {
+      if (priceDollars == null) {
         _showError('Please enter a valid rate.');
+        return;
+      }
+      if (priceDollars.abs() > 999999.99) {
+        _showError('Rate cannot exceed \$999,999.99.');
         return;
       }
     } else {
       priceDollars = double.tryParse(_unitList.text.replaceAll(',', ''));
       unitCostDollars = double.tryParse(_unitCost.text.replaceAll(',', ''));
-      if (priceDollars == null || priceDollars < 0) {
+      if (priceDollars == null) {
         _showError('Please enter a valid unit list price.');
+        return;
+      }
+      // Negative prices are allowed (e.g. discounts/coupons).
+      if (priceDollars.abs() > 999999.99) {
+        _showError('Unit price cannot exceed \$999,999.99.');
         return;
       }
     }
@@ -581,19 +602,23 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
         approvalStatus: const Value('approved'),
       ));
       // Insert linked template parts, each tied to the new labor line.
-      // part.sellPrice and part.cost are already int cents — copy directly.
+      // Sell price is recomputed from the current markup tier rules so it stays
+      // accurate even if the shop's markup tiers have changed since the catalog
+      // entry was saved. Falls back to the stored sell price if no tier matches.
       if (_isLabor) {
         for (final entry in _linkedTemplateParts) {
           final q = double.tryParse(
                   entry.qtyController.text.replaceAll(',', '')) ??
               1.0;
           if (q > 0) {
+            final freshSell = _computeSellPriceCents(entry.part.cost);
+            final sellPrice = freshSell >= 0 ? freshSell : entry.part.sellPrice;
             await db.insertLineItem(EstimateLineItemsCompanion.insert(
               estimateId: widget.estimateId,
               type: 'part',
               description: entry.part.description,
               quantity: Value(q),
-              unitPrice: entry.part.sellPrice,   // int cents → int cents
+              unitPrice: sellPrice,              // fresh or fallback, int cents
               unitCost: Value(entry.part.cost),  // int cents → int cents
               inventoryPartId: Value(entry.part.id),
               parentLaborId: Value(newId),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +18,7 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _searchCtrl = TextEditingController();
   String _query = '';
+  Timer? _debounce;
 
   // Search results
   List<Customer> _customers = [];
@@ -32,6 +35,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchCtrl.removeListener(_onQueryChanged);
     _searchCtrl.dispose();
     super.dispose();
@@ -52,7 +56,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         _searching = true;
       }
     });
-    if (q.isNotEmpty) _runSearch(q);
+    if (q.isNotEmpty) {
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 200), () => _runSearch(q));
+    }
   }
 
   Future<void> _runSearch(String q) async {
@@ -192,7 +199,7 @@ class _CustomerResult extends StatelessWidget {
       title: customer.name,
       subtitle: customer.phone ?? customer.email ?? '',
       onTap: () => context
-          .push('/repair-orders/customers/${customer.id}'),
+          .push('/records/customers/${customer.id}'),
     );
   }
 }
@@ -217,7 +224,7 @@ class _VehicleResult extends StatelessWidget {
       title: _title,
       subtitle: vehicle.licensePlate ?? vehicle.vin ?? '',
       onTap: () => context.push(
-          '/repair-orders/customers/${vehicle.customerId}/vehicles/${vehicle.id}'),
+          '/records/customers/${vehicle.customerId}/vehicles/${vehicle.id}'),
     );
   }
 }
@@ -235,7 +242,7 @@ class _EstimateResult extends StatelessWidget {
       title: estNum,
       subtitle: customer,
       onTap: () => context.push(
-          '/repair-orders/estimates/${detail.estimate.id}'),
+          '/records/estimates/${detail.estimate.id}'),
     );
   }
 }
@@ -253,7 +260,7 @@ class _RoResult extends StatelessWidget {
       title: roNum,
       subtitle: customer,
       onTap: () =>
-          context.push('/repair-orders/ros/${detail.ro.id}'),
+          context.push('/records/ros/${detail.ro.id}'),
     );
   }
 }

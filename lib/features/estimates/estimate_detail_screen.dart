@@ -161,7 +161,7 @@ class _EstimateDetailView extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(dialogCtx);
               await ref.read(dbProvider).deleteEstimate(estimate.id);
-              if (context.mounted) context.go('/repair-orders/estimates');
+              if (context.mounted) context.go('/records/estimates');
             },
             child: const Text('Delete'),
           ),
@@ -583,7 +583,7 @@ class _EstimateDetailView extends ConsumerWidget {
                       icon: CupertinoIcons.cube_box_fill,
                       label: 'Add Part',
                       onTap: () => context.push(
-                        '/repair-orders/estimates/${estimate.id}/line-items/part?parentLaborId=${labor.id}',
+                        '/records/estimates/${estimate.id}/line-items/part?parentLaborId=${labor.id}',
                       ),
                     ),
                   ),
@@ -675,7 +675,7 @@ class _EstimateDetailView extends ConsumerWidget {
                       icon: CupertinoIcons.wrench_fill,
                       label: 'Add Labor',
                       onTap: () => context.push(
-                          '/repair-orders/estimates/${estimate.id}/line-items/labor'),
+                          '/records/estimates/${estimate.id}/line-items/labor'),
                     ),
                     Container(
                       height: 0.5,
@@ -686,7 +686,7 @@ class _EstimateDetailView extends ConsumerWidget {
                       icon: CupertinoIcons.cube_box_fill,
                       label: 'Add Part',
                       onTap: () => context.push(
-                          '/repair-orders/estimates/${estimate.id}/line-items/part'),
+                          '/records/estimates/${estimate.id}/line-items/part'),
                     ),
                     Container(
                       height: 0.5,
@@ -697,7 +697,7 @@ class _EstimateDetailView extends ConsumerWidget {
                       icon: CupertinoIcons.ellipsis_circle_fill,
                       label: 'Add Other',
                       onTap: () => context.push(
-                          '/repair-orders/estimates/${estimate.id}/line-items/other'),
+                          '/records/estimates/${estimate.id}/line-items/other'),
                     ),
                   ],
                 ),
@@ -1225,7 +1225,7 @@ class _LineItemRow extends ConsumerWidget {
       onDismissed: (_) => onDelete(item.id),
       child: GestureDetector(
         onTap: () => context.push(
-            '/repair-orders/estimates/${item.estimateId}/line-items/${item.id}/edit'),
+            '/records/estimates/${item.estimateId}/line-items/${item.id}/edit'),
         onSecondaryTapUp: (details) => showContextMenu(
           context: context,
           position: details.globalPosition,
@@ -1234,7 +1234,7 @@ class _LineItemRow extends ConsumerWidget {
               label: 'Edit',
               icon: CupertinoIcons.pencil,
               onTap: () => context.push(
-                  '/repair-orders/estimates/${item.estimateId}/line-items/${item.id}/edit'),
+                  '/records/estimates/${item.estimateId}/line-items/${item.id}/edit'),
             ),
             contextMenuDivider,
             ContextMenuAction(
@@ -1279,7 +1279,7 @@ class _RoBanner extends ConsumerWidget {
           children: [
             _sectionHeaderStatic('REPAIR ORDER'),
             GestureDetector(
-              onTap: () => context.push('/repair-orders/ros/${ro.id}'),
+              onTap: () => context.push('/records/ros/${ro.id}'),
               child: Container(
                 color: CupertinoColors.white,
                 padding: const EdgeInsets.symmetric(
@@ -1351,9 +1351,12 @@ class _ConvertRowState extends ConsumerState<_ConvertRow> {
           vehicleId: Value(widget.estimate.vehicleId),
           note: Value(widget.estimate.note),
           serviceDate: Value(widget.estimate.createdAt),
+          // Snapshot the tax rate as basis points so reprints stay correct
+          // even if the estimate is deleted later (e.g. 8.5% → 850).
+          taxRateBps: Value((widget.estimate.taxRate * 100).round()),
         ));
       });
-      if (mounted) context.push('/repair-orders/ros/$roId');
+      if (mounted) context.push('/records/ros/$roId');
     } finally {
       if (mounted) setState(() => _converting = false);
     }

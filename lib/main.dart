@@ -138,6 +138,10 @@ class AutoShopProApp extends StatelessWidget {
 
 BuildContext? get _ctx => appNavigatorKey.currentContext;
 
+// When bumping the version at session close-out, update this constant
+// to match CLAUDE.md "Current Version" and pubspec.yaml "version:".
+const _appVersion = '0.12.2';
+
 Future<void> _showAboutDialog() async {
   final ctx = _ctx;
   if (ctx == null) return;
@@ -145,18 +149,18 @@ Future<void> _showAboutDialog() async {
     context: ctx,
     builder: (d) => CupertinoAlertDialog(
       title: const Text('AutoShopPro'),
-      content: const Padding(
-        padding: EdgeInsets.only(top: 6),
+      content: Padding(
+        padding: const EdgeInsets.only(top: 6),
         child: Column(
           children: [
-            Text('Version 0.10.3', style: TextStyle(fontWeight: FontWeight.w600)),
-            SizedBox(height: 4),
-            Text(
+            Text('Version $_appVersion', style: const TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            const Text(
               'Professional shop management for independent automotive repair shops.',
               style: TextStyle(fontSize: 13),
             ),
-            SizedBox(height: 8),
-            Text('© 2025 AutoShopPro', style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93))),
+            const SizedBox(height: 8),
+            const Text('© 2026 AutoShopPro', style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93))),
           ],
         ),
       ),
@@ -182,19 +186,19 @@ Future<void> _openSettings() async {
 Future<void> _newEstimate() async {
   final ctx = _ctx;
   if (ctx == null) return;
-  ctx.push('/repair-orders/estimates/new');
+  ctx.push('/records/estimates/new');
 }
 
 Future<void> _newCustomer() async {
   final ctx = _ctx;
   if (ctx == null) return;
-  ctx.go('/repair-orders/customers/new');
+  ctx.push('/records/customers/new');
 }
 
 Future<void> _openSearch() async {
   final ctx = _ctx;
   if (ctx == null) return;
-  ctx.go('/search');
+  ctx.push('/search');
 }
 
 Future<void> _showHelpDialog() async {
@@ -232,7 +236,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   // The list of routes in the same order as the nav items below.
   final List<String> _routes = const [
-    '/repair-orders',
+    '/records',
     '/parts',
     '/payments',
     '/dashboard',

@@ -124,7 +124,7 @@ class _DashboardBody extends StatelessWidget {
                       _KpiRow(
                         icon: CupertinoIcons.money_dollar_circle_fill,
                         iconColor: const Color(0xFFFF9500),
-                        label: 'Revenue',
+                        label: 'Revenue (excl. tax)',
                         value: formatMoneyFromDouble(stats.revenueToday),
                         valueBold: true,
                       ),
@@ -163,7 +163,7 @@ class _DashboardBody extends StatelessWidget {
                       _KpiRow(
                         icon: CupertinoIcons.money_dollar_circle_fill,
                         iconColor: const Color(0xFF007AFF),
-                        label: 'Revenue',
+                        label: 'Revenue (excl. tax)',
                         value: formatMoneyFromDouble(stats.revenueThisWeek),
                         valueBold: true,
                       ),
@@ -202,7 +202,7 @@ class _DashboardBody extends StatelessWidget {
                       _KpiRow(
                         icon: CupertinoIcons.money_dollar_circle_fill,
                         iconColor: const Color(0xFF34C759),
-                        label: 'Revenue',
+                        label: 'Revenue (excl. tax)',
                         value: formatMoneyFromDouble(stats.revenueThisMonth),
                         valueBold: true,
                       ),
@@ -251,7 +251,7 @@ class _DashboardBody extends StatelessWidget {
                       _KpiRow(
                         icon: CupertinoIcons.money_dollar_circle_fill,
                         iconColor: const Color(0xFF5856D6),
-                        label: 'Revenue',
+                        label: 'Revenue (excl. tax)',
                         value: formatMoneyFromDouble(stats.revenueThisYear),
                         valueBold: true,
                       ),
@@ -300,7 +300,7 @@ class _DashboardBody extends StatelessWidget {
                       _KpiRow(
                         icon: CupertinoIcons.money_dollar_circle_fill,
                         iconColor: const Color(0xFF8E8E93),
-                        label: 'Total Revenue',
+                        label: 'Total Revenue (excl. tax)',
                         value: formatMoneyFromDouble(stats.revenueAllTime),
                         valueBold: true,
                       ),

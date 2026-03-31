@@ -85,7 +85,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
         email: Value(blankToNull(_email.text)),
         internalNote: Value(blankToNull(_internalNote.text)),
       ));
-      if (mounted) context.go('/repair-orders/customers/$newId');
+      if (mounted) context.go('/records/customers/$newId');
       return;
     }
 

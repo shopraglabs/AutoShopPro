@@ -47,7 +47,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           // Tap + to go to the "New Customer" form
-          onPressed: () => context.go('/repair-orders/customers/new'),
+          onPressed: () => context.go('/records/customers/new'),
           child: const Icon(CupertinoIcons.add),
         ),
       ),
@@ -88,7 +88,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                       return _CustomerTile(
                         customer: customer,
                         onTap: () => context.go(
-                            '/repair-orders/customers/${customer.id}'),
+                            '/records/customers/${customer.id}'),
                       );
                     },
                   ));
@@ -190,7 +190,7 @@ class _CustomerTile extends ConsumerWidget {
             label: 'Edit Customer',
             icon: CupertinoIcons.pencil,
             onTap: () => context.push(
-                '/repair-orders/customers/${customer.id}/edit'),
+                '/records/customers/${customer.id}/edit'),
           ),
           contextMenuDivider,
           ContextMenuAction(

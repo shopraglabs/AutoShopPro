@@ -372,6 +372,10 @@ The heart of the app. Everything else depends on this.
 - ✅ Records hub screen order: Customers → Estimates → Repair Orders → Invoices → Vendors
 - ✅ README v0.10.2 entry backfilled
 
+### Route Rename & Nav Cleanup (v0.12.2 Full Picture)
+- ✅ All internal route paths renamed from `/repair-orders/...` to `/records/...` — matches sidebar "Records" label; eliminates stale naming that predated the rename
+- ✅ Payments sidebar route changed to `PlaceholderScreen` — invoices no longer appear under Payments; invoice list only accessible from Records
+
 ### Phase 1 Audit Fixes (v0.12.1 Full Picture)
 - ✅ AppleScript injection — escape email and file path before osascript interpolation
 - ✅ Estimate locking — ADD ITEMS hidden and rows read-only when linked RO is closed; open ROs still editable
@@ -385,6 +389,29 @@ The heart of the app. Everything else depends on this.
 - ✅ Close-RO unchecked-item warning — dialog prompts "Complete & Close" to deduct remaining stock
 - ✅ TTF font in PDFs — Arial loaded from assets; accented characters (José, García) render correctly
 - ✅ Migration v8 guard — from < 8 changed to from == 7 for RENAME operation
+
+### Phase 2 Audit Fixes (v0.12.2 Full Picture)
+- ✅ VIN character set validation — rejects VINs with invalid chars (I, O, Q) before API call
+- ✅ Keyboard shortcuts fix — ⌘N and ⌘F now use context.push instead of context.go; back stack preserved
+- ✅ Negative prices allowed — coupons/discounts are valid; only a $999,999.99 cap enforced
+- ✅ Markup tier gap prevention — "From cost" auto-filled and locked when adding a new tier; no silent fallback gaps
+- ✅ Markup tier display fix — min/max cost was showing cents as dollars (e.g. $5000 instead of $50); fixed with fromCents()
+- ✅ ARO denominator fix — ARO now counts only ROs with line items; ROs with no estimate excluded from average
+- ✅ Dashboard labels — "Revenue" renamed to "Revenue (excl. tax)" throughout dashboard
+- ✅ PDF temp file cleanup — temp files deleted 30s after view/print, 60s after email
+- ✅ Shop contact info — address/phone/email stored in ShopSettings and printed on all invoices (schema v32)
+- ✅ Tax rate snapshot — taxRateBps stored on RepairOrder at creation; invoice reprints use correct rate even if estimate deleted (schema v33)
+- ✅ Invoice list totals — invoice list rows now show post-tax total to match invoice detail
+
+### Phase 3 Audit Fixes (v0.12.2 Full Picture)
+- ✅ Reopen RO — "Reopen Repair Order" action (↺ icon) added to closed RO ACTIONS section with confirmation dialog
+- ✅ null-out parentLaborId on labor delete — deleteLineItem() first orphans child parts instead of letting them disappear
+- ✅ Search debounce — 200ms Timer in search_screen.dart; 4 DB queries per keystroke → 1 query per pause
+- ✅ DB indexes on FK columns — schema v34 adds 7 indexes (vehicles.customer_id, estimates.customer_id, line_items.estimate_id, line_items.parent_labor_id, repair_orders.customer_id, repair_orders.estimate_id, template_parts.template_id)
+- ✅ Markup recomputed at catalog insert — _pickFromCatalog now calls _applyMarkupTier() + _recalcFromCostAndPercent(); template parts use _computeSellPriceCents() helper; stale stored sell prices no longer used
+- ✅ About dialog version — _appVersion constant added; pubspec.yaml version aligned to match CLAUDE.md; copyright updated to 2026
+- ✅ Template linked-part quantity — qty field added to _LinkedPart typedef; each linked part row shows an editable qty field; default qty saved to and loaded from DB
+- ✅ CSV import transaction — each row's DB writes wrapped in _db.transaction(); failed row rolls back cleanly; no orphaned customers or estimates
 
 ---
 

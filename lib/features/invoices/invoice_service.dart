@@ -47,6 +47,9 @@ Future<Uint8List> buildInvoicePdf({
   required List<EstimateLineItem> lineItems,
   required double taxRate,
   required String? shopName,
+  String? shopAddress,
+  String? shopPhone,
+  String? shopEmail,
   String? customerComplaint,
   String? comment,
   List<EstimateLineItem> declinedItems = const [],
@@ -105,6 +108,21 @@ Future<Uint8List> buildInvoicePdf({
                       color: dark,
                     ),
                   ),
+                  if (shopAddress?.isNotEmpty == true) ...[
+                    pw.SizedBox(height: 3),
+                    pw.Text(shopAddress!,
+                        style: pw.TextStyle(fontSize: 10, color: mid)),
+                  ],
+                  if (shopPhone?.isNotEmpty == true) ...[
+                    pw.SizedBox(height: 2),
+                    pw.Text(shopPhone!,
+                        style: pw.TextStyle(fontSize: 10, color: mid)),
+                  ],
+                  if (shopEmail?.isNotEmpty == true) ...[
+                    pw.SizedBox(height: 2),
+                    pw.Text(shopEmail!,
+                        style: pw.TextStyle(fontSize: 10, color: mid)),
+                  ],
                 ],
               ),
             ),
@@ -623,6 +641,18 @@ Future<void> openInPreview(String filePath) async {
   await Process.run('open', [filePath]);
 }
 
+/// Schedules deletion of a temp PDF file after [seconds] delay.
+/// Best-effort — silently ignores errors (file already deleted, etc.).
+/// Preview and Mail read the file on open, so 30 s is always sufficient.
+void _deleteTempAfterDelay(String filePath, {int seconds = 30}) {
+  Future.delayed(Duration(seconds: seconds), () async {
+    try {
+      final f = File(filePath);
+      if (await f.exists()) await f.delete();
+    } catch (_) {}
+  });
+}
+
 /// Escapes a string for safe interpolation inside an AppleScript double-quoted
 /// string literal. Neutralizes backslashes, double quotes, and newlines.
 String _escapeForAppleScript(String s) => s
@@ -672,6 +702,9 @@ Future<Uint8List> buildSimpleInvoicePdf({
   required List<EstimateLineItem> lineItems,
   required double taxRate,
   required String? shopName,
+  String? shopAddress,
+  String? shopPhone,
+  String? shopEmail,
   String? customerComplaint,
   String? comment,
   List<EstimateLineItem> declinedItems = const [],
@@ -745,10 +778,30 @@ Future<Uint8List> buildSimpleInvoicePdf({
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Expanded(
-              child: pw.Text(
-                shopName?.isNotEmpty == true ? shopName! : 'AutoShopPro',
-                style: pw.TextStyle(
-                    fontSize: 22, fontWeight: pw.FontWeight.bold, color: dark),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    shopName?.isNotEmpty == true ? shopName! : 'AutoShopPro',
+                    style: pw.TextStyle(
+                        fontSize: 22, fontWeight: pw.FontWeight.bold, color: dark),
+                  ),
+                  if (shopAddress?.isNotEmpty == true) ...[
+                    pw.SizedBox(height: 3),
+                    pw.Text(shopAddress!,
+                        style: pw.TextStyle(fontSize: 10, color: mid)),
+                  ],
+                  if (shopPhone?.isNotEmpty == true) ...[
+                    pw.SizedBox(height: 2),
+                    pw.Text(shopPhone!,
+                        style: pw.TextStyle(fontSize: 10, color: mid)),
+                  ],
+                  if (shopEmail?.isNotEmpty == true) ...[
+                    pw.SizedBox(height: 2),
+                    pw.Text(shopEmail!,
+                        style: pw.TextStyle(fontSize: 10, color: mid)),
+                  ],
+                ],
               ),
             ),
             pw.Column(
@@ -1046,6 +1099,9 @@ Future<void> showInvoiceActions({
   required List<EstimateLineItem> lineItems,
   required double taxRate,
   required String? shopName,
+  String? shopAddress,
+  String? shopPhone,
+  String? shopEmail,
   String? customerComplaint,
   String? comment,
   List<EstimateLineItem> declinedItems = const [],
@@ -1062,6 +1118,7 @@ Future<void> showInvoiceActions({
           icon: CupertinoIcons.eye,
           onTap: () => _handleView(context, ro, customer, vehicle, lineItems,
               taxRate, shopName, customerComplaint, simple,
+              shopAddress: shopAddress, shopPhone: shopPhone, shopEmail: shopEmail,
               comment: comment, declinedItems: declinedItems),
         ),
         ContextMenuAction(
@@ -1069,6 +1126,7 @@ Future<void> showInvoiceActions({
           icon: CupertinoIcons.arrow_down_doc,
           onTap: () => _handleSave(context, ro, customer, vehicle, lineItems,
               taxRate, shopName, customerComplaint, simple,
+              shopAddress: shopAddress, shopPhone: shopPhone, shopEmail: shopEmail,
               comment: comment, declinedItems: declinedItems),
         ),
         ContextMenuAction(
@@ -1076,6 +1134,7 @@ Future<void> showInvoiceActions({
           icon: CupertinoIcons.printer,
           onTap: () => _handlePrint(context, ro, customer, vehicle, lineItems,
               taxRate, shopName, customerComplaint, simple,
+              shopAddress: shopAddress, shopPhone: shopPhone, shopEmail: shopEmail,
               comment: comment, declinedItems: declinedItems),
         ),
         ContextMenuAction(
@@ -1083,6 +1142,7 @@ Future<void> showInvoiceActions({
           icon: CupertinoIcons.mail,
           onTap: () => _handleEmail(context, ro, customer, vehicle, lineItems,
               taxRate, shopName, customerComplaint, simple,
+              shopAddress: shopAddress, shopPhone: shopPhone, shopEmail: shopEmail,
               comment: comment, declinedItems: declinedItems),
         ),
       ],
@@ -1101,6 +1161,7 @@ Future<void> showInvoiceActions({
             Navigator.pop(sheetCtx);
             await _handleView(context, ro, customer, vehicle, lineItems,
                 taxRate, shopName, customerComplaint, simple,
+                shopAddress: shopAddress, shopPhone: shopPhone, shopEmail: shopEmail,
                 comment: comment, declinedItems: declinedItems);
           },
           child: const Text('View PDF'),
@@ -1110,6 +1171,7 @@ Future<void> showInvoiceActions({
             Navigator.pop(sheetCtx);
             await _handleSave(context, ro, customer, vehicle, lineItems,
                 taxRate, shopName, customerComplaint, simple,
+                shopAddress: shopAddress, shopPhone: shopPhone, shopEmail: shopEmail,
                 comment: comment, declinedItems: declinedItems);
           },
           child: const Text('Save as PDF'),
@@ -1119,6 +1181,7 @@ Future<void> showInvoiceActions({
             Navigator.pop(sheetCtx);
             await _handlePrint(context, ro, customer, vehicle, lineItems,
                 taxRate, shopName, customerComplaint, simple,
+                shopAddress: shopAddress, shopPhone: shopPhone, shopEmail: shopEmail,
                 comment: comment, declinedItems: declinedItems);
           },
           child: const Text('Print'),
@@ -1128,6 +1191,7 @@ Future<void> showInvoiceActions({
             Navigator.pop(sheetCtx);
             await _handleEmail(context, ro, customer, vehicle, lineItems,
                 taxRate, shopName, customerComplaint, simple,
+                shopAddress: shopAddress, shopPhone: shopPhone, shopEmail: shopEmail,
                 comment: comment, declinedItems: declinedItems);
           },
           child: const Text('Email'),
@@ -1151,6 +1215,9 @@ Future<Uint8List> _buildBytes(
   String? shopName,
   String? customerComplaint,
   bool simple, {
+  String? shopAddress,
+  String? shopPhone,
+  String? shopEmail,
   String? comment,
   List<EstimateLineItem> declinedItems = const [],
 }) =>
@@ -1162,6 +1229,9 @@ Future<Uint8List> _buildBytes(
             lineItems: lineItems,
             taxRate: taxRate,
             shopName: shopName,
+            shopAddress: shopAddress,
+            shopPhone: shopPhone,
+            shopEmail: shopEmail,
             customerComplaint: customerComplaint,
             comment: comment,
             declinedItems: declinedItems,
@@ -1173,6 +1243,9 @@ Future<Uint8List> _buildBytes(
             lineItems: lineItems,
             taxRate: taxRate,
             shopName: shopName,
+            shopAddress: shopAddress,
+            shopPhone: shopPhone,
+            shopEmail: shopEmail,
             customerComplaint: customerComplaint,
             comment: comment,
             declinedItems: declinedItems,
@@ -1188,15 +1261,20 @@ Future<void> _handleView(
   String? shopName,
   String? customerComplaint,
   bool simple, {
+  String? shopAddress,
+  String? shopPhone,
+  String? shopEmail,
   String? comment,
   List<EstimateLineItem> declinedItems = const [],
 }) async {
   try {
     final bytes = await _buildBytes(
         ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple,
+        shopAddress: shopAddress, shopPhone: shopPhone, shopEmail: shopEmail,
         comment: comment, declinedItems: declinedItems);
     final path = await saveInvoiceToTemp(bytes, ro.id);
     await openInPreview(path);
+    _deleteTempAfterDelay(path); // clean up temp file once Preview has opened it
   } catch (e) {
     if (context.mounted) _showError(context, e);
   }
@@ -1212,12 +1290,16 @@ Future<void> _handleSave(
   String? shopName,
   String? customerComplaint,
   bool simple, {
+  String? shopAddress,
+  String? shopPhone,
+  String? shopEmail,
   String? comment,
   List<EstimateLineItem> declinedItems = const [],
 }) async {
   try {
     final bytes = await _buildBytes(
         ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple,
+        shopAddress: shopAddress, shopPhone: shopPhone, shopEmail: shopEmail,
         comment: comment, declinedItems: declinedItems);
     final path = await saveInvoiceToDownloads(bytes, ro.id);
     final fileName = path.split('/').last;
@@ -1259,15 +1341,20 @@ Future<void> _handlePrint(
   String? shopName,
   String? customerComplaint,
   bool simple, {
+  String? shopAddress,
+  String? shopPhone,
+  String? shopEmail,
   String? comment,
   List<EstimateLineItem> declinedItems = const [],
 }) async {
   try {
     final bytes = await _buildBytes(
         ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple,
+        shopAddress: shopAddress, shopPhone: shopPhone, shopEmail: shopEmail,
         comment: comment, declinedItems: declinedItems);
     final path = await saveInvoiceToTemp(bytes, ro.id);
     await openInPreview(path);
+    _deleteTempAfterDelay(path); // clean up temp file once Preview has opened it
     if (context.mounted) {
       showCupertinoDialog(
         context: context,
@@ -1299,12 +1386,16 @@ Future<void> _handleEmail(
   String? shopName,
   String? customerComplaint,
   bool simple, {
+  String? shopAddress,
+  String? shopPhone,
+  String? shopEmail,
   String? comment,
   List<EstimateLineItem> declinedItems = const [],
 }) async {
   try {
     final bytes = await _buildBytes(
         ro, customer, vehicle, lineItems, taxRate, shopName, customerComplaint, simple,
+        shopAddress: shopAddress, shopPhone: shopPhone, shopEmail: shopEmail,
         comment: comment, declinedItems: declinedItems);
     final path = await saveInvoiceToTemp(bytes, ro.id);
     await openInMailWithAttachment(
@@ -1313,6 +1404,8 @@ Future<void> _handleEmail(
       customerName: customer.name,
       customerEmail: customer.email,
     );
+    // Give Mail 60 s to attach the file before deleting it from the temp folder.
+    _deleteTempAfterDelay(path, seconds: 60);
   } catch (e) {
     if (context.mounted) _showError(context, e);
   }
@@ -1756,6 +1849,7 @@ Future<void> _handleEstimatePrint(
         shopName: shopName);
     final path = await saveInvoiceToTemp(bytes, estimate.id);
     await openInPreview(path);
+    _deleteTempAfterDelay(path);
     if (context.mounted) {
       showCupertinoDialog(
         context: context,
@@ -1799,6 +1893,7 @@ Future<void> _handleEstimateEmail(
       customerName: customer.name,
       customerEmail: customer.email,
     );
+    _deleteTempAfterDelay(path, seconds: 60);
   } catch (e) {
     if (context.mounted) _showError(context, e);
   }

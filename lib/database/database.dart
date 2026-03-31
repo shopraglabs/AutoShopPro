@@ -133,6 +133,11 @@ class RepairOrders extends Table {
   DateTimeColumn get serviceDate => dateTime().nullable()();
   // Optional comment printed on the invoice (e.g. warranty notes, terms).
   TextColumn get comment => text().nullable()();
+  // Tax rate snapshotted at RO creation time — stored as basis points (int).
+  // e.g. 8.5% → 850. Copied from estimates.taxRate on conversion.
+  // Prevents reprints from showing 0% tax if the estimate is later deleted.
+  // NULL on ROs that predate v33 (falls back to estimate.taxRate at display time).
+  IntColumn get taxRateBps => integer().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -199,6 +204,10 @@ class ShopSettings extends Table {
       real().withDefault(const Constant(30.0))();
   // Default tax rate applied to new estimates, e.g. 8.5 means 8.5%  (REAL — not money)
   RealColumn get defaultTaxRate => real().withDefault(const Constant(0.0))();
+  // Shop contact info — printed on invoice headers (required by law in many states)
+  TextColumn get shopAddress => text().nullable()();
+  TextColumn get shopPhone => text().nullable()();
+  TextColumn get shopEmail => text().nullable()();
 }
 
 // A reusable service template — e.g. "Oil Change", "Tire Rotation".
@@ -279,7 +288,7 @@ class AppDatabase extends _$AppDatabase {
   // Every time you change a table definition, bump this number by 1.
   // Drift uses it to know when to run a migration (update the stored schema).
   @override
-  int get schemaVersion => 31;
+  int get schemaVersion => 34;
 
   // Drift runs this when it finds an older database on the device.
   @override
@@ -889,6 +898,65 @@ class AppDatabase extends _$AppDatabase {
           'UPDATE estimates SET created_at = $jan2026Secs WHERE created_at > $maxValidSecs',
         );
       }
+      if (from < 32) {
+        // v32: Add shop address, phone, and email to shop_settings.
+        // Required for invoice headers (legal requirement in many states).
+        final addrCol = await m.database.customSelect(
+          "SELECT name FROM pragma_table_info('shop_settings') WHERE name='shop_address'",
+        ).get();
+        if (addrCol.isEmpty) {
+          await m.addColumn(shopSettings, shopSettings.shopAddress);
+        }
+        final phoneCol = await m.database.customSelect(
+          "SELECT name FROM pragma_table_info('shop_settings') WHERE name='shop_phone'",
+        ).get();
+        if (phoneCol.isEmpty) {
+          await m.addColumn(shopSettings, shopSettings.shopPhone);
+        }
+        final emailCol = await m.database.customSelect(
+          "SELECT name FROM pragma_table_info('shop_settings') WHERE name='shop_email'",
+        ).get();
+        if (emailCol.isEmpty) {
+          await m.addColumn(shopSettings, shopSettings.shopEmail);
+        }
+      }
+      if (from < 33) {
+        // v33: Add tax_rate_bps to repair_orders — snapshot of the tax rate at
+        // RO creation time (basis points: 850 = 8.5%).
+        // NULL for existing ROs (they fall back to estimate.taxRate at display time).
+        final col = await m.database.customSelect(
+          "SELECT name FROM pragma_table_info('repair_orders') WHERE name='tax_rate_bps'",
+        ).get();
+        if (col.isEmpty) {
+          await m.addColumn(repairOrders, repairOrders.taxRateBps);
+        }
+      }
+      if (from < 34) {
+        // v34: Add indexes on high-traffic FK columns to eliminate full table
+        // scans on common joins (vehicles→customer, items→estimate, ROs→estimate, etc.).
+        // CREATE INDEX IF NOT EXISTS is idempotent — safe to run on any version.
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_vehicles_customer_id ON vehicles(customer_id)',
+        );
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_estimates_customer_id ON estimates(customer_id)',
+        );
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_line_items_estimate_id ON estimate_line_items(estimate_id)',
+        );
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_line_items_parent_labor_id ON estimate_line_items(parent_labor_id)',
+        );
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_repair_orders_customer_id ON repair_orders(customer_id)',
+        );
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_repair_orders_estimate_id ON repair_orders(estimate_id)',
+        );
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_template_parts_template_id ON service_template_parts(template_id)',
+        );
+      }
     },
   );
 
@@ -1040,8 +1108,17 @@ class AppDatabase extends _$AppDatabase {
       update(estimateLineItems).replace(item);
 
   // Permanently removes a line item by id.
-  Future<int> deleteLineItem(int id) =>
-      (delete(estimateLineItems)..where((l) => l.id.equals(id))).go();
+  // If the item is a labor line, any parts linked to it (via parentLaborId)
+  // are first orphaned (parentLaborId set to null) so they stay on the estimate
+  // rather than silently disappearing.
+  Future<int> deleteLineItem(int id) => transaction(() async {
+        await (update(estimateLineItems)
+              ..where((l) => l.parentLaborId.equals(id)))
+            .write(const EstimateLineItemsCompanion(
+          parentLaborId: Value(null),
+        ));
+        return (delete(estimateLineItems)..where((l) => l.id.equals(id))).go();
+      });
 
   // ─── Settings Queries ────────────────────────────────────────────────────────
 

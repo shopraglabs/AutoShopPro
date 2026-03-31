@@ -185,6 +185,9 @@ final dashboardStatsProvider =
   int totalCostCents = 0;
   int rosWithCostData = 0;
   double totalGpPct = 0.0;
+  // Only count ROs that actually have line items (estimateId != null).
+  // closedROs.length would over-count ROs with no estimate, deflating ARO.
+  int countedROsForARO = 0;
 
   for (final roDetail in closedROs) {
     final ro = roDetail.ro;
@@ -200,6 +203,7 @@ final dashboardStatsProvider =
         .fold<int>(0, (sum, i) => sum + (i.quantity * (i.unitCost ?? i.unitPrice)).round());
 
     revenueAllCents += roRevenueCents;
+    countedROsForARO++;
 
     // Gross profit = revenue minus known part costs only.
     // Items without unitCost (most labor) are treated as 100% margin —
@@ -227,9 +231,9 @@ final dashboardStatsProvider =
     if (!date.isBefore(startOfYear)   && date.isBefore(startOfNextYear))  { revenueYearCents  += roRevenueCents; gpYearCents  += roGpCents; }
   }
 
-  final aroAllTimeCents = closedROs.isEmpty
+  final aroAllTimeCents = countedROsForARO == 0
       ? 0.0
-      : revenueAllCents / closedROs.length;
+      : revenueAllCents / countedROsForARO;
 
   final avgGpPct = rosWithCostData == 0
       ? -1.0
