@@ -415,6 +415,16 @@ The heart of the app. Everything else depends on this.
 
 ---
 
+### Search, Polish & Bug Fixes (v0.13.0 Sharp Eye)
+- ✅ Search on estimates list — CupertinoSearchTextField filters by estimate number, customer name, vehicle
+- ✅ Search on repair orders list — search bar above filter pills; status filter + search apply together
+- ✅ Default markup button on Add Part form — "Apply shop default markup" row resets markup % to shop setting and recalculates sell price
+- ✅ Overflow fix — parts sub-header (labor name label) wrapped in Expanded + ellipsis; no more "overflowed by N pixels" in debug
+- ✅ Parts grouped by labor name — parts sub-header shows laborName (e.g. "Brake job - Rear") instead of the full labor description
+- ✅ Service template save stuck — _save() wrapped in try/catch; _saving reset to false on error; switched to context.pop()
+
+---
+
 ### Backend (Go — planned)
 - ⬜ Go project scaffolding
 - ⬜ PostgreSQL schema

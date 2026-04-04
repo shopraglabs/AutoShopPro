@@ -6,6 +6,8 @@ A cross-platform automotive shop management app built with Flutter. One codebase
 
 ## Project Status
 
+**v0.13.0 — Sharp Eye** — Search added to estimates and repair orders lists (filters by number, customer, and vehicle). "Apply shop default markup" button on Add Part form. Parts sub-header now shows the labor name (not the full description). Overflow fix on parts section header. Service template save no longer gets stuck on error.
+
 **v0.12.2 — Full Picture** — Phase 2 + Phase 3 production audit: 19 fixes including tax rate snapshot on invoices, shop contact info on PDFs, PDF temp file cleanup, reopen RO action, search debounce, DB indexes on FK columns, markup recomputed at catalog insert, template linked-part default quantities, CSV import transactions, and more.
 
 **v0.12.1 — Full Picture** — Phase 1 production audit: 12 critical/high fixes including AppleScript injection (RCE via customer email), estimate locking on closed ROs, N+1 query elimination, integer-cents subtotals, GP formula fix, atomic DB transactions on convert-to-RO and stock deduction, close-RO unchecked-item warning, TTF font in PDFs for accented characters, and migration v8 guard fix.

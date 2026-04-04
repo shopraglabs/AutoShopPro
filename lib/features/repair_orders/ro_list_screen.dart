@@ -49,6 +49,7 @@ class RoListScreen extends ConsumerStatefulWidget {
 class _RoListScreenState extends ConsumerState<RoListScreen> {
   // null = show all; otherwise filter to that status string
   String? _filter;
+  String _search = '';
 
   @override
   Widget build(BuildContext context) {
@@ -61,26 +62,36 @@ class _RoListScreenState extends ConsumerState<RoListScreen> {
       child: SafeArea(
         child: Column(
           children: [
-            // ── Status filter pill bar ─────────────────────────────────────
+            // ── Status filter pill bar + search ───────────────────────────
             Container(
               color: CupertinoColors.systemGroupedBackground,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    for (int i = 0; i < _filters.length; i++) ...[
-                      if (i > 0) const SizedBox(width: 8),
-                      _FilterPill(
-                        label: _filters[i].$1,
-                        selected: _filter == _filters[i].$2,
-                        onTap: () =>
-                            setState(() => _filter = _filters[i].$2),
-                      ),
-                    ],
-                  ],
-                ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                    child: CupertinoSearchTextField(
+                      placeholder: 'Search repair orders…',
+                      onChanged: (v) => setState(() => _search = v),
+                    ),
+                  ),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                    child: Row(
+                      children: [
+                        for (int i = 0; i < _filters.length; i++) ...[
+                          if (i > 0) const SizedBox(width: 8),
+                          _FilterPill(
+                            label: _filters[i].$1,
+                            selected: _filter == _filters[i].$2,
+                            onTap: () =>
+                                setState(() => _filter = _filters[i].$2),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -91,12 +102,29 @@ class _RoListScreenState extends ConsumerState<RoListScreen> {
                     const Center(child: CupertinoActivityIndicator()),
                 error: (e, _) => Center(child: Text('Error: $e')),
                 data: (allRos) {
-                  // Apply the active filter
-                  final ros = _filter == null
+                  // Apply status filter then search filter
+                  final statusFiltered = _filter == null
                       ? allRos
                       : allRos
                           .where((r) => r.ro.status == _filter)
                           .toList();
+                  final q = _search.toLowerCase();
+                  final ros = q.isEmpty
+                      ? statusFiltered
+                      : statusFiltered.where((item) {
+                          final num = 'RO-${item.ro.id.toString().padLeft(4, '0')}';
+                          final customer = (item.customer?.name ?? '').toLowerCase();
+                          final vehicle = item.vehicle != null
+                              ? [
+                                  item.vehicle!.year?.toString() ?? '',
+                                  item.vehicle!.make,
+                                  item.vehicle!.model,
+                                ].join(' ').toLowerCase()
+                              : '';
+                          return num.contains(q) ||
+                              customer.contains(q) ||
+                              vehicle.contains(q);
+                        }).toList();
 
                   if (ros.isEmpty) {
                     return Center(
@@ -112,9 +140,11 @@ class _RoListScreenState extends ConsumerState<RoListScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              _filter == null
-                                  ? 'No repair orders yet.'
-                                  : 'No ${_statusLabel(_filter!).toLowerCase()} repair orders.',
+                              _search.isNotEmpty
+                                  ? 'No results for "$_search"'
+                                  : _filter == null
+                                      ? 'No repair orders yet.'
+                                      : 'No ${_statusLabel(_filter!).toLowerCase()} repair orders.',
                               style: const TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w600,
@@ -123,9 +153,11 @@ class _RoListScreenState extends ConsumerState<RoListScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              _filter == null
-                                  ? 'Convert an estimate to create your first RO.'
-                                  : 'Try a different filter above.',
+                              _search.isNotEmpty
+                                  ? 'Try a different search term.'
+                                  : _filter == null
+                                      ? 'Convert an estimate to create your first RO.'
+                                      : 'Try a different filter above.',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontSize: 14,

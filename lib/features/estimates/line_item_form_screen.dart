@@ -174,6 +174,16 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
     }
   }
 
+  // Resets markup % to the shop default and recalculates markup $ + list price.
+  Future<void> _applyDefaultMarkup() async {
+    final settings = await ref.read(dbProvider).getOrCreateSettings();
+    if (!mounted) return;
+    _syncingMarkup = true;
+    _markupPercent.text = settings.defaultPartsMarkup.toStringAsFixed(1);
+    _syncingMarkup = false;
+    _recalcFromCostAndPercent();
+  }
+
   Future<void> _loadVendorName(int vendorId) async {
     final vendor = await ref.read(dbProvider).getVendor(vendorId);
     if (mounted && vendor != null) {
@@ -863,6 +873,26 @@ class _LineItemFormScreenState extends ConsumerState<LineItemFormScreen> {
                     _MarkupRow(
                       percentController: _markupPercent,
                       dollarController: _markupDollar,
+                    ),
+                    _divider(),
+                    // ── Parts: Apply default markup button ───────────
+                    GestureDetector(
+                      onTap: _applyDefaultMarkup,
+                      child: Container(
+                        color: CupertinoColors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: const [
+                            Icon(CupertinoIcons.arrow_counterclockwise,
+                                size: 16, color: Color(0xFF007AFF)),
+                            SizedBox(width: 8),
+                            Text('Apply shop default markup',
+                                style: TextStyle(
+                                    fontSize: 15, color: Color(0xFF007AFF))),
+                          ],
+                        ),
+                      ),
                     ),
                     _divider(),
                     // ── Parts: Unit List ─────────────────────────────

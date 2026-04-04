@@ -908,7 +908,7 @@ class _LineItemSection extends StatelessWidget {
     for (final labor in laborLines) {
       final linked = items.where((p) => p.parentLaborId == labor.id).toList();
       if (linked.isNotEmpty) {
-        groups.add((label: labor.description, parts: linked));
+        groups.add((label: labor.laborName ?? labor.description, parts: linked));
       }
     }
     final unassigned =
@@ -931,12 +931,15 @@ class _LineItemSection extends StatelessWidget {
                   const Icon(CupertinoIcons.arrow_turn_down_right,
                       size: 11, color: Color(0xFF8E8E93)),
                   const SizedBox(width: 4),
-                  Text(
-                    groups[g].label!,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF8E8E93),
-                      fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: Text(
+                      groups[g].label!,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF8E8E93),
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],

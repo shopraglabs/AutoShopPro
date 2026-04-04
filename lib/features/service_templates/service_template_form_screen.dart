@@ -191,37 +191,44 @@ class _ServiceTemplateFormScreenState
     setState(() => _saving = true);
     final db = ref.read(dbProvider);
 
-    int templateId;
-    if (_isEditing) {
-      await db.updateServiceTemplate(widget.template!.copyWith(
-        name: name,
-        laborDescription: laborDesc,
-        defaultHours: hours,
-        defaultRate: Value(rateCents),
-      ));
-      templateId = widget.template!.id;
-      // Replace all linked parts.
-      await db.deleteAllTemplatePartsForTemplate(templateId);
-    } else {
-      templateId = await db.insertServiceTemplate(ServiceTemplatesCompanion.insert(
-        name: name,
-        laborDescription: laborDesc,
-        defaultHours: Value(hours),
-        defaultRate: Value(rateCents),
-      ));
-    }
+    try {
+      int templateId;
+      if (_isEditing) {
+        await db.updateServiceTemplate(widget.template!.copyWith(
+          name: name,
+          laborDescription: laborDesc,
+          defaultHours: hours,
+          defaultRate: Value(rateCents),
+        ));
+        templateId = widget.template!.id;
+        // Replace all linked parts.
+        await db.deleteAllTemplatePartsForTemplate(templateId);
+      } else {
+        templateId = await db.insertServiceTemplate(ServiceTemplatesCompanion.insert(
+          name: name,
+          laborDescription: laborDesc,
+          defaultHours: Value(hours),
+          defaultRate: Value(rateCents),
+        ));
+      }
 
-    // Write linked parts with their default quantities.
-    for (final p in _linkedParts) {
-      final qty = double.tryParse(p.qtyController.text.replaceAll(',', '')) ?? 1.0;
-      await db.insertTemplatePart(ServiceTemplatePartsCompanion(
-        templateId: Value(templateId),
-        inventoryPartId: Value(p.inventoryPartId),
-        quantity: Value(qty > 0 ? qty : 1.0),
-      ));
-    }
+      // Write linked parts with their default quantities.
+      for (final p in _linkedParts) {
+        final qty = double.tryParse(p.qtyController.text.replaceAll(',', '')) ?? 1.0;
+        await db.insertTemplatePart(ServiceTemplatePartsCompanion(
+          templateId: Value(templateId),
+          inventoryPartId: Value(p.inventoryPartId),
+          quantity: Value(qty > 0 ? qty : 1.0),
+        ));
+      }
 
-    if (mounted) Navigator.pop(context);
+      if (mounted) context.pop();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        _err('Could not save template. Please try again.');
+      }
+    }
   }
 
   void _err(String msg) {

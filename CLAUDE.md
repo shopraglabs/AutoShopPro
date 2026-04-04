@@ -30,12 +30,12 @@ AutoShopPro is a cross-platform automotive shop management app inspired by Tekme
 - **App shell** — sidebar nav (desktop), tab bar (mobile), all 5 module placeholders
 - **Customers** — list (searchable), detail, add/edit/delete, phone/name formatting, internal note field
 - **Vehicles** — list per customer, detail, add/edit/delete, VIN decode (NHTSA API), all formatters, "NO PLATE" auto-stored when plate is blank and shown as-is in all displays
-- **Estimates** — list, create (customer + vehicle picker with "+ New" options), detail (labor + parts + totals), customer complaint field, delete; new estimate from vehicle page opens form with customer+vehicle pre-filled
+- **Estimates** — list (searchable by number/customer/vehicle), create (customer + vehicle picker with "+ New" options), detail (labor + parts + totals), customer complaint field, delete; new estimate from vehicle page opens form with customer+vehicle pre-filled
 - **Customer concerns** — multiple complaints per estimate; displayed as bullet list on estimate detail, included in PDFs
 - **Line items** — add labor (hrs × rate, default rate from settings), add parts (unit cost + markup % / $ / list, part number, vendor picker, link to labor line), swipe to delete, live total preview, edit existing items; Add Part button under each labor row pre-links the part
-- **Parts display** — grouped under their linked labor line sub-header in estimate and RO detail
+- **Parts display** — grouped under their linked labor line sub-header (shows labor name) in estimate and RO detail; "Apply shop default markup" button on Add Part form resets markup % to shop setting
 - **Estimate approval** — tap circle badge on any line item to approve or decline; declined items show strikethrough/gray and are excluded from totals; "X items declined" footnote in totals section
-- **Repair Orders** — convert estimate → RO (declined items excluded), RO list (color-coded status, filter pills: All/Open/Closed), RO detail, status flow (Open → Closed), mark items done per line item, Complete All button, Edit Repair Order, edit RO note, assign technician from bottom sheet picker, invoice comment field (shown on PDFs), service date picker
+- **Repair Orders** — convert estimate → RO (declined items excluded), RO list (color-coded status, searchable by number/customer/vehicle, filter pills: All/Open/Closed), RO detail, status flow (Open → Closed), mark items done per line item, Complete All button, Edit Repair Order, edit RO note, assign technician from bottom sheet picker, invoice comment field (shown on PDFs), service date picker
 - **Vendors** — list, add/edit/delete, account # forced uppercase, contact name
 - **Shop settings** — default labor rate + parts markup, stored in DB, accessible via ⌘,
 - **macOS menu bar** — AutoShopPro / File (⌘N, ⇧⌘N, ⌘F for Search) / Window / Help
@@ -246,4 +246,4 @@ onTap: () => controller.selection = TextSelection(
 Repository: https://github.com/shopraglabs/AutoShopPro
 
 ## Current Version
-v0.12.2 Full Picture
+v0.13.0 Sharp Eye

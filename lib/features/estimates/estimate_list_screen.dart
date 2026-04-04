@@ -25,11 +25,18 @@ double _calcTotal(List<EstimateLineItem> items, double taxRate) {
   return subtotal + subtotal * (taxRate / 100);
 }
 
-class EstimateListScreen extends ConsumerWidget {
+class EstimateListScreen extends ConsumerStatefulWidget {
   const EstimateListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EstimateListScreen> createState() => _EstimateListScreenState();
+}
+
+class _EstimateListScreenState extends ConsumerState<EstimateListScreen> {
+  String _search = '';
+
+  @override
+  Widget build(BuildContext context) {
     final estimatesAsync = ref.watch(estimatesProvider);
 
     return CupertinoPageScaffold(
@@ -47,45 +54,81 @@ class EstimateListScreen extends ConsumerWidget {
               const Center(child: CupertinoActivityIndicator()),
           error: (e, _) => Center(child: Text('Error: $e')),
           data: (estimates) {
-            if (estimates.isEmpty) {
-              return const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      CupertinoIcons.doc_fill,
-                      size: 48,
-                      color: Color(0xFFC7C7CC),
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      'No estimates yet',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1C1C1E),
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Tap + to create your first estimate',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Color(0xFF8E8E93),
-                      ),
-                    ),
-                  ],
+            // Filter estimates by search query
+            final q = _search.toLowerCase();
+            final filtered = q.isEmpty
+                ? estimates
+                : estimates.where((item) {
+                    final num = _estimateNumber(item.estimate.id).toLowerCase();
+                    final customer = (item.customer?.name ?? '').toLowerCase();
+                    final vehicle = item.vehicle != null
+                        ? [
+                            item.vehicle!.year?.toString() ?? '',
+                            item.vehicle!.make,
+                            item.vehicle!.model,
+                          ].join(' ').toLowerCase()
+                        : '';
+                    return num.contains(q) ||
+                        customer.contains(q) ||
+                        vehicle.contains(q);
+                  }).toList();
+
+            return Column(
+              children: [
+                // ── Search bar ─────────────────────────────────────────────
+                Container(
+                  color: CupertinoColors.systemGroupedBackground,
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                  child: CupertinoSearchTextField(
+                    placeholder: 'Search estimates…',
+                    onChanged: (v) => setState(() => _search = v),
+                  ),
                 ),
-              );
-            }
-            return CupertinoScrollbar(
-              child: ListView.builder(
-                itemCount: estimates.length,
-                itemBuilder: (context, i) {
-                  final item = estimates[i];
-                  return _EstimateRow(item: item);
-                },
-              ),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                CupertinoIcons.doc_fill,
+                                size: 48,
+                                color: Color(0xFFC7C7CC),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _search.isEmpty
+                                    ? 'No estimates yet'
+                                    : 'No results for "$_search"',
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1C1C1E),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _search.isEmpty
+                                    ? 'Tap + to create your first estimate'
+                                    : 'Try a different search term',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  color: Color(0xFF8E8E93),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : CupertinoScrollbar(
+                          child: ListView.builder(
+                            itemCount: filtered.length,
+                            itemBuilder: (context, i) {
+                              return _EstimateRow(item: filtered[i]);
+                            },
+                          ),
+                        ),
+                ),
+              ],
             );
           },
         ),
